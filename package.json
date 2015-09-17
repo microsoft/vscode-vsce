@@ -1,0 +1,8 @@
+{
+  "name": "vscode-extension-manager",
+  "version": "0.1.0",
+  "description": "VSCode Extension Manager",
+  "main": "index.js",
+  "author": "Microsoft Corporation",
+  "license": "MIT"
+}
