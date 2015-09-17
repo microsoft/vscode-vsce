@@ -4,5 +4,15 @@
   "description": "VSCode Extension Manager",
   "main": "index.js",
   "author": "Microsoft Corporation",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^3.10.1",
+    "yazl": "^2.2.2"
+  },
+  "devDependencies": {
+    "babel": "^5.8.23",
+    "gulp": "^3.9.0",
+    "gulp-tsb": "^1.6.0",
+    "rimraf": "^2.4.3"
+  }
 }
