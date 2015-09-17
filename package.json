@@ -2,16 +2,22 @@
   "name": "vscode-extension-manager",
   "version": "0.1.0",
   "description": "VSCode Extension Manager",
-  "main": "index.js",
+  "main": "out/main.js",
+  "bin": {
+    "vsce": "out/vsce"
+  },
   "author": "Microsoft Corporation",
   "license": "MIT",
   "dependencies": {
     "lodash": "^3.10.1",
+    "minimist": "^1.2.0",
     "yazl": "^2.2.2"
   },
   "devDependencies": {
     "babel": "^5.8.23",
+    "event-stream": "^3.3.1",
     "gulp": "^3.9.0",
+    "gulp-filter": "^3.0.1",
     "gulp-tsb": "^1.6.0",
     "rimraf": "^2.4.3"
   }

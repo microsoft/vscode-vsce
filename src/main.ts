@@ -1,25 +1,49 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as _ from 'lodash';
-import * as yazl from 'yazl';
+import * as minimist from 'minimist';
+import _package = require('./package');
+const packagejson = require('../package.json');
 
-var templatePath = path.join(__dirname, 'resources', 'extension.vsixmanifest');
-var vsixmanifest = fs.readFileSync(templatePath, 'utf8');
-var template = _.template(vsixmanifest);
-var result = template({
-	id: 'uuid',
-	displayName: 'UUID',
-	version: '0.2.0',
-	publisher: 'joaomoreno2',
-	description: 'This is a UUID extension',
-	tags: 'VSCode'
-});
+interface ICommand {
+	(args: minimist.ParsedArgs): boolean;
+}
 
-var zip = new yazl.ZipFile();
-zip.addBuffer(new Buffer(result, 'utf8'), 'extension.vsixmanifest');
-zip.addFile(path.join(__dirname, 'resources', '[Content_Types].xml'), '[Content_Types].xml');
-zip.addBuffer(new Buffer('hello world', 'utf8'), 'hello.txt');
-zip.end();
+function helpCommand(args: minimist.ParsedArgs): boolean {
+	console.log(`Usage: vsce [command] [opts] [args]
 
-var zipStream = fs.createWriteStream(path.join(__dirname, 'uuid.vsix'));
-zip.outputStream.pipe(zipStream);
+Commands:
+    package [path]          Packages the extension into a .vsix package
+
+Global options:
+    --help, -h              Display help
+
+VSCode Extension Manager v${ packagejson.version }`
+	);
+	
+	process.exit(0);
+	return true;
+}
+
+function packageCommand(args: minimist.ParsedArgs): boolean {
+	_package(args._[1]);
+	return true;
+}
+
+function command(name: string): ICommand {
+	switch (name) {
+		case 'package': return packageCommand;
+		default: return helpCommand;
+	}
+}
+
+module.exports = function (argv: string[]): void {
+	var args = minimist(argv);
+	
+	if (args['help'] || args['h'] || args._.length === 0) {
+		helpCommand(args);
+		return;
+	}
+	
+	if (!command(args._[0])(args)) {
+		helpCommand(args);
+		return;
+	}
+};
