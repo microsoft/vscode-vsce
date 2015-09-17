@@ -1,36 +1,88 @@
-import * as fs from 'fs';
+import { existsSync, readFileSync, createWriteStream } from 'fs';
 import { dirname, join, resolve } from 'path';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
+import { Manifest, VsixManifest } from './manifest';
+import { fatal } from './util';
 
-export = function (path?: string) {
-	const resourcesPath = join(dirname(__dirname), 'resources');
-	const manifestTemplatePath = join(resourcesPath, 'extension.vsixmanifest');
-	const manifestTemplateStr = fs.readFileSync(manifestTemplatePath, 'utf8');
-	const manifestTemplate = _.template(manifestTemplateStr);
+const resourcesPath = join(dirname(__dirname), 'resources');
+const vsixManifestTemplatePath = join(resourcesPath, 'extension.vsixmanifest');
+const vsixManifestTemplateStr = readFileSync(vsixManifestTemplatePath, 'utf8');
+const vsixManifestTemplate = _.template(vsixManifestTemplateStr);
+
+function validate(manifest: any): string {
+	if (!manifest.name) {
+		return 'Manifest missing field: name';
+	}
 	
-	const manifest = {
-		id: 'uuid',
-		displayName: 'UUID',
-		version: '0.2.0',
-		publisher: 'joaomoreno2',
-		description: 'This is a UUID extension',
-		tags: 'VSCode'
+	if (!manifest.version) {
+		return 'Manifest missing field: version';
+	}
+	
+	if (!manifest.publisher) {
+		return 'Manifest missing field: publisher';
+	}
+	
+	if (!manifest.engines) {
+		return 'Manifest missing field: engines';
+	}
+	
+	if (!manifest.engines.vscode) {
+		return 'Manifest missing field: engines.vscode';
+	}
+	
+	return null;
+}
+
+function toVsixManifest(manifest: Manifest): VsixManifest {
+	return {
+		id: manifest.name,
+		displayName: manifest.name,
+		version: manifest.version,
+		publisher: manifest.publisher,
+		description: manifest.description || '',
+		tags: (manifest.keywords || []).concat('vscode').join(';')
 	};
+}
+
+export = function (path?: string): void {
+	const manifestPath = join(process.cwd(), 'package.json');
+	let manifestStr: string;
 	
-	const manifestStr = manifestTemplate(manifest);
+	try {
+		manifestStr = readFileSync(manifestPath, 'utf8');
+	} catch (e) {
+		return fatal(`Extension manifest not found: ${ manifestPath }`);
+	}
+	
+	let manifest: any;
+	
+	try {
+		manifest = JSON.parse(manifestStr);
+	} catch (e) {
+		return fatal(`Error parsing JSON: ${ manifestPath }`);
+	}
+	
+	const validation = validate(manifest);
+	
+	if (validation) {
+		return fatal(validation);
+	}
+	
+	const vsixManifest = toVsixManifest(manifest);
+	const vsixManifestStr = vsixManifestTemplate(vsixManifest);
 	
 	const zip = new yazl.ZipFile();
-	zip.addBuffer(new Buffer(manifestStr, 'utf8'), 'extension.vsixmanifest');
+	zip.addBuffer(new Buffer(vsixManifestStr, 'utf8'), 'extension.vsixmanifest');
 	zip.addFile(join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');
 	zip.addBuffer(new Buffer('hello world', 'utf8'), 'hello.txt');
 	zip.end();
 	
 	if (!path) {
-		path = join(process.cwd(), `${ manifest.id }-${ manifest.version }.vsix`);
+		path = join(process.cwd(), `${ manifest.name }-${ manifest.version }.vsix`);
 	}
 	
-	const zipStream = fs.createWriteStream(path);
+	const zipStream = createWriteStream(path);
 	zip.outputStream.pipe(zipStream);
 	
 	console.log(`Package created: ${ resolve(path) }`);
