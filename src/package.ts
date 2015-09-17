@@ -1,16 +1,11 @@
-import { existsSync, readFileSync, createWriteStream } from 'fs';
+import { readFile, createWriteStream } from 'fs';
 import { dirname, join, resolve } from 'path';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest, VsixManifest } from './manifest';
-import { fatal } from './util';
+import { nfcall, Promise, reject } from 'q';
 
-const resourcesPath = join(dirname(__dirname), 'resources');
-const vsixManifestTemplatePath = join(resourcesPath, 'extension.vsixmanifest');
-const vsixManifestTemplateStr = readFileSync(vsixManifestTemplatePath, 'utf8');
-const vsixManifestTemplate = _.template(vsixManifestTemplateStr);
-
-function validate(manifest: any): string {
+function validate(manifest: Manifest): string {
 	if (!manifest.name) {
 		return 'Manifest missing field: name';
 	}
@@ -45,45 +40,47 @@ function toVsixManifest(manifest: Manifest): VsixManifest {
 	};
 }
 
-export = function (path?: string): void {
+export = function (path?: string): Promise<any> {
 	const manifestPath = join(process.cwd(), 'package.json');
-	let manifestStr: string;
 	
-	try {
-		manifestStr = readFileSync(manifestPath, 'utf8');
-	} catch (e) {
-		return fatal(`Extension manifest not found: ${ manifestPath }`);
-	}
-	
-	let manifest: any;
-	
-	try {
-		manifest = JSON.parse(manifestStr);
-	} catch (e) {
-		return fatal(`Error parsing JSON: ${ manifestPath }`);
-	}
-	
-	const validation = validate(manifest);
-	
-	if (validation) {
-		return fatal(validation);
-	}
-	
-	const vsixManifest = toVsixManifest(manifest);
-	const vsixManifestStr = vsixManifestTemplate(vsixManifest);
-	
-	const zip = new yazl.ZipFile();
-	zip.addBuffer(new Buffer(vsixManifestStr, 'utf8'), 'extension.vsixmanifest');
-	zip.addFile(join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');
-	zip.addBuffer(new Buffer('hello world', 'utf8'), 'hello.txt');
-	zip.end();
-	
-	if (!path) {
-		path = join(process.cwd(), `${ manifest.name }-${ manifest.version }.vsix`);
-	}
-	
-	const zipStream = createWriteStream(path);
-	zip.outputStream.pipe(zipStream);
-	
-	console.log(`Package created: ${ resolve(path) }`);
+	return nfcall<string>(readFile, manifestPath, 'utf8')
+		.catch(() => reject<string>(`Extension manifest not found: ${ manifestPath }`))
+		.then<Manifest>(manifestStr => {
+			try {
+				return JSON.parse(manifestStr);
+			} catch (e) {
+				return reject<Manifest>(`Error parsing manifest file: not a valid JSON file.`);
+			}
+		})
+		.then(manifest => {
+			const validation = validate(manifest);
+			
+			if (validation) {
+				return reject<void>(validation);
+			}
+
+			const resourcesPath = join(dirname(__dirname), 'resources');
+			const vsixManifestTemplatePath = join(resourcesPath, 'extension.vsixmanifest');
+			
+			return nfcall<string>(readFile, vsixManifestTemplatePath, 'utf8')
+				.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
+				.then(vsixManifestTemplate => vsixManifestTemplate(toVsixManifest(manifest)))
+				.then(vsixManifestStr => Promise<void>((c, e) => {
+					const zip = new yazl.ZipFile();
+					zip.addBuffer(new Buffer(vsixManifestStr, 'utf8'), 'extension.vsixmanifest');
+					zip.addFile(join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');
+					zip.addBuffer(new Buffer('hello world', 'utf8'), 'hello.txt');
+					zip.end();
+					
+					if (!path) {
+						path = join(process.cwd(), `${ manifest.name }-${ manifest.version }.vsix`);
+					}
+					
+					const zipStream = createWriteStream(path);
+					zip.outputStream.pipe(zipStream);
+					zip.outputStream.once('error', e);
+					zip.outputStream.once('end', c);
+				}));
+		})
+		.then(() => console.log(`Package created: ${ resolve(path) }`));
 };

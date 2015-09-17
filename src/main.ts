@@ -1,5 +1,6 @@
 import * as minimist from 'minimist';
 import _package = require('./package');
+import { fatal } from './util';
 const packagejson = require('../package.json');
 
 interface ICommand {
@@ -23,7 +24,7 @@ VSCode Extension Manager v${ packagejson.version }`
 }
 
 function packageCommand(args: minimist.ParsedArgs): boolean {
-	_package(args._[1]);
+	_package(args._[1]).catch(fatal);
 	return true;
 }
 

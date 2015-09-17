@@ -9,8 +9,10 @@
   "author": "Microsoft Corporation",
   "license": "MIT",
   "dependencies": {
+    "glob": "^5.0.14",
     "lodash": "^3.10.1",
     "minimist": "^1.2.0",
+    "q": "^1.4.1",
     "yazl": "^2.2.2"
   },
   "devDependencies": {
