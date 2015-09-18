@@ -11,7 +11,7 @@ export interface Manifest {
 	engines: { vscode: string; [name: string]: string; };
 	
 	// mandatory (vscode)
-	publisher: string;
+	publisher: string; // TODO move out
 	
 	// optional (npm)
 	author?: string | Person;
