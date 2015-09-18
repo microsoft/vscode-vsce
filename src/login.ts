@@ -43,14 +43,15 @@ function promptForCredentials(): Promise<ICredentials> {
 	});
 }
 
-export function getCredentials(): Promise<ICredentials> {
-	return readCredentials();
-}
+export interface IGetCredentialsOptions {
+	promptToOverwrite?: boolean;
+	promptIfMissing?: boolean;
+} 
 
-export function login(): Promise<ICredentials> {
+export function getCredentials(options: IGetCredentialsOptions = {}): Promise<ICredentials> {
 	return readCredentials()
 		.then(credentials => {
-			if (!credentials) {
+			if (!credentials || !options.promptToOverwrite) {
 				return resolve(credentials);
 			}
 			
@@ -58,8 +59,18 @@ export function login(): Promise<ICredentials> {
 			return read('Do you want to overwrite existing credentials? [y/N] ')
 				.then<ICredentials>(answer => /^y$/i.test(answer) ? promptForCredentials() : credentials);
 		})
-		.then(credentials => credentials || promptForCredentials())
-		.then(writeCredentials);
+		.then(credentials => {
+			if (credentials || !options.promptIfMissing) {
+				return resolve(credentials);
+			}
+			
+			return promptForCredentials()
+				.then(writeCredentials);
+		});
+}
+
+export function login(): Promise<ICredentials> {
+	return getCredentials({ promptIfMissing: true, promptToOverwrite: true });
 }
 
 export function logout(): Promise<any> {
