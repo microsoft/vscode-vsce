@@ -101,9 +101,9 @@ export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackag
 	return readManifest(cwd)
 		.then(validateManifest)
 		.then(manifest => {
-			return writeVsix(cwd, manifest, packagePath).then(packagePath => ({
-				manifest,
-				packagePath
-			}));
+			return writeVsix(cwd, manifest, packagePath).then(packagePath => {
+				console.log(`Package created: ${ packagePath }`);
+				return { manifest, packagePath };
+			});
 		});
-};
+}

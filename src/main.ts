@@ -2,6 +2,7 @@ import * as minimist from 'minimist';
 import { pack } from './package';
 import { publish } from './publish';
 import { fatal } from './util';
+import { login, logout } from './login';
 const packagejson = require('../package.json');
 
 interface ICommand {
@@ -13,6 +14,8 @@ function helpCommand(args: minimist.ParsedArgs): boolean {
 
 Commands:
     package [vsix path]          Packages the extension into a .vsix package
+	login                        Logs in to the extension service
+	logout                       Logs out of the extension service
     publish [pat]                Publishes the extension
 
 Global options:
@@ -26,16 +29,23 @@ VSCode Extension Manager v${ packagejson.version }`
 }
 
 function command(args: minimist.ParsedArgs): boolean {
-	switch (args._[0]) {
-		case 'package':
-			pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`), fatal);
-			return true;
-		case 'publish':
-			publish(args._[1]).catch(fatal);
-			return true;
-		default:
-			return false;
+	const promise = (() => {
+		switch (args._[0]) {
+			case 'package': return pack(args._[1]);
+			case 'login': return login();
+			case 'logout': return logout();
+			case 'publish': return publish(args._[1]);
+		}
+		
+		return null;
+	})();
+	
+	if (promise) {
+		promise.catch(fatal);
+		return true;
 	}
+	
+	return false;
 }
 
 module.exports = function (argv: string[]): void {
