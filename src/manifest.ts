@@ -10,6 +10,13 @@ export interface Manifest {
 	version: string;
 	engines: { vscode: string; [name: string]: string; };
 	
+	// vscode
+	contributes?: { [contributionType: string]: any; };
+	activationEvents?: string[];
+	extensionDependencies?: string[];
+	_bundling?: { [name: string]: string; }[];
+	_testing?: string;
+	
 	// optional (npm)
 	author?: string | Person;
 	description?: string;
