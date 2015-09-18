@@ -80,8 +80,10 @@ function writeVsix(cwd: string, manifest: Manifest, packagePath: string): Promis
 					
 					const zipStream = fs.createWriteStream(packagePath);
 					zip.outputStream.pipe(zipStream);
+					
 					zip.outputStream.once('error', e);
-					zip.outputStream.once('end', () => c(packagePath));
+					zipStream.once('error', e);
+					zipStream.once('finish', () => c(packagePath));
 				}));
 		});
 }
@@ -90,9 +92,18 @@ function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${ manifest.name }-${ manifest.version }.vsix`);
 }
 
-export = function (packagePath?: string, cwd = process.cwd()): Promise<any> {
+export interface IPackageResult {
+	manifest: Manifest;
+	packagePath: string;
+}
+
+export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
 		.then(validateManifest)
-		.then(manifest => writeVsix(cwd, manifest, packagePath))
-		.then(packagePath => console.log(`Package created: ${ packagePath }`));
+		.then(manifest => {
+			return writeVsix(cwd, manifest, packagePath).then(packagePath => ({
+				manifest,
+				packagePath
+			}));
+		});
 };

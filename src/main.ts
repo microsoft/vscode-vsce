@@ -1,5 +1,6 @@
 import * as minimist from 'minimist';
-import _package = require('./package');
+import { pack } from './package';
+import { publish } from './publish';
 import { fatal } from './util';
 const packagejson = require('../package.json');
 
@@ -11,10 +12,11 @@ function helpCommand(args: minimist.ParsedArgs): boolean {
 	console.log(`Usage: vsce [command] [opts] [args]
 
 Commands:
-    package [path]          Packages the extension into a .vsix package
+    package [vsix path]          Packages the extension into a .vsix package
+    publish [pat]                Publishes the extension
 
 Global options:
-    --help, -h              Display help
+    --help, -h                   Display help
 
 VSCode Extension Manager v${ packagejson.version }`
 	);
@@ -23,15 +25,16 @@ VSCode Extension Manager v${ packagejson.version }`
 	return true;
 }
 
-function packageCommand(args: minimist.ParsedArgs): boolean {
-	_package(args._[1]).catch(fatal);
-	return true;
-}
-
-function command(name: string): ICommand {
-	switch (name) {
-		case 'package': return packageCommand;
-		default: return helpCommand;
+function command(args: minimist.ParsedArgs): boolean {
+	switch (args._[0]) {
+		case 'package':
+			pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`), fatal);
+			return true;
+		case 'publish':
+			publish(args._[1]).catch(fatal);
+			return true;
+		default:
+			return false;
 	}
 }
 
@@ -43,7 +46,7 @@ module.exports = function (argv: string[]): void {
 		return;
 	}
 	
-	if (!command(args._[0])(args)) {
+	if (!command(args)) {
 		helpCommand(args);
 		return;
 	}

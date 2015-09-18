@@ -13,6 +13,8 @@
     "lodash": "^3.10.1",
     "minimist": "^1.2.0",
     "q": "^1.4.1",
+    "tmp": "0.0.27",
+    "vso-node-api": "^0.4.2",
     "yazl": "^2.2.2"
   },
   "devDependencies": {
