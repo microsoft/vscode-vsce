@@ -8,6 +8,9 @@
   },
   "author": "Microsoft Corporation",
   "license": "MIT",
+  "scripts": {
+    "preinstall": "gulp compile"
+  },
   "dependencies": {
     "glob": "^5.0.14",
     "lodash": "^3.10.1",
