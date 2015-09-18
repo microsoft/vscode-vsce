@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Promise, nfcall, resolve, reject } from 'q';
 import { home } from 'osenv';
-import read = require('read');
+import { read } from './util';
 
 const credentialsPath = path.join(home(), '.vsce');
 
@@ -29,33 +29,34 @@ function writeCredentials(credentials: ICredentials): Promise<ICredentials> {
 		.then(() => credentials);
 }
 
-function clearCredentials(): Promise<void> {
-	return nfcall<void>(fs.unlink, credentialsPath);
+function clearCredentials(): Promise<any> {
+	return nfcall(fs.unlink, credentialsPath)
+		.catch(err => err.code !== 'ENOENT' ? reject(err) : resolve('null'));
 }
 
 function promptForCredentials(): Promise<ICredentials> {
-	return nfcall<string>(read, { prompt: 'Account name:' }).spread(account => {
-		return nfcall<string>(read, { prompt: 'Publisher:' }).spread(publisher => {
-			return nfcall<string>(read, { prompt: 'Personal Access Token:', silent: true, replace: '*' })
-				.spread(pat => ({ account, publisher, pat }));
+	return read('Account name:').then(account => {
+		return read('Publisher:').then(publisher => {
+			return read('Personal Access Token:', { silent: true, replace: '*' })
+				.then(pat => ({ account, publisher, pat }));
 		});
 	});
 }
 
 export function getCredentials(): Promise<ICredentials> {
-	return login(false);
+	return readCredentials();
 }
 
-export function login(relogin = true): Promise<ICredentials> {
+export function login(): Promise<ICredentials> {
 	return readCredentials()
 		.then(credentials => {
-			if (!credentials || !relogin) {
+			if (!credentials) {
 				return resolve(credentials);
 			}
 			
 			console.log(`Existing credentials found: { account: ${ credentials.account }, publisher: ${ credentials.publisher } }`);
-			return nfcall<string>(read, { prompt: 'Do you want to overwrite existing credentials? [y/N] ' })
-				.spread<ICredentials>(answer => /^y$/i.test(answer) ? promptForCredentials() : credentials);
+			return read('Do you want to overwrite existing credentials? [y/N] ')
+				.then<ICredentials>(answer => /^y$/i.test(answer) ? promptForCredentials() : credentials);
 		})
 		.then(credentials => credentials || promptForCredentials())
 		.then(writeCredentials);
