@@ -42,7 +42,3 @@ export interface Manifest {
 	// preferGlobal
 	// publishConfig
 }
-
-export interface VsixManifest {
-	
-}

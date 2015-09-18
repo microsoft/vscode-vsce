@@ -1,4 +1,4 @@
 export function fatal(message: string, ...args: any[]) {
-	console.error(message, ...args);
+	console.error('Error:', message, ...args);
 	process.exit(1);
 }
