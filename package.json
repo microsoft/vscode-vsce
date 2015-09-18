@@ -9,7 +9,7 @@
   "author": "Microsoft Corporation",
   "license": "MIT",
   "scripts": {
-    "preinstall": "gulp compile"
+    "prepublish": "gulp compile"
   },
   "dependencies": {
     "glob": "^5.0.14",
