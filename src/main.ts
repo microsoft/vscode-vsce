@@ -14,9 +14,9 @@ function helpCommand(args: minimist.ParsedArgs): boolean {
 
 Commands:
     package [vsix path]          Packages the extension into a .vsix package
-	login                        Logs in to the extension service
-	logout                       Logs out of the extension service
-    publish [pat]                Publishes the extension
+    publish                      Publishes the extension
+    login                        Logs in to the extension service
+    logout                       Logs out of the extension service
 
 Global options:
     --help, -h                   Display help
@@ -35,9 +35,8 @@ function command(args: minimist.ParsedArgs): boolean {
 			case 'login': return login();
 			case 'logout': return logout();
 			case 'publish': return publish(args._[1]);
+			default: return null;
 		}
-		
-		return null;
 	})();
 	
 	if (promise) {
