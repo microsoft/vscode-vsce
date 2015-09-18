@@ -6,11 +6,16 @@ import { read } from './util';
 
 const credentialsPath = path.join(home(), '.vsce');
 
-interface ICredentials {
+export interface ICredentials {
 	account: string;
 	publisher: string;
 	pat: string;
 }
+
+export interface IGetCredentialsOptions {
+	promptToOverwrite?: boolean;
+	promptIfMissing?: boolean;
+} 
 
 function readCredentials(): Promise<ICredentials> {
 	return nfcall<string>(fs.readFile, credentialsPath, 'utf8')
@@ -42,11 +47,6 @@ function promptForCredentials(): Promise<ICredentials> {
 		});
 	});
 }
-
-export interface IGetCredentialsOptions {
-	promptToOverwrite?: boolean;
-	promptIfMissing?: boolean;
-} 
 
 export function getCredentials(options: IGetCredentialsOptions = {}): Promise<ICredentials> {
 	return readCredentials()
