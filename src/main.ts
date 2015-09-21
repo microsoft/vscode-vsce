@@ -5,11 +5,7 @@ import { fatal } from './util';
 import { login, logout } from './login';
 const packagejson = require('../package.json');
 
-interface ICommand {
-	(args: minimist.ParsedArgs): boolean;
-}
-
-function helpCommand(args: minimist.ParsedArgs): boolean {
+function helpCommand(): void {
 	console.log(`Usage: vsce [command] [opts] [args]
 
 Commands:
@@ -20,12 +16,14 @@ Commands:
 
 Global options:
     --help, -h                   Display help
+    --version, -v                Display version
 
 VSCode Extension Manager v${ packagejson.version }`
 	);
-	
-	process.exit(0);
-	return true;
+}
+
+function versionCommand(): void {
+	console.log(packagejson.version);
 }
 
 function command(args: minimist.ParsedArgs): boolean {
@@ -50,13 +48,11 @@ function command(args: minimist.ParsedArgs): boolean {
 module.exports = function (argv: string[]): void {
 	var args = minimist(argv);
 	
-	if (args['help'] || args['h'] || args._.length === 0) {
-		helpCommand(args);
-		return;
-	}
-	
-	if (!command(args)) {
-		helpCommand(args);
-		return;
+	if (args['version'] || args['v']) {
+		versionCommand();
+	} else if (args['help'] || args['h'] || args._.length === 0) {
+		helpCommand();
+	} else if (!command(args)) {
+		helpCommand();
 	}
 };
