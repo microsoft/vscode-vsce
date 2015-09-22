@@ -29,7 +29,7 @@ function versionCommand(): void {
 function command(args: minimist.ParsedArgs): boolean {
 	const promise = (() => {
 		switch (args._[0]) {
-			case 'package': return pack(args._[1]);
+			case 'package': return pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`));
 			case 'login': return login();
 			case 'logout': return logout();
 			case 'publish': return publish(args._[1]);
