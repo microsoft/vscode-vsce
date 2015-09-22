@@ -8,6 +8,7 @@ import { nfcall, Promise, reject, resolve, all } from 'q';
 import * as glob from 'glob';
 import * as minimatch from 'minimatch';
 import { read } from './util';
+import { exec } from 'child_process';
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
@@ -44,6 +45,22 @@ function validateManifest(manifest: Manifest): Promise<Manifest> {
 	}
 	
 	return resolve(manifest);
+}
+
+function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
+	if (!manifest.scripts || !manifest.scripts['prepublish']) {
+		return resolve(manifest);
+	}
+	
+	const script = manifest.scripts['prepublish'];
+	console.log(`Executing prepublish script '${ script }'...`);
+	
+	return nfcall<string>(exec, script, { cwd })
+		.catch(err => reject(err.message))
+		.spread((stdout: string, stderr: string) => {
+			process.stdout.write(stdout);
+			return resolve(manifest);
+		});
 }
 
 function toVsixManifest(manifest: Manifest): Promise<string> {
@@ -98,7 +115,7 @@ function writeVsix(cwd: string, manifest: Manifest, packagePath: string): Promis
 				.spread((vsixManifest: string, files: string[]) => Promise<string>((c, e) => {
 					const zip = new yazl.ZipFile();
 					zip.addBuffer(new Buffer(vsixManifest, 'utf8'), 'extension.vsixmanifest');
-					zip.addFile(path.join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');		
+					zip.addFile(path.join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');
 					files.forEach(file => zip.addFile(path.join(cwd, file), 'extension/' + file));
 					zip.end();
 					
@@ -124,6 +141,7 @@ export interface IPackageResult {
 export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
 		.then(validateManifest)
+		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => {
 			return writeVsix(cwd, manifest, packagePath).then(packagePath => {
 				console.log(`Package created: ${ packagePath }`);
