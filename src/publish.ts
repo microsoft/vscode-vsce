@@ -12,7 +12,7 @@ export function publish(cwd = process.cwd()): Promise<any> {
 	return getCredentials({ promptIfMissing: true })
 		.then(credentials => {
 			const authHandler = getBasicHandler('oauth', credentials.pat);
-			const vsoapi = new WebApi(`https://${ credentials.account }.visualstudio.com`, authHandler);
+			const vsoapi = new WebApi(credentials.account, authHandler);
 			const api = vsoapi.getQGalleryApi(galleryUrl);
 			
 			return nfcall<string>(tmpName)

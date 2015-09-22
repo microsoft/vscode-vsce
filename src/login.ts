@@ -41,6 +41,11 @@ function clearCredentials(): Promise<any> {
 
 function promptForCredentials(): Promise<ICredentials> {
 	return read('Account name:').then(account => {
+		if (!/^https?:\/\//.test(account)) {
+			account = `https://${ account }.visualstudio.com`;
+			console.log(`Assuming account name '${ account }'`);
+		}
+		
 		return read('Publisher:').then(publisher => {
 			return read('Personal Access Token:', { silent: true, replace: '*' })
 				.then(pat => ({ account, publisher, pat }));
