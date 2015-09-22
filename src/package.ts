@@ -6,6 +6,7 @@ import { Manifest } from './manifest';
 import { getCredentials } from './login';
 import { nfcall, Promise, reject, resolve, all } from 'q';
 import * as glob from 'glob';
+import * as minimatch from 'minimatch';
 import { read } from './util';
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
@@ -73,8 +74,18 @@ function toVsixManifest(manifest: Manifest): Promise<string> {
 		});
 }
 
+const defaultIgnore = ['.vscodeignore', '**/*.vsix', '**/.DS_Store'];
+
 function collectFiles(cwd: string): Promise<string[]> {
-	return nfcall<string[]>(glob, '**', { cwd, nodir: true });
+	return nfcall<string[]>(glob, '**', { cwd, nodir: true, dot: true }).then(files => {
+		return nfcall<string>(fs.readFile, path.join(cwd, '.vscodeignore'), 'utf8')
+			.catch<string>(err => err.code !== 'ENOENT' ? reject(err) : resolve(''))
+			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
+			.then(ignore => defaultIgnore.concat(ignore))
+			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
+			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
+			.spread((ignore: string[], negate: string[]) => files.filter(f => !ignore.some(i => minimatch(f, i)) || negate.some(i => minimatch(f, i.substr(1)))));
+	});
 }
 
 function writeVsix(cwd: string, manifest: Manifest, packagePath: string): Promise<string> {
@@ -87,7 +98,7 @@ function writeVsix(cwd: string, manifest: Manifest, packagePath: string): Promis
 				.spread((vsixManifest: string, files: string[]) => Promise<string>((c, e) => {
 					const zip = new yazl.ZipFile();
 					zip.addBuffer(new Buffer(vsixManifest, 'utf8'), 'extension.vsixmanifest');
-					zip.addFile(path.join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');				
+					zip.addFile(path.join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');		
 					files.forEach(file => zip.addFile(path.join(cwd, file), 'extension/' + file));
 					zip.end();
 					
