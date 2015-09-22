@@ -3,8 +3,12 @@ import { assign } from 'lodash';
 import _read = require('read');
 
 export function fatal(message: any, ...args: any[]) {
-	if (message instanceof Error && /^cancell?ed$/i.test(message.message)) {
-		return;
+	if (message instanceof Error) {
+		if (/^cancell?ed$/i.test(message.message)) {
+			return;
+		}
+		
+		message = message.message;
 	}
 	
 	console.error('Error:', message, ...args);

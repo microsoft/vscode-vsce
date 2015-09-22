@@ -3,6 +3,7 @@ import * as path from 'path';
 import { Promise, nfcall, resolve, reject } from 'q';
 import { home } from 'osenv';
 import { read } from './util';
+import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 
 const credentialsPath = path.join(home(), '.vsce');
 
@@ -62,7 +63,7 @@ export function getCredentials(options: IGetCredentialsOptions = {}): Promise<IC
 			
 			console.log(`Existing credentials found: { account: ${ credentials.account }, publisher: ${ credentials.publisher } }`);
 			return read('Do you want to overwrite existing credentials? [y/N] ')
-				.then<ICredentials>(answer => /^y$/i.test(answer) ? promptForCredentials() : credentials);
+				.then<ICredentials>(answer => /^y$/i.test(answer) ? null : credentials);
 		})
 		.then(credentials => {
 			if (credentials || !options.promptIfMissing) {
@@ -74,8 +75,19 @@ export function getCredentials(options: IGetCredentialsOptions = {}): Promise<IC
 		});
 }
 
+const galleryUrl = 'https://app.market.visualstudio.com';
+
 export function login(): Promise<ICredentials> {
-	return getCredentials({ promptIfMissing: true, promptToOverwrite: true });
+	return getCredentials({ promptIfMissing: true, promptToOverwrite: true }).then(credentials => {
+		const authHandler = getBasicHandler('oauth', credentials.pat);
+		const vsoapi = new WebApi(credentials.account, authHandler);
+		const api = vsoapi.getQGalleryApi(galleryUrl);
+		
+		return api.getPublisher(credentials.publisher).then(publisher => {
+			console.log(`Authentication successful. Found publisher '${ publisher.displayName }'.`);
+			return credentials;
+		});
+	});
 }
 
 export function logout(): Promise<any> {
