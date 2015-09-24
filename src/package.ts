@@ -28,6 +28,10 @@ function readManifest(cwd: string): Promise<Manifest> {
 }
 
 function validateManifest(manifest: Manifest): Promise<Manifest> {
+	if (!manifest.publisher) {
+		return reject<Manifest>('Manifest missing field: publisher');
+	}
+	
 	if (!manifest.name) {
 		return reject<Manifest>('Manifest missing field: name');
 	}
@@ -66,29 +70,14 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 function toVsixManifest(manifest: Manifest): Promise<string> {
 	return nfcall<string>(fs.readFile, vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-		.then(vsixManifestTemplate => {
-			return getCredentials().then(credentials => {
-				if (credentials) {
-					return resolve(credentials.publisher);
-				}
-				
-				console.log(`A publisher name is required. Run '${ path.basename(process.argv[1]) } login' to avoid setting it every time.`);
-				return read('Publisher name: ');
-			}).then(publisher => {
-				if (!publisher) {
-					return reject<string>('Packaging requires a publisher name.');
-				}
-				
-				return vsixManifestTemplate({
-					id: manifest.name,
-					displayName: manifest.name,
-					version: manifest.version,
-					publisher,
-					description: manifest.description || '',
-					tags: (manifest.keywords || []).concat('vscode').join(';')
-				});
-			});
-		});
+		.then(vsixManifestTemplate => vsixManifestTemplate({
+			id: manifest.name,
+			displayName: manifest.name,
+			version: manifest.version,
+			publisher: manifest.publisher,
+			description: manifest.description || '',
+			tags: (manifest.keywords || []).concat('vscode').join(';')
+		}));
 }
 
 const defaultIgnore = ['.vscodeignore', '**/*.vsix', '**/.DS_Store'];
