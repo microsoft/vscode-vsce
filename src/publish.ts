@@ -1,27 +1,21 @@
 import { readFile } from 'fs';
-import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
-import { IQGalleryApi } from 'vso-node-api/GalleryApi';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { nfcall, Promise, reject, resolve, all } from 'q';
-import { pack, IPackageResult } from './package';
+import { nfcall, Promise, reject } from 'q';
+import { pack } from './package';
 import { tmpName } from 'tmp';
-import { getCredentials, ICredentials } from './login';
+import { get } from './store';
+import { getGalleryAPI } from './util';
 
 const galleryUrl = 'https://app.market.visualstudio.com';
 
-function getGalleryAPI({ account, pat }: ICredentials): IQGalleryApi {
-	const authHandler = getBasicHandler('oauth', pat);
-	const vsoapi = new WebApi(account, authHandler);
-	return vsoapi.getQGalleryApi(galleryUrl);
-}
-
 export function publish(cwd = process.cwd()): Promise<any> {
-	return getCredentials({ promptIfMissing: true })
-		.then(getGalleryAPI)
-		.then(api => nfcall<string>(tmpName)
-			.then(packagePath => pack(packagePath, cwd))
-			.then(({ manifest, packagePath }) => nfcall<string>(readFile, packagePath, 'base64')
-				.then(extensionManifest => {
+	return nfcall<string>(tmpName)
+		.then(packagePath => pack(packagePath, cwd))
+		.then(result => {
+			const { manifest, packagePath } = result;
+			
+			return get(manifest.publisher).then(getGalleryAPI).then(api => {
+				return nfcall<string>(readFile, packagePath, 'base64').then(extensionManifest => {
 					const fullName = `${ manifest.name }@${ manifest.version }`;
 					console.log(`Publishing ${ fullName }...`);
 					
@@ -40,7 +34,7 @@ export function publish(cwd = process.cwd()): Promise<any> {
 								.catch(err => reject(err.statusCode === 409 ? `${ fullName } already exists.` : err))
 								.then(() => console.log(`Successfully published ${ fullName }!`));
 						});
-				})
-			)
-		);
+					});
+				});
+		});
 };

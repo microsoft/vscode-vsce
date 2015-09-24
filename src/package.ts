@@ -3,11 +3,9 @@ import * as path from 'path';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest } from './manifest';
-import { getCredentials } from './login';
 import { nfcall, Promise, reject, resolve, all } from 'q';
 import * as glob from 'glob';
 import * as minimatch from 'minimatch';
-import { read } from './util';
 import { exec } from 'child_process';
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
