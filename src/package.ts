@@ -50,11 +50,11 @@ function validateManifest(manifest: Manifest): Promise<Manifest> {
 }
 
 function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
-	if (!manifest.scripts || !manifest.scripts['prepublish']) {
+	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return resolve(manifest);
 	}
 	
-	const script = manifest.scripts['prepublish'];
+	const script = manifest.scripts['vscode:prepublish'];
 	console.log(`Executing prepublish script '${ script }'...`);
 	
 	return nfcall<string>(exec, script, { cwd })
