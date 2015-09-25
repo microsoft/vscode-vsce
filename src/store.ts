@@ -7,8 +7,13 @@ import { validatePublisher } from './validation';
 
 const storePath = path.join(home(), '.vsce');
 
+export interface IPublisher {
+	name: string;
+	pat: string;
+}
+
 export interface IStore {
-	[publisher: string]: string;
+	publishers: IPublisher[];
 }
 
 export interface IGetOptions {
@@ -25,6 +30,10 @@ function load(): Promise<IStore> {
 			} catch (e) {
 				return reject(`Error parsing store: ${ storePath }`);
 			}
+		})
+		.then(store => {
+			store.publishers = store.publishers || [];
+			return resolve(store);
 		});
 }
 
@@ -33,71 +42,73 @@ function save(store: IStore): Promise<IStore> {
 		.then(() => store);
 }
 
-function requestPAT(store: IStore, publisher: string): Promise<string> {
-	return read(`Personal Access Token for publisher '${ publisher }':`, { silent: true, replace: '*' })
+function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
+	return read(`Personal Access Token for publisher '${ publisherName }':`, { silent: true, replace: '*' })
 		.then(pat => {
 			const api = getGalleryAPI(pat);
 			
-			return api.getPublisher(publisher).then(p => {
+			return api.getPublisher(publisherName).then(p => {
 				console.log(`Authentication successful. Found publisher '${ p.displayName }'.`);
 				return pat;
 			});
 		})
 		.then(pat => {
-			store[publisher] = pat;
-			return save(store).then(() => pat);
+			const publisher = { name: publisherName, pat };
+			store.publishers = [...store.publishers.filter(p => p.name !== publisherName), publisher];
+			return save(store).then(() => publisher);
 		});
 }
 
-export function get(publisher: string): Promise<string> {
-	validatePublisher(publisher);
+export function getPublisher(publisherName: string): Promise<IPublisher> {
+	validatePublisher(publisherName);
 	
 	return load().then(store => {
-		if (store[publisher]) {
-			return resolve(store[publisher]);
-		}
-		
-		return requestPAT(store, publisher);
+		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
+		return publisher ? resolve(publisher) : requestPAT(store, publisherName);
 	});
 }
 
-function add(publisher: string): Promise<string> {
-	validatePublisher(publisher);
+function addPublisher(publisherName: string): Promise<IPublisher> {
+	validatePublisher(publisherName);
 	
 	return load()
 		.then<IStore>(store => {
-			if (store[publisher]) {
-				console.log(`Publisher '${ publisher }' is already known`);
+			const publisher = store.publishers.filter(p => p.name === publisherName)[0];
+			
+			if (publisher) {
+				console.log(`Publisher '${ publisherName }' is already known`);
 				return read('Do you want to overwrite its PAT? [y/N] ')
 					.then(answer => /^y$/i.test(answer) ? store : reject('Aborted'));
 			}
 			
 			return resolve(store);
 		})
-		.then(store => requestPAT(store, publisher));
+		.then(store => requestPAT(store, publisherName));
 }
 
-function rm(publisher: string): Promise<any> {
-	validatePublisher(publisher);
+function rmPublisher(publisherName: string): Promise<any> {
+	validatePublisher(publisherName);
 	
 	return load().then(store => {
-		if (!store[publisher]) {
-			return reject(`Unknown publisher '${ publisher }'`);
+		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
+		
+		if (!publisher) {
+			return reject(`Unknown publisher '${ publisherName }'`);
 		}
 		
-		delete store[publisher];
+		store.publishers = store.publishers.filter(p => p.name !== publisherName);
 		return save(store);
 	});
 }
 
-function list(): Promise<string[]> {
-	return load().then(store => Object.keys(store));
+function listPublishers(): Promise<IPublisher[]> {
+	return load().then(store => store.publishers);
 }
 
 export function publisher(action: string, publisher: string): Promise<any> {
 	switch (action) {
-		case 'add': return add(publisher);
-		case 'rm': return rm(publisher);
-		case 'list': default: return list().then(publishers => publishers.forEach(p => console.log(p)));
+		case 'add': return addPublisher(publisher);
+		case 'rm': return rmPublisher(publisher);
+		case 'list': default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
 	}
 }
