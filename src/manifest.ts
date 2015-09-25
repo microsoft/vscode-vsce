@@ -11,6 +11,7 @@ export interface Manifest {
 	engines: { vscode: string; [name: string]: string; };
 	
 	// vscode
+	publisher: string;
 	contributes?: { [contributionType: string]: any; };
 	activationEvents?: string[];
 	extensionDependencies?: string[];

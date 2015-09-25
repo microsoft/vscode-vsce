@@ -3,11 +3,9 @@ import * as path from 'path';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest } from './manifest';
-import { getCredentials } from './login';
 import { nfcall, Promise, reject, resolve, all } from 'q';
 import * as glob from 'glob';
 import * as minimatch from 'minimatch';
-import { read } from './util';
 import { exec } from 'child_process';
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
@@ -28,6 +26,10 @@ function readManifest(cwd: string): Promise<Manifest> {
 }
 
 function validateManifest(manifest: Manifest): Promise<Manifest> {
+	if (!manifest.publisher) {
+		return reject<Manifest>('Manifest missing field: publisher');
+	}
+	
 	if (!manifest.name) {
 		return reject<Manifest>('Manifest missing field: name');
 	}
@@ -48,11 +50,11 @@ function validateManifest(manifest: Manifest): Promise<Manifest> {
 }
 
 function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
-	if (!manifest.scripts || !manifest.scripts['prepublish']) {
+	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return resolve(manifest);
 	}
 	
-	const script = manifest.scripts['prepublish'];
+	const script = manifest.scripts['vscode:prepublish'];
 	console.log(`Executing prepublish script '${ script }'...`);
 	
 	return nfcall<string>(exec, script, { cwd })
@@ -66,29 +68,14 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 function toVsixManifest(manifest: Manifest): Promise<string> {
 	return nfcall<string>(fs.readFile, vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-		.then(vsixManifestTemplate => {
-			return getCredentials().then(credentials => {
-				if (credentials) {
-					return resolve(credentials.publisher);
-				}
-				
-				console.log(`A publisher name is required. Run '${ path.basename(process.argv[1]) } login' to avoid setting it every time.`);
-				return read('Publisher name: ');
-			}).then(publisher => {
-				if (!publisher) {
-					return reject<string>('Packaging requires a publisher name.');
-				}
-				
-				return vsixManifestTemplate({
-					id: manifest.name,
-					displayName: manifest.name,
-					version: manifest.version,
-					publisher,
-					description: manifest.description || '',
-					tags: (manifest.keywords || []).concat('vscode').join(';')
-				});
-			});
-		});
+		.then(vsixManifestTemplate => vsixManifestTemplate({
+			id: manifest.name,
+			displayName: manifest.name,
+			version: manifest.version,
+			publisher: manifest.publisher,
+			description: manifest.description || '',
+			tags: (manifest.keywords || []).concat('vscode').join(';')
+		}));
 }
 
 const defaultIgnore = ['.vscodeignore', '**/*.vsix', '**/.DS_Store'];

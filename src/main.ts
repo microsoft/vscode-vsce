@@ -2,7 +2,7 @@ import * as minimist from 'minimist';
 import { pack } from './package';
 import { publish } from './publish';
 import { fatal } from './util';
-import { login, logout } from './login';
+import { publisher } from './store';
 const packagejson = require('../package.json');
 
 function helpCommand(): void {
@@ -11,8 +11,9 @@ function helpCommand(): void {
 Commands:
     package [vsix path]          Packages the extension into a .vsix package
     publish                      Publishes the extension
-    login                        Logs in to the extension service
-    logout                       Logs out of the extension service
+    publisher add [publisher]    Add a publisher
+    publisher rm [publisher]     Remove a publisher
+    publisher list               List all added publishers
 
 Global options:
     --help, -h                   Display help
@@ -27,22 +28,26 @@ function versionCommand(): void {
 }
 
 function command(args: minimist.ParsedArgs): boolean {
-	const promise = (() => {
-		switch (args._[0]) {
-			case 'package': return pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`));
-			case 'login': return login();
-			case 'logout': return logout();
-			case 'publish': return publish(args._[1]);
-			default: return null;
+	try {
+		const promise = (() => {
+			switch (args._[0]) {
+				case 'package': return pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`));
+				case 'publisher': return publisher(args._[1], args._[2]);
+				case 'publish': return publish(args._[1]);
+				default: return null;
+			}
+		})();
+		
+		if (promise) {
+			promise.catch(fatal);
+			return true;
 		}
-	})();
-	
-	if (promise) {
-		promise.catch(fatal);
+		
+		return false;
+	} catch (e) {
+		fatal(e);
 		return true;
 	}
-	
-	return false;
 }
 
 module.exports = function (argv: string[]): void {
