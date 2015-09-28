@@ -9,8 +9,7 @@ function helpCommand(): void {
 	console.log(`Usage: vsce [command] [opts] [args]
 
 Commands:
-    package [vsix path]          Packages the extension into a .vsix package
-    publish                      Publishes the extension
+    publish                      Publishes an extension
     publisher add [publisher]    Add a publisher
     publisher rm [publisher]     Remove a publisher
     publisher list               List all added publishers
