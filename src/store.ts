@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { exec } from 'child_process';
 import { Promise, nfcall, resolve, reject } from 'q';
 import { home } from 'osenv';
 import { read, getGalleryAPI } from './util';
@@ -39,6 +40,13 @@ function load(): Promise<IStore> {
 
 function save(store: IStore): Promise<IStore> {
 	return nfcall<void>(fs.writeFile, storePath, JSON.stringify(store))
+		.then(() => {
+			if (process.platform !== 'win32') {
+				return resolve(null);
+			}
+			
+			return nfcall(exec, `attrib +H ${ storePath }`);
+		})
 		.then(() => store);
 }
 
