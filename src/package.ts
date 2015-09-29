@@ -11,7 +11,18 @@ import { exec } from 'child_process';
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 
-function readManifest(cwd: string): Promise<Manifest> {
+export interface IFile {
+	path: string;
+	contents?: Buffer;
+	localPath?: string;
+}
+
+export interface IPackageResult {
+	manifest: Manifest;
+	packagePath: string;
+}
+
+export function readManifest(cwd: string): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 	
 	return nfcall<string>(fs.readFile, manifestPath, 'utf8')
@@ -92,44 +103,41 @@ function collectFiles(cwd: string): Promise<string[]> {
 	});
 }
 
-function writeVsix(cwd: string, manifest: Manifest, packagePath: string): Promise<string> {
-	packagePath = packagePath || defaultPackagePath(cwd, manifest);
-	
+export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
+	return all<any>([toVsixManifest(manifest), collectFiles(cwd)])
+		.spread((vsixManifest: string, files: string[]) => [
+			{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
+			{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
+			...files.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }))
+		]);
+}
+
+function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 	return nfcall(fs.unlink, packagePath)
 		.catch(err => err.code !== 'ENOENT' ? reject(err) : resolve(null))
-		.then(() => {
-			return all<any>([toVsixManifest(manifest), collectFiles(cwd)])
-				.spread((vsixManifest: string, files: string[]) => Promise<string>((c, e) => {
-					const zip = new yazl.ZipFile();
-					zip.addBuffer(new Buffer(vsixManifest, 'utf8'), 'extension.vsixmanifest');
-					zip.addFile(path.join(resourcesPath, '[Content_Types].xml'), '[Content_Types].xml');
-					files.forEach(file => zip.addFile(path.join(cwd, file), 'extension/' + file));
-					zip.end();
-					
-					const zipStream = fs.createWriteStream(packagePath);
-					zip.outputStream.pipe(zipStream);
-					
-					zip.outputStream.once('error', e);
-					zipStream.once('error', e);
-					zipStream.once('finish', () => c(packagePath));
-				}));
-		});
+		.then(() => Promise<string>((c, e) => {
+			const zip = new yazl.ZipFile();
+			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
+			zip.end();
+			
+			const zipStream = fs.createWriteStream(packagePath);
+			zip.outputStream.pipe(zipStream);
+			
+			zip.outputStream.once('error', e);
+			zipStream.once('error', e);
+			zipStream.once('finish', () => c(packagePath));
+		}));
 }
 
 function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${ manifest.name }-${ manifest.version }.vsix`);
 }
 
-export interface IPackageResult {
-	manifest: Manifest;
-	packagePath: string;
-}
-
 export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
 		.then(validateManifest)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => writeVsix(cwd, manifest, packagePath)
-			.then(packagePath => ({ manifest, packagePath }))
-		);
+		.then(manifest => collect(cwd, manifest)
+			.then(files => writeVsix(files, packagePath || defaultPackagePath(cwd, manifest))
+				.then(packagePath => ({ manifest, packagePath }))));
 }
