@@ -89,7 +89,12 @@ function toVsixManifest(manifest: Manifest): Promise<string> {
 		}));
 }
 
-const defaultIgnore = ['.vscodeignore', '**/*.vsix', '**/.DS_Store'];
+const defaultIgnore = [
+	'.vscodeignore',
+	'**/.git/**',
+	'**/*.vsix',
+	'**/.DS_Store'
+];
 
 function collectFiles(cwd: string): Promise<string[]> {
 	return nfcall<string[]>(glob, '**', { cwd, nodir: true, dot: true }).then(files => {
