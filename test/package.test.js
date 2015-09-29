@@ -38,4 +38,18 @@ describe('collect', () => {
 			})
 			.catch(cb);
 	});
+	
+	it('should ignore devDependencies', cb => {
+		const cwd = fixture('devDependencies');
+		
+		readManifest(cwd)
+			.then(manifest => collect(cwd, manifest))
+			.then(files => {
+				assert.equal(files.length, 4);
+				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
+				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
+				cb();
+			})
+			.catch(cb);
+	});
 });

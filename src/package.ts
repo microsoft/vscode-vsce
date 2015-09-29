@@ -96,11 +96,17 @@ const defaultIgnore = [
 	'**/.DS_Store'
 ];
 
-function collectFiles(cwd: string): Promise<string[]> {
+function devDependenciesIgnore(manifest: Manifest): string[] {
+	const devDependencies = Object.keys(manifest.devDependencies || {});
+	return devDependencies.map(d => `node_modules/${ d }/**`);
+}
+
+function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 	return nfcall<string[]>(glob, '**', { cwd, nodir: true, dot: true }).then(files => {
 		return nfcall<string>(fs.readFile, path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? reject(err) : resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
+			.then(ignore => devDependenciesIgnore(manifest).concat(ignore))
 			.then(ignore => defaultIgnore.concat(ignore))
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
 			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
@@ -109,7 +115,7 @@ function collectFiles(cwd: string): Promise<string[]> {
 }
 
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
-	return all<any>([toVsixManifest(manifest), collectFiles(cwd)])
+	return all<any>([toVsixManifest(manifest), collectFiles(cwd, manifest)])
 		.spread((vsixManifest: string, files: string[]) => [
 			{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
 			{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
