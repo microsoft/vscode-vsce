@@ -52,13 +52,13 @@ export function list(publisher: string): Promise<any> {
 		.then(getGalleryAPI)
 		.then(api => {
 			const criteira = [{ filterType: ExtensionQueryFilterType.Tag, value: 'vscode' }];
-			const filters = [{ criteria: criteira, direction: PagingDirection.Backward, pageSize: 1000, pagingToken: null }]
+			const filters = [{ criteria: criteira, direction: PagingDirection.Backward, pageSize: 1000, pagingToken: null }];
 			const query = { filters, flags: ExtensionQueryFlags.IncludeVersions };
 			
 			return api.queryExtensions(query).then(result => {
-				return result.results[0].extensions.forEach(e => {
-					console.log(`${ e.extensionName } @ ${ e.versions[0].version }`);
-				});
+				return result.results[0].extensions
+					.filter(e => e.publisher.publisherName === publisher)
+					.forEach(e => console.log(`${ e.extensionName } @ ${ e.versions[0].version }`));
 			});
 		});
 };
