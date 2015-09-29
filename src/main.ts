@@ -6,13 +6,13 @@ import { publisher } from './store';
 const packagejson = require('../package.json');
 
 function helpCommand(): void {
-	console.log(`Usage: vsce [command] [opts] [args]
+	console.log(`Usage: vsce [opts] <command> [args]
 
 Commands:
     publish                      Publishes an extension
-    list [publisher]             Lists all extensions published by the given publisher
-    publisher add [publisher]    Add a publisher
-    publisher rm [publisher]     Remove a publisher
+    list <publisher>             Lists all extensions published by the given publisher
+    publisher add <publisher>    Add a publisher
+    publisher rm <publisher>     Remove a publisher
     publisher list               List all added publishers
 
 Global options:
