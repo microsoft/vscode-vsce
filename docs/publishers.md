@@ -11,9 +11,9 @@ management of extensions is provided through that service.
 ### Get a Personal Access Token
 
 First, login to or sign up for
-[Visual Studio Online](https://www.visualstudio.com/en-us/get-started/setup/sign-up-for-visual-studio-online)
+[Visual Studio Online](https://www.visualstudio.com/en-us/get-started/setup/sign-up-for-visual-studio-online).
 
-Then, from your account's home page (`https://[ACCOUNT].visualstudio.com`), go to your
+Then, from your account's home page `https://ACCOUNT.visualstudio.com`, go to
 the **My Profile** page:
 
 ![1](images/publishers1.png)
@@ -25,10 +25,11 @@ Switch to the **Security** tab and **Add** a new Personal Access Token:
 Give the Personal Access Token a nice description, optionally extend its 
 expiration date to 1 year and make it access every account:
 
-![3](images/publishers2.png)
+![3](images/publishers3.png)
 
-The next screen will display your newly created Personal Access Token. **Copy**
-it, you'll need it to create a publisher.
+The next screen will display your newly created Personal Access Token.
+
+**Copy** it, you'll need it to create a publisher.
 
 ## Create a Publisher
 
