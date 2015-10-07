@@ -1,5 +1,5 @@
 import * as minimist from 'minimist';
-import { pack } from './package';
+import { pack, ls } from './package';
 import { publish, list } from './publish';
 import { fatal } from './util';
 import { publisher } from './store';
@@ -10,6 +10,7 @@ function helpCommand(): void {
 
 Commands:
     publish                      Publishes an extension
+    ls                           Lists all the files that will be packaged
     list <publisher>             Lists all extensions published by the given publisher
     publisher add <publisher>    Add a publisher
     publisher rm <publisher>     Remove a publisher
@@ -32,6 +33,7 @@ function command(args: minimist.ParsedArgs): boolean {
 		const promise = (() => {
 			switch (args._[0]) {
 				case 'package': return pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`));
+				case 'ls': return ls();
 				case 'publish': return publish(args._[1]);
 				case 'list': return list(args._[1]);
 				case 'publisher': return publisher(args._[1], args._[2]);

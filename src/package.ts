@@ -66,7 +66,7 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	}
 	
 	const script = manifest.scripts['vscode:prepublish'];
-	console.log(`Executing prepublish script '${ script }'...`);
+	console.warn(`Executing prepublish script '${ script }'...`);
 	
 	return nfcall<string>(exec, script, { cwd })
 		.catch(err => reject(err.message))
@@ -151,4 +151,12 @@ export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackag
 		.then(manifest => collect(cwd, manifest)
 			.then(files => writeVsix(files, packagePath || defaultPackagePath(cwd, manifest))
 				.then(packagePath => ({ manifest, packagePath }))));
+}
+
+export function ls(cwd = process.cwd()): Promise<any> {
+	return readManifest(cwd)
+		.then(validateManifest)
+		.then(manifest => prepublish(cwd, manifest))
+		.then(manifest => collectFiles(cwd, manifest))
+		.then(files => files.forEach(f => console.log(`${f}`)));
 }
