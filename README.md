@@ -14,7 +14,7 @@ Make sure it has at least the following fields:
 * `name`
 * `version`
 * `publisher`
-* `engines.vscode`
+* `engines["vscode"]`
 
 ### Example:
 
