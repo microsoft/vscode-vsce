@@ -14,6 +14,7 @@ Commands:
     unpublish [<publisher> <name>]  Unpublishes an extension
     list <publisher>                Lists all extensions published by the given publisher
     publisher create <publisher>    Creates a new publisher
+    publisher delete <publisher>    Deletes a publisher
     publisher add <publisher>       Add a publisher
     publisher rm <publisher>        Remove a publisher
     publisher list                  List all added publishers

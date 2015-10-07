@@ -71,7 +71,7 @@ export function unpublish(publisher?: string, name?: string, cwd = process.cwd()
 	return details.then(({ publisher, name }) => {
 		const fullName = `${ publisher }.${ name }`;
 		
-		return read(`This will FOREVER delete ${ fullName }! Are you sure? [y/N] `)
+		return read(`This will FOREVER delete '${ fullName }'! Are you sure? [y/N] `)
 			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
 			.then(() => getPublisher(publisher))
 			.then(p => p.pat)

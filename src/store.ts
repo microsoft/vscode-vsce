@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
-import { Promise, nfcall, resolve, reject } from 'q';
+import { Promise, nfcall, resolve, reject, ninvoke } from 'q';
 import { home } from 'osenv';
-import { read, getGalleryAPI } from './util';
+import { read, getGalleryAPI, getRawGalleryAPI } from './util';
 import { validatePublisher } from './validation';
 
 const storePath = path.join(home(), '.vsce');
@@ -53,6 +53,11 @@ function save(store: IStore): Promise<IStore> {
 function addPublisherToStore(store: IStore, publisher: IPublisher): Promise<IPublisher> {
 	store.publishers = [...store.publishers.filter(p => p.name !== publisher.name), publisher];
 	return save(store).then(() => publisher);
+}
+
+function removePublisherFromStore(store: IStore, publisherName: string): Promise<any> {
+	store.publishers = store.publishers.filter(p => p.name !== publisherName);
+	return save(store);
 }
 
 function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
@@ -105,8 +110,7 @@ function rmPublisher(publisherName: string): Promise<any> {
 			return reject(`Unknown publisher '${ publisherName }'`);
 		}
 		
-		store.publishers = store.publishers.filter(p => p.name !== publisherName);
-		return save(store);
+		return removePublisherFromStore(store, publisherName);
 	});
 }
 
@@ -130,6 +134,17 @@ function createPublisher(publisherName: string): Promise<any> {
 					.then(() => ({ name: publisherName, pat }));
 			})
 			.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
+	})
+	.then(() => console.log(`Successfully created publisher '${ publisherName }'.`));
+}
+
+function deletePublisher(publisherName: string): Promise<any> {
+	return getPublisher(publisherName).then(({ pat }) => {
+		return read(`This will FOREVER delete '${ publisherName }'! Are you sure? [y/N] `)
+			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
+			.then(() => ninvoke(getRawGalleryAPI(pat), 'deletePublisher', publisherName))
+			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
+			.then(() => console.log(`Successfully deleted publisher '${ publisherName }'.`));
 	});
 }
 
@@ -137,11 +152,12 @@ function listPublishers(): Promise<IPublisher[]> {
 	return load().then(store => store.publishers);
 }
 
-export function publisher(action: string, publisher: string): Promise<any> {
+export function publisher(action: string, publisherName: string): Promise<any> {
 	switch (action) {
-		case 'create': return createPublisher(publisher);
-		case 'add': return addPublisher(publisher);
-		case 'rm': return rmPublisher(publisher);
+		case 'create': return createPublisher(publisherName);
+		case 'delete': return deletePublisher(publisherName);
+		case 'add': return addPublisher(publisherName);
+		case 'rm': return rmPublisher(publisherName);
 		case 'list': default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
 	}
 }
