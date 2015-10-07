@@ -1,0 +1,8 @@
+src/
+typings/
+test/
+.gitignore
+gulpfile.babel.js
+jsconfig.json
+tsconfig.json
+tsd.json
