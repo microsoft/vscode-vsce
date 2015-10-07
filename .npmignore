@@ -1,6 +1,7 @@
 src/
 typings/
 test/
+docs/
 .gitignore
 gulpfile.babel.js
 jsconfig.json
