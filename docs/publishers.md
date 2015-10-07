@@ -1,8 +1,8 @@
 # Publishers
 
 A **publisher** is the identity who publishes extensions to the Visual Studio Code
-gallery. Every extension needs to include a `publisher` name in its `package.json`
-file.
+gallery. Every extension needs to include a `publisher` name in its [`package.json`
+file](manifest.md).
 
 ## Gallery
 
