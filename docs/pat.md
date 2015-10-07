@@ -1,3 +1,3 @@
-# Extension Publishers
+# About Publishers
 
 etc
