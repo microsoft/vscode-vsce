@@ -1,5 +1,11 @@
 # Publishers
 
+A **publisher** is the identity who publishes extensions to the Visual Studio Code
+gallery. Every extension needs to include a `publisher` name in its `package.json`
+file.
+
+## Gallery
+
 Visual Studio Code leverages
 [Visual Studio Online](https://www.visualstudio.com/products/what-is-visual-studio-online-vs)
 for its gallery services. This means that authentication, hosting and
