@@ -2,7 +2,7 @@ import { Promise, nfcall } from 'q';
 import { assign } from 'lodash';
 import _read = require('read');
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
-import { IQGalleryApi } from 'vso-node-api/GalleryApi';
+import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 
 export function fatal(message: any, ...args: any[]) {
 	if (message instanceof Error) {
@@ -26,4 +26,10 @@ export function getGalleryAPI(pat: string): IQGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
 	return vsoapi.getQGalleryApi('https://app.market.visualstudio.com');
+}
+
+export function getRawGalleryAPI(pat: string): IGalleryApi {
+	const authHandler = getBasicHandler('oauth', pat);
+	const vsoapi = new WebApi('oauth', authHandler);
+	return vsoapi.getGalleryApi('https://app.market.visualstudio.com');
 }

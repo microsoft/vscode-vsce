@@ -1,6 +1,6 @@
 import * as minimist from 'minimist';
 import { pack, ls } from './package';
-import { publish, list } from './publish';
+import { publish, list, unpublish } from './publish';
 import { fatal } from './util';
 import { publisher } from './store';
 const packagejson = require('../package.json');
@@ -9,16 +9,17 @@ function helpCommand(): void {
 	console.log(`Usage: vsce [opts] <command> [args]
 
 Commands:
-    publish                      Publishes an extension
-    ls                           Lists all the files that will be packaged
-    list <publisher>             Lists all extensions published by the given publisher
-    publisher add <publisher>    Add a publisher
-    publisher rm <publisher>     Remove a publisher
-    publisher list               List all added publishers
+    ls                              Lists all the files that will be published
+    publish                         Publishes an extension
+    unpublish [<publisher> <name>]  Unpublishes an extension
+    list <publisher>                Lists all extensions published by the given publisher
+    publisher add <publisher>       Add a publisher
+    publisher rm <publisher>        Remove a publisher
+    publisher list                  List all added publishers
 
 Global options:
-    --help, -h                   Display help
-    --version, -v                Display version
+    --help, -h                      Display help
+    --version, -v                   Display version
 
 VSCode Extension Manager v${ packagejson.version }`
 	);
@@ -35,6 +36,7 @@ function command(args: minimist.ParsedArgs): boolean {
 				case 'package': return pack(args._[1]).then(({ packagePath }) => console.log(`Package created: ${ packagePath }`));
 				case 'ls': return ls();
 				case 'publish': return publish(args._[1]);
+				case 'unpublish': return unpublish(args._[1], args._[2]);
 				case 'list': return list(args._[1]);
 				case 'publisher': return publisher(args._[1], args._[2]);
 				default: return null;

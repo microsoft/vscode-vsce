@@ -22,20 +22,6 @@ export interface IPackageResult {
 	packagePath: string;
 }
 
-export function readManifest(cwd: string): Promise<Manifest> {
-	const manifestPath = path.join(cwd, 'package.json');
-	
-	return nfcall<string>(fs.readFile, manifestPath, 'utf8')
-		.catch(() => reject<string>(`Extension manifest not found: ${ manifestPath }`))
-		.then<Manifest>(manifestStr => {
-			try {
-				return resolve(JSON.parse(manifestStr));
-			} catch (e) {
-				return reject(`Error parsing manifest file: not a valid JSON file.`);
-			}
-		});
-}
-
 function validateManifest(manifest: Manifest): Promise<Manifest> {
 	if (!manifest.publisher) {
 		return reject<Manifest>('Manifest missing field: publisher');
@@ -58,6 +44,21 @@ function validateManifest(manifest: Manifest): Promise<Manifest> {
 	}
 	
 	return resolve(manifest);
+}
+
+export function readManifest(cwd: string): Promise<Manifest> {
+	const manifestPath = path.join(cwd, 'package.json');
+	
+	return nfcall<string>(fs.readFile, manifestPath, 'utf8')
+		.catch(() => reject<string>(`Extension manifest not found: ${ manifestPath }`))
+		.then<Manifest>(manifestStr => {
+			try {
+				return resolve(JSON.parse(manifestStr));
+			} catch (e) {
+				return reject(`Error parsing manifest file: not a valid JSON file.`);
+			}
+		})
+		.then(validateManifest);
 }
 
 function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
@@ -146,7 +147,6 @@ function defaultPackagePath(cwd: string, manifest: Manifest): string {
 
 export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
-		.then(validateManifest)
 		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => collect(cwd, manifest)
 			.then(files => writeVsix(files, packagePath || defaultPackagePath(cwd, manifest))
@@ -155,7 +155,6 @@ export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackag
 
 export function ls(cwd = process.cwd()): Promise<any> {
 	return readManifest(cwd)
-		.then(validateManifest)
 		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => collectFiles(cwd, manifest))
 		.then(files => files.forEach(f => console.log(`${f}`)));

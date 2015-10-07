@@ -1,10 +1,10 @@
 import { readFile } from 'fs';
 import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { nfcall, Promise, reject } from 'q';
-import { pack } from './package';
+import { nfcall, Promise, reject, ninvoke, resolve } from 'q';
+import { pack, readManifest } from './package';
 import { tmpName } from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI } from './util';
+import { getGalleryAPI, getRawGalleryAPI, read } from './util';
 import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 
@@ -21,7 +21,7 @@ export function publish(cwd = process.cwd()): Promise<any> {
 				.then(getGalleryAPI)
 				.then(api => {
 					return nfcall<string>(readFile, packagePath, 'base64').then(extensionManifest => {
-						const fullName = `${ manifest.name }@${ manifest.version }`;
+						const fullName = `${ manifest.publisher}.${ manifest.name }@${ manifest.version }`;
 						console.log(`Publishing ${ fullName }...`);
 						
 						return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
@@ -42,7 +42,7 @@ export function publish(cwd = process.cwd()): Promise<any> {
 						});
 				});
 		});
-};
+}
 
 export function list(publisher: string): Promise<any> {
 	validatePublisher(publisher);
@@ -61,4 +61,22 @@ export function list(publisher: string): Promise<any> {
 					.forEach(e => console.log(`${ e.extensionName } @ ${ e.versions[0].version }`));
 			});
 		});
-};
+}
+
+export function unpublish(publisher?: string, name?: string, cwd = process.cwd()): Promise<any> {
+	const details = publisher && name
+		? resolve(({ publisher, name }))
+		: readManifest(cwd);
+	
+	return details.then(({ publisher, name }) => {
+		const fullName = `${ publisher }.${ name }`;
+		
+		return read(`This will FOREVER delete ${ fullName }! Are you sure? [y/N] `)
+			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
+			.then(() => getPublisher(publisher))
+			.then(p => p.pat)
+			.then(getRawGalleryAPI)
+			.then(api => ninvoke(api, 'deleteExtension', publisher, name, ''))
+			.then(() => console.log(`Successfully deleted ${ fullName }!`));
+	});
+}
