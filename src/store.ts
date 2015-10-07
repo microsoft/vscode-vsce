@@ -50,6 +50,11 @@ function save(store: IStore): Promise<IStore> {
 		.then(() => store);
 }
 
+function addPublisherToStore(store: IStore, publisher: IPublisher): Promise<IPublisher> {
+	store.publishers = [...store.publishers.filter(p => p.name !== publisher.name), publisher];
+	return save(store).then(() => publisher);
+}
+
 function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 	return read(`Personal Access Token for publisher '${ publisherName }':`, { silent: true, replace: '*' })
 		.then(pat => {
@@ -60,11 +65,7 @@ function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 				return pat;
 			});
 		})
-		.then(pat => {
-			const publisher = { name: publisherName, pat };
-			store.publishers = [...store.publishers.filter(p => p.name !== publisherName), publisher];
-			return save(store).then(() => publisher);
-		});
+		.then(pat => addPublisherToStore(store, { name: publisherName, pat }));
 }
 
 export function getPublisher(publisherName: string): Promise<IPublisher> {
@@ -109,12 +110,36 @@ function rmPublisher(publisherName: string): Promise<any> {
 	});
 }
 
+function createPublisher(publisherName: string): Promise<any> {
+	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
+		return read(`Personal Access Token:`, { silent: true, replace: '*' })
+			.then(pat => {
+				const api = getGalleryAPI(pat);
+				const raw = {
+					publisherName,
+					displayName,
+					extensions: [],
+					flags: null,
+					lastUpdated: null,
+					longDescription: '',
+					publisherId: null,
+					shortDescription: ''
+				};
+				
+				return api.createPublisher(raw)
+					.then(() => ({ name: publisherName, pat }));
+			})
+			.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
+	});
+}
+
 function listPublishers(): Promise<IPublisher[]> {
 	return load().then(store => store.publishers);
 }
 
 export function publisher(action: string, publisher: string): Promise<any> {
 	switch (action) {
+		case 'create': return createPublisher(publisher);
 		case 'add': return addPublisher(publisher);
 		case 'rm': return rmPublisher(publisher);
 		case 'list': default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
