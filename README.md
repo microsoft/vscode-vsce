@@ -6,6 +6,11 @@ This tool assists in publishing Visual Studio Code extensions.
 npm install -g vsce
 ```
 
+## Publishers
+
+You'll need to [create a **publisher**](docs/pat.md) in order to publish
+an extension to the Visual Studio Code gallery.
+
 ## Manifest files
 
 Every Visual Studio Code extension needs a manifest file: `package.json`.
