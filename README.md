@@ -6,8 +6,8 @@ This tool assists in publishing Visual Studio Code extensions.
 npm install -g vsce
 ```
 
-> Before you can publish an extension to the gallery, you'll first need
-to [create a **publisher**](docs/pat.md).
+**Note:** Before you can publish an extension to the gallery, you'll first need
+to [create a publisher](docs/pat.md).
 
 ## Manifest files
 
