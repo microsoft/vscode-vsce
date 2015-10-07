@@ -8,7 +8,7 @@ npm install -g vsce
 
 ## Manifest files
 
-Every Visual Studio extension needs a manifest file: `package.json`.
+Every Visual Studio Code extension needs a manifest file: `package.json`.
 Make sure it has at least the following fields:
 
 * `name`
