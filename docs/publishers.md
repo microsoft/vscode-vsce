@@ -13,7 +13,7 @@ management of extensions is provided through that service.
 
 `vsce` can only publish extensions using
 [Personal Access Tokens](https://www.visualstudio.com/en-us/news/2015-jul-7-vso.aspx).
-You need to create at least one, in order to publish an extension.
+You need to create at least one in order to publish an extension.
 
 ### Get a Personal Access Token
 
