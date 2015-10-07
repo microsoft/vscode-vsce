@@ -1,5 +1,4 @@
-# vsce
-VSCode Extension Manager
+# VSCode Extension Manager
 
 ## Development
 
