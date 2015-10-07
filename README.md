@@ -28,11 +28,8 @@ Publishing uuid@0.0.1...
 Successfully published uuid@0.0.1!
 ```
 
-**Note:** Before you can publish an extension to the gallery, you'll first need
-to [create a **publisher**](docs/publishers.md).
-
 ## Help Topics
 
 * [Manifest File](docs/manifest.md)
-* [Publishers](docs/publishers.md)
+* [Publishers and Personal Access Tokens](docs/publishers.md)
 * [Advanced Usage](docs/advanced.md)
