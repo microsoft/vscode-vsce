@@ -1,4 +1,4 @@
-# About the Manifest
+# Manifest File
 
 Every Visual Studio Code extension needs a manifest file `package.json` at
 the root of the extension directory structure.

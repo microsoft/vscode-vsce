@@ -1,6 +1,4 @@
-# About Publishers
-
-## Introduction
+# Publishers
 
 Visual Studio Code leverages
 [Visual Studio Online](https://www.visualstudio.com/products/what-is-visual-studio-online-vs)

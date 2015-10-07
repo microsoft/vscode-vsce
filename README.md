@@ -33,6 +33,6 @@ to [create a **publisher**](docs/publishers.md).
 
 ## Help Topics
 
-* [About the Manifest](docs/manifest.md)
-* [About Publishers](docs/publishers.md)
+* [Manifest File](docs/manifest.md)
+* [Publishers](docs/publishers.md)
 * [Advanced Usage](docs/advanced.md)
