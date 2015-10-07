@@ -1,5 +1,5 @@
 {
-  "name": "vscode-extension-manager",
+  "name": "vsce",
   "version": "0.1.0",
   "description": "VSCode Extension Manager",
   "main": "out/main.js",
