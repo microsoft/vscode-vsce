@@ -3,7 +3,7 @@ export function validatePublisher(publisher: string): void {
 		throw new Error(`Missing publisher name`);
 	}
 	
-	if (!/^[a-z0-9\-]+$/i.test(publisher)) {
+	if (!/^[a-z0-9][a-z0-9\-]*$/i.test(publisher)) {
 		throw new Error(`Invalid publisher '${ publisher }'`);
 	}
 }
