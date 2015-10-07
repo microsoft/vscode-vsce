@@ -13,11 +13,11 @@ Commands:
     publish                         Publishes an extension
     unpublish [<publisher> <name>]  Unpublishes an extension
     list <publisher>                Lists all extensions published by the given publisher
+    publisher                       List all known publishers
     publisher create <publisher>    Creates a new publisher
     publisher delete <publisher>    Deletes a publisher
-    publisher add <publisher>       Add a publisher
-    publisher rm <publisher>        Remove a publisher
-    publisher list                  List all added publishers
+    publisher login <publisher>     Add a publisher to the known publishers list
+    publisher logout <publisher>    Remove a publisher from the known publishers list
 
 Global options:
     --help, -h                      Display help

@@ -82,7 +82,7 @@ export function getPublisher(publisherName: string): Promise<IPublisher> {
 	});
 }
 
-function addPublisher(publisherName: string): Promise<IPublisher> {
+function loginPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 	
 	return load()
@@ -100,7 +100,7 @@ function addPublisher(publisherName: string): Promise<IPublisher> {
 		.then(store => requestPAT(store, publisherName));
 }
 
-function rmPublisher(publisherName: string): Promise<any> {
+function logoutPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
 	
 	return load().then(store => {
@@ -156,8 +156,8 @@ export function publisher(action: string, publisherName: string): Promise<any> {
 	switch (action) {
 		case 'create': return createPublisher(publisherName);
 		case 'delete': return deletePublisher(publisherName);
-		case 'add': return addPublisher(publisherName);
-		case 'rm': return rmPublisher(publisherName);
-		case 'list': default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
+		case 'login': return loginPublisher(publisherName);
+		case 'logout': return logoutPublisher(publisherName);
+		default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
 	}
 }
