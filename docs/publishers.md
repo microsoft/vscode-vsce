@@ -11,8 +11,9 @@ Visual Studio Code leverages
 for its gallery services. This means that authentication, hosting and
 management of extensions is provided through that service.
 
-`vsce` is able to authenticate against Visual Studio Online through
+`vsce` can only publish extensions using
 [Personal Access Tokens](https://www.visualstudio.com/en-us/news/2015-jul-7-vso.aspx).
+You need to create at least one, in order to publish an extension.
 
 ### Get a Personal Access Token
 
