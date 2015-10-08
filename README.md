@@ -33,3 +33,4 @@ Successfully published uuid@0.0.1!
 * [Manifest File](docs/manifest.md)
 * [Publishers and Personal Access Tokens](docs/publishers.md)
 * [Advanced Usage](docs/advanced.md)
+* [FAQ](docs/faq.md)
