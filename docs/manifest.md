@@ -18,8 +18,6 @@ Here's a minimal manifest file:
 
 ## Fields
 
-The manifest file builds upon [npm's `package.json`](https://docs.npmjs.com/files/package.json).
-
 Name | Required | Type | Details
 ---- |:--------:| ---- | -------
 `name` | ✓ | `string` | The name of the extension.
@@ -30,3 +28,4 @@ Name | Required | Type | Details
 `activationEvents` | | `array` | An array of the activation events for this extension.
 `keywords` | | `array` | An array of **keywords** or **tags** to make it easier to find the extension.
 
+Also check [npm's `package.json` reference](https://docs.npmjs.com/files/package.json).
