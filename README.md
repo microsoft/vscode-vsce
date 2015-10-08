@@ -4,7 +4,7 @@ This tool assists in publishing Visual Studio Code extensions.
 
 #### Quick Reference
 
-* [Manifest File](docs/manifest.md)
+* [`package.json` reference](docs/manifest.md)
 * [Publishers and Personal Access Tokens](docs/publishers.md)
 * [Advanced Usage](docs/advanced.md)
 * [FAQ](docs/faq.md)
