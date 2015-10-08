@@ -2,15 +2,30 @@
   "name": "vsce",
   "version": "0.1.0",
   "description": "VSCode Extension Manager",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/Microsoft/vsce"
+  },
+  "homepage": "https://code.visualstudio.com",
+  "bugs": "https://github.com/Microsoft/vsce/issues",
+  "keywords": [
+    "vscode",
+    "vsce",
+    "extension"
+  ],
+  "contributors": [ "Microsoft Corporation" ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
   "main": "out/main.js",
   "bin": {
     "vsce": "out/vsce"
   },
-  "author": "Microsoft Corporation",
-  "license": "MIT",
   "scripts": {
     "test": "mocha",
     "prepublish": "gulp compile"
+  },
+  "engines": {
+    "node" : ">= 0.10.3"
   },
   "dependencies": {
     "glob": "^5.0.14",
