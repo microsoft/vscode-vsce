@@ -2,7 +2,14 @@
 
 This tool assists in publishing Visual Studio Code extensions.
 
-## Get Started
+#### Quick Reference
+
+* [Manifest File](docs/manifest.md)
+* [Publishers and Personal Access Tokens](docs/publishers.md)
+* [Advanced Usage](docs/advanced.md)
+* [FAQ](docs/faq.md)
+
+## Usage
 
 First, install using npm:
 
@@ -27,10 +34,3 @@ $ vsce publish
 Publishing uuid@0.0.1...
 Successfully published uuid@0.0.1!
 ```
-
-## Help Topics
-
-* [Manifest File](docs/manifest.md)
-* [Publishers and Personal Access Tokens](docs/publishers.md)
-* [Advanced Usage](docs/advanced.md)
-* [FAQ](docs/faq.md)
