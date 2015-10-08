@@ -24,7 +24,7 @@ Name | Required | Type | Details
 ---- |:--------:| ---- | -------
 `name` | ✓ | `string` | The name of the extension.
 `version` | ✓ | `string` | [Semver](http://semver.org/) compatible version.
-`publisher` | ✓ | `string` | The [**publisher name**](https://github.com/Microsoft/vsce/blob/master/docs/publishers.md).
+`publisher` | ✓ | `string` | The [publisher name](https://github.com/Microsoft/vsce/blob/master/docs/publishers.md).
 `engines` | ✓ | `object` | An object containing at least the `vscode` key matching the versions of Code that the extension is compatible with.
 `contributes` | | `object` | An object describing the extension's contributions.
 `activationEvents` | | `array` | An array of the activation events for this extension.
