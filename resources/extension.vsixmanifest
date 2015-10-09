@@ -12,6 +12,6 @@
   </Installation>
   <Dependencies/>
   <Assets>
-    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="package.json"/>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json"/>
   </Assets>
 </PackageManifest>
