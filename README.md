@@ -1,13 +1,6 @@
 # VSCode Extension Manager
 
-This tool assists in publishing Visual Studio Code extensions.
-
-#### Quick Reference
-
-* [`package.json` reference](docs/manifest.md)
-* [Publishers and Personal Access Tokens](docs/publishers.md)
-* [Advanced Usage](docs/advanced.md)
-* [FAQ](docs/faq.md)
+This tool assists in publishing Visual Studio Code extensions. [Read the docs](https://github.com/Microsoft/vscode-extensionbuilders/blob/master/docs/tools/gallerycli.md).
 
 ## Usage
 
