@@ -1,3 +1,5 @@
+/*global describe,it*/
+
 import { readManifest, collect } from '../out/package';
 import * as path from 'path';
 import * as fs from 'fs';
