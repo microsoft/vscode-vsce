@@ -27,6 +27,11 @@ export interface IPackageResult {
 	packagePath: string;
 }
 
+export interface IAsset {
+	type: string;
+	path: string;
+}
+
 function validateManifest(manifest: Manifest): Promise<Manifest> {
 	if (!manifest.publisher) {
 		return Promise.reject('Manifest missing field: publisher');
@@ -82,7 +87,15 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
-export function toVsixManifest(manifest: Manifest): Promise<string> {
+export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
+	const assets = files.map<IAsset>(f => {
+		if (/^extension\/README.md$/i.test(f.path)) {
+			return { type: 'Microsoft.VisualStudio.Services.Content.Details', path: f.path };
+		}
+		
+		return null;
+	}).filter(f => !!f);
+	
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate({
@@ -92,7 +105,7 @@ export function toVsixManifest(manifest: Manifest): Promise<string> {
 			publisher: manifest.publisher,
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(';'),
-			assets: []
+			assets
 		}));
 }
 
@@ -122,13 +135,17 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 }
 
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
-	return Promise.all<any>([toVsixManifest(manifest), collectFiles(cwd, manifest)])
-		.then<{ vsixManifest: string; files: string[]; }>(promises => <any> _.indexBy(promises, (o,i) => i ? 'files' : 'vsixManifest'))
-		.then(({ vsixManifest, files }) => [
-			{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
-			{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
-			...files.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }))
-		]);
+	return collectFiles(cwd, manifest).then(fileNames => {
+		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		
+		return toVsixManifest(manifest, files).then(vsixManifest => {
+			return [
+				{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
+				{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
+				...files
+			];
+		});
+	});
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<string> {

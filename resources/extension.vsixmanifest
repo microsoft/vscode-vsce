@@ -12,6 +12,7 @@
   </Installation>
   <Dependencies/>
   <Assets>
-    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json"/>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" />
+    <% _.forEach(assets, function (asset) { %><Asset Type="${ asset.type }" Path="${ asset.path }" /><% }); %>
   </Assets>
 </PackageManifest>

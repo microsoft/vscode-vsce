@@ -69,7 +69,7 @@ describe('toVsixManifest', () => {
 			description: 'test extension'
 		};
 		
-		return toVsixManifest(manifest)
+		return toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result);
@@ -95,6 +95,27 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 1);
 				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
 				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
+			});
+	});
+	
+	it('should treat README.md as asset', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension'
+		};
+		
+		const files = [
+			{ path: 'extension/readme.md' }
+		];
+		
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
 });
