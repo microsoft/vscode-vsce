@@ -28,6 +28,9 @@
     },
     "commander/commander.d.ts": {
       "commit": "14ab703f435375194360cdba3abab61afc879c18"
+    },
+    "es6-promise/es6-promise.d.ts": {
+      "commit": "14ab703f435375194360cdba3abab61afc879c18"
     }
   }
 }

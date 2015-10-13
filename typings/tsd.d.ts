@@ -6,3 +6,4 @@
 /// <reference path="vso-node-api/vso-node-api.d.ts" />
 /// <reference path="tmp/tmp.d.ts" />
 /// <reference path="commander/commander.d.ts" />
+/// <reference path="es6-promise/es6-promise.d.ts" />

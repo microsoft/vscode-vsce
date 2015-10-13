@@ -1,12 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest } from './manifest';
-import { nfcall, Promise, reject, resolve, all } from 'q';
-import * as glob from 'glob';
+import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
-import { exec } from 'child_process';
+import * as denodeify from 'denodeify';
+
+const readFile = denodeify<string, string, string>(fs.readFile);
+const unlink = denodeify<string, void>(fs.unlink);
+const exec = denodeify<string, { cwd?: string; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
+const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
@@ -24,38 +29,38 @@ export interface IPackageResult {
 
 function validateManifest(manifest: Manifest): Promise<Manifest> {
 	if (!manifest.publisher) {
-		return reject<Manifest>('Manifest missing field: publisher');
+		return Promise.reject('Manifest missing field: publisher');
 	}
 	
 	if (!manifest.name) {
-		return reject<Manifest>('Manifest missing field: name');
+		return Promise.reject('Manifest missing field: name');
 	}
 	
 	if (!manifest.version) {
-		return reject<Manifest>('Manifest missing field: version');
+		return Promise.reject('Manifest missing field: version');
 	}
 	
 	if (!manifest.engines) {
-		return reject<Manifest>('Manifest missing field: engines');
+		return Promise.reject('Manifest missing field: engines');
 	}
 	
 	if (!manifest.engines.vscode) {
-		return reject<Manifest>('Manifest missing field: engines.vscode');
+		return Promise.reject('Manifest missing field: engines.vscode');
 	}
 	
-	return resolve(manifest);
+	return Promise.resolve(manifest);
 }
 
 export function readManifest(cwd: string): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 	
-	return nfcall<string>(fs.readFile, manifestPath, 'utf8')
-		.catch(() => reject<string>(`Extension manifest not found: ${ manifestPath }`))
+	return readFile(manifestPath, 'utf8')
+		.catch(() => Promise.reject(`Extension manifest not found: ${ manifestPath }`))
 		.then<Manifest>(manifestStr => {
 			try {
-				return resolve(JSON.parse(manifestStr));
+				return Promise.resolve(JSON.parse(manifestStr));
 			} catch (e) {
-				return reject(`Error parsing manifest file: not a valid JSON file.`);
+				return Promise.reject(`Error parsing manifest file: not a valid JSON file.`);
 			}
 		})
 		.then(validateManifest);
@@ -63,22 +68,22 @@ export function readManifest(cwd: string): Promise<Manifest> {
 
 function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
-		return resolve(manifest);
+		return Promise.resolve(manifest);
 	}
 	
 	const script = manifest.scripts['vscode:prepublish'];
 	console.warn(`Executing prepublish script '${ script }'...`);
 	
-	return nfcall<string>(exec, script, { cwd })
-		.catch(err => reject(err.message))
-		.spread((stdout: string, stderr: string) => {
+	return exec(script, { cwd })
+		.then(({ stdout }) => {
 			process.stdout.write(stdout);
-			return resolve(manifest);
-		});
+			return Promise.resolve(manifest);
+		})
+		.catch(err => Promise.reject(err.message));
 }
 
 function toVsixManifest(manifest: Manifest): Promise<string> {
-	return nfcall<string>(fs.readFile, vsixManifestTemplatePath, 'utf8')
+	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate({
 			id: manifest.name,
@@ -103,21 +108,22 @@ function devDependenciesIgnore(manifest: Manifest): string[] {
 }
 
 function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
-	return nfcall<string[]>(glob, '**', { cwd, nodir: true, dot: true }).then(files => {
-		return nfcall<string>(fs.readFile, path.join(cwd, '.vscodeignore'), 'utf8')
-			.catch<string>(err => err.code !== 'ENOENT' ? reject(err) : resolve(''))
+	return glob('**', { cwd, nodir: true, dot: true }).then(files => {
+		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
+			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
 			.then(ignore => devDependenciesIgnore(manifest).concat(ignore))
 			.then(ignore => defaultIgnore.concat(ignore))
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
-			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
-			.spread((ignore: string[], negate: string[]) => files.filter(f => !ignore.some(i => minimatch(f, i)) || negate.some(i => minimatch(f, i.substr(1)))));
+			.then<{ ignore: string[]; negate: string[]; }>(ignore => <any> _.indexBy(_.partition(ignore, i => !/^\s*!/.test(i)), (o, i) => i ? 'negate' : 'ignore'))
+			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i)) || negate.some(i => minimatch(f, i.substr(1)))));
 	});
 }
 
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
-	return all<any>([toVsixManifest(manifest), collectFiles(cwd, manifest)])
-		.spread((vsixManifest: string, files: string[]) => [
+	return Promise.all<any>([toVsixManifest(manifest), collectFiles(cwd, manifest)])
+		.then<{ vsixManifest: string; files: string[]; }>(promises => <any> _.indexBy(promises, (o,i) => i ? 'files' : 'vsixManifest'))
+		.then(({ vsixManifest, files }) => [
 			{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
 			{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
 			...files.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }))
@@ -125,9 +131,9 @@ export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<string> {
-	return nfcall(fs.unlink, packagePath)
-		.catch(err => err.code !== 'ENOENT' ? reject(err) : resolve(null))
-		.then(() => Promise<string>((c, e) => {
+	return unlink(packagePath)
+		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
+		.then(() => new Promise<string>((c, e) => {
 			const zip = new yazl.ZipFile();
 			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();

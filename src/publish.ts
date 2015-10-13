@@ -1,17 +1,20 @@
-import { readFile } from 'fs';
+import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { nfcall, Promise, reject, ninvoke, resolve } from 'q';
 import { pack, readManifest } from './package';
-import { tmpName } from 'tmp';
+import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, getRawGalleryAPI, read } from './util';
 import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
+import * as denodeify from 'denodeify';
+
+const tmpName = denodeify<string>(tmp.tmpName);
+const readFile = denodeify<string, string, string>(fs.readFile);
 
 const galleryUrl = 'https://app.market.visualstudio.com';
 
 export function publish(cwd = process.cwd()): Promise<any> {
-	return nfcall<string>(tmpName)
+	return tmpName()
 		.then(packagePath => pack(packagePath, cwd))
 		.then(result => {
 			const { manifest, packagePath } = result;
@@ -20,15 +23,15 @@ export function publish(cwd = process.cwd()): Promise<any> {
 				.then(p => p.pat)
 				.then(getGalleryAPI)
 				.then(api => {
-					return nfcall<string>(readFile, packagePath, 'base64').then(extensionManifest => {
+					return readFile(packagePath, 'base64').then(extensionManifest => {
 						const fullName = `${ manifest.publisher}.${ manifest.name }@${ manifest.version }`;
 						console.log(`Publishing ${ fullName }...`);
 						
 						return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
-							.catch<PublishedExtension>(err => err.statusCode === 404 ? null : reject(err))
+							.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
 							.then(extension => {
 								if (extension && extension.versions.some(v => v.version === manifest.version)) {
-									return reject<void>(`${ fullName } already exists.`);
+									return Promise.reject(`${ fullName } already exists.`);
 								}
 								
 								var promise = extension
@@ -36,7 +39,7 @@ export function publish(cwd = process.cwd()): Promise<any> {
 									: api.createExtension({ extensionManifest });
 								
 								return promise
-									.catch(err => reject(err.statusCode === 409 ? `${ fullName } already exists.` : err))
+									.catch(err => Promise.reject(err.statusCode === 409 ? `${ fullName } already exists.` : err))
 									.then(() => console.log(`Successfully published ${ fullName }!`));
 							});
 						});
@@ -65,18 +68,21 @@ export function list(publisher: string): Promise<any> {
 
 export function unpublish(publisher?: string, name?: string, cwd = process.cwd()): Promise<any> {
 	const details = publisher && name
-		? resolve(({ publisher, name }))
+		? Promise.resolve(({ publisher, name }))
 		: readManifest(cwd);
 	
 	return details.then(({ publisher, name }) => {
 		const fullName = `${ publisher }.${ name }`;
 		
 		return read(`This will FOREVER delete '${ fullName }'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
+			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
 			.then(() => getPublisher(publisher))
 			.then(p => p.pat)
 			.then(getRawGalleryAPI)
-			.then(api => ninvoke(api, 'deleteExtension', publisher, name, ''))
+			.then(api => {
+				const deleteExtension = denodeify<string, string, string, void>(api.deleteExtension.bind(api));
+				return deleteExtension(publisher, name, '');
+			})
 			.then(() => console.log(`Successfully deleted ${ fullName }!`));
 	});
 }

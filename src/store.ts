@@ -1,12 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
-import { Promise, nfcall, resolve, reject, ninvoke } from 'q';
+import * as cp from 'child_process';
 import { home } from 'osenv';
 import { read, getGalleryAPI, getRawGalleryAPI } from './util';
 import { validatePublisher } from './validation';
+import * as denodeify from 'denodeify';
 
+const readFile = denodeify<string, string, string>(fs.readFile);
+const writeFile = denodeify<string, string, void>(fs.writeFile);
 const storePath = path.join(home(), '.vsce');
+const exec = denodeify<string, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 
 export interface IPublisher {
 	name: string;
@@ -23,29 +26,29 @@ export interface IGetOptions {
 }
 
 function load(): Promise<IStore> {
-	return nfcall<string>(fs.readFile, storePath, 'utf8')
-		.catch<string>(err => err.code !== 'ENOENT' ? reject(err) : resolve('{}'))
+	return readFile(storePath, 'utf8')
+		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
 		.then<IStore>(rawStore => {
 			try {
-				return resolve(JSON.parse(rawStore));
+				return Promise.resolve(JSON.parse(rawStore));
 			} catch (e) {
-				return reject(`Error parsing store: ${ storePath }`);
+				return Promise.reject(`Error parsing store: ${ storePath }`);
 			}
 		})
 		.then(store => {
 			store.publishers = store.publishers || [];
-			return resolve(store);
+			return Promise.resolve(store);
 		});
 }
 
 function save(store: IStore): Promise<IStore> {
-	return nfcall<void>(fs.writeFile, storePath, JSON.stringify(store))
+	return writeFile(storePath, JSON.stringify(store))
 		.then(() => {
 			if (process.platform !== 'win32') {
-				return resolve(null);
+				return Promise.resolve(null);
 			}
 			
-			return nfcall(exec, `attrib +H ${ storePath }`);
+			return exec(`attrib +H ${ storePath }`);
 		})
 		.then(() => store);
 }
@@ -78,7 +81,7 @@ export function getPublisher(publisherName: string): Promise<IPublisher> {
 	
 	return load().then(store => {
 		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
-		return publisher ? resolve(publisher) : requestPAT(store, publisherName);
+		return publisher ? Promise.resolve(publisher) : requestPAT(store, publisherName);
 	});
 }
 
@@ -92,10 +95,10 @@ export function loginPublisher(publisherName: string): Promise<IPublisher> {
 			if (publisher) {
 				console.log(`Publisher '${ publisherName }' is already known`);
 				return read('Do you want to overwrite its PAT? [y/N] ')
-					.then(answer => /^y$/i.test(answer) ? store : reject('Aborted'));
+					.then(answer => /^y$/i.test(answer) ? store : Promise.reject('Aborted'));
 			}
 			
-			return resolve(store);
+			return Promise.resolve(store);
 		})
 		.then(store => requestPAT(store, publisherName));
 }
@@ -107,7 +110,7 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
 		
 		if (!publisher) {
-			return reject(`Unknown publisher '${ publisherName }'`);
+			return Promise.reject(`Unknown publisher '${ publisherName }'`);
 		}
 		
 		return removePublisherFromStore(store, publisherName);
@@ -141,8 +144,12 @@ export function createPublisher(publisherName: string): Promise<any> {
 export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
 		return read(`This will FOREVER delete '${ publisherName }'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
-			.then(() => ninvoke(getRawGalleryAPI(pat), 'deletePublisher', publisherName))
+			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
+			.then(() => {
+				const rawApi = getRawGalleryAPI(pat);
+				const deletePublisher = denodeify<string, void>(rawApi.deletePublisher.bind(rawApi));
+				return deletePublisher(publisherName);
+			})
 			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
 			.then(() => console.log(`Successfully deleted publisher '${ publisherName }'.`));
 	});
