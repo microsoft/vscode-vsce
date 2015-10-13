@@ -4,7 +4,7 @@ import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 
-export function fatal(message: any, ...args: any[]) {
+export function fatal<T>(message: any, ...args: any[]): Promise<T> {
 	if (message instanceof Error) {
 		if (/^cancell?ed$/i.test(message.message)) {
 			return;
@@ -15,6 +15,11 @@ export function fatal(message: any, ...args: any[]) {
 	
 	console.error('Error:', message, ...args);
 	process.exit(1);
+	return Promise.resolve<T>(null);
+}
+
+export function catchFatal<T>(promise: Promise<T>): Promise<T> {
+	return promise.catch<T>(fatal);
 }
 
 const __read = denodeify<_read.Options,string>(_read);

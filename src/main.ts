@@ -1,7 +1,7 @@
 import * as program from 'commander';
 import { pack, ls } from './package';
 import { publish, list, unpublish } from './publish';
-import { fatal } from './util';
+import { catchFatal } from './util';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 const packagejson = require('../package.json');
 
@@ -12,47 +12,47 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
-		.action(() => ls());
+		.action(() => catchFatal(ls()));
 	
 	program
 		.command('publish')
 		.description('Publishes an extension')
-		.action(() => publish());
+		.action(() => catchFatal(publish()));
 	
 	program
 		.command('unpublish [publisher] [name]')
 		.description('Unpublishes an extension')
-		.action((publisher, name) => unpublish(publisher, name));
+		.action((publisher, name) => catchFatal(unpublish(publisher, name)));
 	
 	program
 		.command('list <publisher>')
 		.description('Lists all extensions published by the given publisher')
-		.action(publisher => list(publisher));
+		.action(publisher => catchFatal(list(publisher)));
 	
 	program
 		.command('ls-publishers')
 		.description('List all known publishers')
-		.action(() => listPublishers());
+		.action(() => catchFatal(listPublishers()));
 	
 	program
 		.command('create-publisher <publisher>')
 		.description('Creates a new publisher')
-		.action(publisher => createPublisher(publisher));
+		.action(publisher => catchFatal(createPublisher(publisher)));
 	
 	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher')
-		.action(publisher => deletePublisher(publisher));
+		.action(publisher => catchFatal(deletePublisher(publisher)));
 	
 	program
 		.command('login <publisher>')
 		.description('Add a publisher to the known publishers list')
-		.action(name => loginPublisher(name));
+		.action(name => catchFatal(loginPublisher(name)));
 	
 	program
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
-		.action(name => logoutPublisher(name));
+		.action(name => catchFatal(logoutPublisher(name)));
 	
 	program.parse(argv);
 		
