@@ -82,7 +82,7 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
-function toVsixManifest(manifest: Manifest): Promise<string> {
+export function toVsixManifest(manifest: Manifest): Promise<string> {
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate({
@@ -91,7 +91,8 @@ function toVsixManifest(manifest: Manifest): Promise<string> {
 			version: manifest.version,
 			publisher: manifest.publisher,
 			description: manifest.description || '',
-			tags: (manifest.keywords || []).concat('vscode').join(';')
+			tags: (manifest.keywords || []).concat('vscode').join(';'),
+			assets: []
 		}));
 }
 
