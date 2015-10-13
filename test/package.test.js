@@ -118,4 +118,26 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
+	
+	it('should treat any license file as asset', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			license: 'SEE LICENSE IN thelicense.md'
+		};
+		
+		const files = [
+			{ path: 'extension/thelicense.md' }
+		];
+		
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
+			});
+	});
 });

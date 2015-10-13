@@ -87,10 +87,27 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
+function getLicenseFilter(manifest:Manifest): (name: string) => boolean {
+	const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
+	
+	if (!match || !match[1]) {
+		return () => false;
+	}
+	
+	const regexp = new RegExp('^extension/' + match[1] + '$');
+	return regexp.test.bind(regexp);
+}
+
 export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
+	const licenseFilter = getLicenseFilter(manifest);
+	
 	const assets = files.map<IAsset>(f => {
 		if (/^extension\/README.md$/i.test(f.path)) {
 			return { type: 'Microsoft.VisualStudio.Services.Content.Details', path: f.path };
+		}
+		
+		if (licenseFilter(f.path)) {
+			return { type: 'Microsoft.VisualStudio.Services.Content.License', path: f.path };
 		}
 		
 		return null;
