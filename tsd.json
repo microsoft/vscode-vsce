@@ -6,12 +6,9 @@
   "bundle": "typings/tsd.d.ts",
   "installed": {
     "node/node.d.ts": {
-      "commit": "6f6e5c7dd9effe21fee14eb65fe340ecbbc8580a"
+      "commit": "14ab703f435375194360cdba3abab61afc879c18"
     },
     "lodash/lodash.d.ts": {
-      "commit": "6f6e5c7dd9effe21fee14eb65fe340ecbbc8580a"
-    },
-    "minimist/minimist.d.ts": {
       "commit": "6f6e5c7dd9effe21fee14eb65fe340ecbbc8580a"
     },
     "glob/glob.d.ts": {
@@ -28,6 +25,9 @@
     },
     "tmp/tmp.d.ts": {
       "commit": "6f6e5c7dd9effe21fee14eb65fe340ecbbc8580a"
+    },
+    "commander/commander.d.ts": {
+      "commit": "14ab703f435375194360cdba3abab61afc879c18"
     }
   }
 }

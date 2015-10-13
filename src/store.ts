@@ -82,7 +82,7 @@ export function getPublisher(publisherName: string): Promise<IPublisher> {
 	});
 }
 
-function loginPublisher(publisherName: string): Promise<IPublisher> {
+export function loginPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 	
 	return load()
@@ -100,7 +100,7 @@ function loginPublisher(publisherName: string): Promise<IPublisher> {
 		.then(store => requestPAT(store, publisherName));
 }
 
-function logoutPublisher(publisherName: string): Promise<any> {
+export function logoutPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
 	
 	return load().then(store => {
@@ -114,7 +114,7 @@ function logoutPublisher(publisherName: string): Promise<any> {
 	});
 }
 
-function createPublisher(publisherName: string): Promise<any> {
+export function createPublisher(publisherName: string): Promise<any> {
 	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
 		return read(`Personal Access Token:`, { silent: true, replace: '*' })
 			.then(pat => {
@@ -138,7 +138,7 @@ function createPublisher(publisherName: string): Promise<any> {
 	.then(() => console.log(`Successfully created publisher '${ publisherName }'.`));
 }
 
-function deletePublisher(publisherName: string): Promise<any> {
+export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
 		return read(`This will FOREVER delete '${ publisherName }'! Are you sure? [y/N] `)
 			.then(answer => /^y$/i.test(answer) ? null : reject('Aborted'))
@@ -148,16 +148,8 @@ function deletePublisher(publisherName: string): Promise<any> {
 	});
 }
 
-function listPublishers(): Promise<IPublisher[]> {
-	return load().then(store => store.publishers);
-}
-
-export function publisher(action: string, publisherName: string): Promise<any> {
-	switch (action) {
-		case 'create': return createPublisher(publisherName);
-		case 'delete': return deletePublisher(publisherName);
-		case 'login': return loginPublisher(publisherName);
-		case 'logout': return logoutPublisher(publisherName);
-		default: return listPublishers().then(publishers => publishers.forEach(p => console.log(p.name)));
-	}
+export function listPublishers(): Promise<void> {
+	return load()
+		.then(store => store.publishers)
+		.then(publishers => publishers.forEach(p => console.log(p.name)));
 }
