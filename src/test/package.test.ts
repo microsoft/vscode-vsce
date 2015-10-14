@@ -173,7 +173,7 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Properties);
 				assert.equal(result.PackageManifest.Metadata[0].Properties.length, 1);
-				assert.ok(result.PackageManifest.Metadata[0].Properties[0].Property, 1);
+				assert.ok(result.PackageManifest.Metadata[0].Properties[0].Property);
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property.length, 1);
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Id, 'Microsoft.VisualStudio.Services.Links.Source');
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://homepage/test');
