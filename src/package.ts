@@ -21,6 +21,7 @@ const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml')
 export interface IFile {
 	path: string;
 	contents?: Buffer;
+	localPath?: string;
 }
 
 export interface IPackageResult {
@@ -175,7 +176,7 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
 	return collectFiles(cwd, manifest).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${ f }` }));
+		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
 		
 		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files)])
 			.then(result => [
@@ -191,7 +192,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
 		.then(() => new Promise<string>((c, e) => {
 			const zip = new yazl.ZipFile();
-			files.forEach(f => zip.addBuffer(f.contents, f.path));
+			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();
 			
 			const zipStream = fs.createWriteStream(packagePath);
