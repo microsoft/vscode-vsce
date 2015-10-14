@@ -208,12 +208,17 @@ function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${ manifest.name }-${ manifest.version }.vsix`);
 }
 
-export function pack(packagePath?: string, cwd = process.cwd()): Promise<IPackageResult> {
+export function pack(packagePath: string = null, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => collect(cwd, manifest)
-			.then(files => writeVsix(files, packagePath || defaultPackagePath(cwd, manifest))
+			.then(files => writeVsix(files, path.resolve(packagePath || defaultPackagePath(cwd, manifest)))
 				.then(packagePath => ({ manifest, packagePath }))));
+}
+
+export function packageCommand(packagePath: string = null, cwd = process.cwd()): Promise<any> {
+	return pack(packagePath, cwd)
+		.then(({ packagePath }) => console.log(`Created: ${ packagePath }`));
 }
 
 export function ls(cwd = process.cwd()): Promise<any> {

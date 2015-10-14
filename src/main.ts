@@ -1,5 +1,5 @@
 import * as program from 'commander';
-import { pack, ls } from './package';
+import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
 import { catchFatal } from './util';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
@@ -13,6 +13,12 @@ module.exports = function (argv: string[]): void {
 		.command('ls')
 		.description('Lists all the files that will be published')
 		.action(() => catchFatal(ls()));
+	
+	program
+		.command('package')
+		.description('Packages an extension')
+		.option('-o, --out [path]', 'Location of the package')
+		.action(({ out }) => catchFatal(packageCommand(out)));
 	
 	program
 		.command('publish')
