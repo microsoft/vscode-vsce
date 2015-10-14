@@ -12,6 +12,7 @@ export interface Manifest {
 	
 	// vscode
 	publisher: string;
+	icon?: string;
 	contributes?: { [contributionType: string]: any; };
 	activationEvents?: string[];
 	extensionDependencies?: string[];

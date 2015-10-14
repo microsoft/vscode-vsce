@@ -179,6 +179,50 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://homepage/test');
 			});
 	});
+	
+	it('should add an icon metadata tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			icon: 'fake.png'
+		};
+		
+		const files = [
+			{ path: 'extension/fake.png' }
+		];
+		
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].Icon);
+				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+			});
+	});
+	
+	it('should add an icon asset', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			icon: 'fake.png'
+		};
+		
+		const files = [
+			{ path: 'extension/fake.png' }
+		];
+		
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Assets[0].Asset.some(d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {

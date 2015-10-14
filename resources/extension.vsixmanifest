@@ -6,10 +6,11 @@
     <Description xml:space="preserve">${ description }</Description>
     <Tags>${ tags }</Tags>
     <GalleryFlags>Public</GalleryFlags>
-    <% if (license) { %><License>${ license }</License><% } %>
     <Properties>
       <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.homepage }" /><% } %>
     </Properties>
+    <% if (license) { %><License>${ license }</License><% } %>
+    <% if (icon) { %><Icon>${ icon }</Icon><% } %>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>

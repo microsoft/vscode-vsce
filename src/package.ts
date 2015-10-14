@@ -102,9 +102,11 @@ function getLicenseFilter(manifest:Manifest): (name: string) => boolean {
 
 export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const licenseFilter = getLicenseFilter(manifest);
+	const icon = manifest.icon ? `extension/${ manifest.icon }` : null;
 	
 	const assets: IAsset[] = [];
 	let license: string = null;
+	let foundIcon: boolean = false;
 	
 	files.forEach(f => {
 		if (/^extension\/README.md$/i.test(f.path)) {
@@ -115,11 +117,12 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 			assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: f.path });
 			license = f.path;
 		}
+		
+		if (f.path === icon) {
+			assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: f.path });
+			foundIcon = true;
+		}
 	});
-	
-	const links = {
-		homepage: manifest.homepage
-	};
 	
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
@@ -132,7 +135,8 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 			tags: (manifest.keywords || []).concat('vscode').join(';'),
 			license,
 			assets,
-			links
+			links: { homepage: manifest.homepage },
+			icon: foundIcon ? icon : null
 		}));
 }
 
