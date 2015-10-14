@@ -34,28 +34,87 @@ export interface IAsset {
 	path: string;
 }
 
-function validateManifest(manifest: Manifest): Promise<Manifest> {
-	if (!manifest.publisher) {
-		return Promise.reject('Manifest missing field: publisher');
+interface IProcessor {
+	onFile(file: IFile): void;
+	assets: IAsset[];
+	vsix: any;
+}
+
+abstract class BaseProcessor implements IProcessor {
+	constructor(protected manifest: Manifest) {}
+	public assets: IAsset[] = [];
+	public vsix: any = Object.create(null);
+	onFile(file: IFile): void {}
+}
+
+class MainProcessor extends BaseProcessor {
+	constructor(manifest: Manifest) {
+		super(manifest);
+		
+		_.assign(this.vsix, {
+			id: manifest.name,
+			displayName: manifest.name,
+			version: manifest.version,
+			publisher: manifest.publisher,
+			description: manifest.description || '',
+			tags: (manifest.keywords || []).concat('vscode').join(';'),
+			links: { homepage: manifest.homepage }
+		});
+	}
+}
+
+class ReadmeProcessor extends BaseProcessor {
+	onFile(file: IFile): void {
+		if (/^extension\/README.md$/i.test(file.path)) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: file.path });
+		}
+	}
+}
+
+class LicenseProcessor extends BaseProcessor {
+	
+	private filter: (name: string) => boolean;
+	
+	constructor(manifest: Manifest) {
+		super(manifest);
+		
+		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
+		
+		if (!match || !match[1]) {
+			this.filter = () => false;
+		} else {
+			const regexp = new RegExp('^extension/' + match[1] + '$');
+			this.filter = regexp.test.bind(regexp);
+		}
+		
+		this.vsix.license = null;
 	}
 	
-	if (!manifest.name) {
-		return Promise.reject('Manifest missing field: name');
+	onFile(file: IFile): void {
+		if (this.filter(file.path)) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: file.path });
+			this.vsix.license = file.path;
+		}
+	}
+}
+
+class IconProcessor extends BaseProcessor {
+	
+	private icon: string;
+	
+	constructor(manifest: Manifest) {
+		super(manifest);
+		
+		this.icon = manifest.icon ? `extension/${ manifest.icon }` : null;
+		this.vsix.icon = null;
 	}
 	
-	if (!manifest.version) {
-		return Promise.reject('Manifest missing field: version');
+	onFile(file: IFile): void {
+		if (file.path === this.icon) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: file.path });
+			this.vsix.icon = this.icon;
+		}
 	}
-	
-	if (!manifest.engines) {
-		return Promise.reject('Manifest missing field: engines');
-	}
-	
-	if (!manifest.engines['vscode']) {
-		return Promise.reject('Manifest missing field: engines.vscode');
-	}
-	
-	return Promise.resolve(manifest);
 }
 
 export function readManifest(cwd: string): Promise<Manifest> {
@@ -70,74 +129,47 @@ export function readManifest(cwd: string): Promise<Manifest> {
 				return Promise.reject(`Error parsing manifest file: not a valid JSON file.`);
 			}
 		})
-		.then(validateManifest);
-}
-
-function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
-	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
-		return Promise.resolve(manifest);
-	}
-	
-	const script = manifest.scripts['vscode:prepublish'];
-	console.warn(`Executing prepublish script '${ script }'...`);
-	
-	return exec(script, { cwd })
-		.then(({ stdout }) => {
-			process.stdout.write(stdout);
+		.then(manifest => {
+			if (!manifest.publisher) {
+				return Promise.reject('Manifest missing field: publisher');
+			}
+			
+			if (!manifest.name) {
+				return Promise.reject('Manifest missing field: name');
+			}
+			
+			if (!manifest.version) {
+				return Promise.reject('Manifest missing field: version');
+			}
+			
+			if (!manifest.engines) {
+				return Promise.reject('Manifest missing field: engines');
+			}
+			
+			if (!manifest.engines['vscode']) {
+				return Promise.reject('Manifest missing field: engines.vscode');
+			}
+			
 			return Promise.resolve(manifest);
-		})
-		.catch(err => Promise.reject(err.message));
-}
-
-function getLicenseFilter(manifest:Manifest): (name: string) => boolean {
-	const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
-	
-	if (!match || !match[1]) {
-		return () => false;
-	}
-	
-	const regexp = new RegExp('^extension/' + match[1] + '$');
-	return regexp.test.bind(regexp);
+		});
 }
 
 export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
-	const licenseFilter = getLicenseFilter(manifest);
-	const icon = manifest.icon ? `extension/${ manifest.icon }` : null;
+	const processors: IProcessor[] = [
+		new MainProcessor(manifest),
+		new ReadmeProcessor(manifest),
+		new LicenseProcessor(manifest),
+		new IconProcessor(manifest)
+	];
 	
-	const assets: IAsset[] = [];
-	let license: string = null;
-	let foundIcon: boolean = false;
+	files.forEach(f => processors.forEach(p => p.onFile(f)));
 	
-	files.forEach(f => {
-		if (/^extension\/README.md$/i.test(f.path)) {
-			assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: f.path });
-		}
-		
-		if (licenseFilter(f.path)) {
-			assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: f.path });
-			license = f.path;
-		}
-		
-		if (f.path === icon) {
-			assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: f.path });
-			foundIcon = true;
-		}
-	});
+	const assets = _.flatten(processors.map(p => p.assets));
+	const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
 	
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-		.then(vsixManifestTemplate => vsixManifestTemplate({
-			id: manifest.name,
-			displayName: manifest.name,
-			version: manifest.version,
-			publisher: manifest.publisher,
-			description: manifest.description || '',
-			tags: (manifest.keywords || []).concat('vscode').join(';'),
-			license,
-			assets,
-			links: { homepage: manifest.homepage },
-			icon: foundIcon ? icon : null
-		}));
+		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
 }
 
 export function toContentTypes(files: IFile[]): Promise<string> {
@@ -210,6 +242,22 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 
 function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${ manifest.name }-${ manifest.version }.vsix`);
+}
+
+function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
+	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
+		return Promise.resolve(manifest);
+	}
+	
+	const script = manifest.scripts['vscode:prepublish'];
+	console.warn(`Executing prepublish script '${ script }'...`);
+	
+	return exec(script, { cwd })
+		.then(({ stdout }) => {
+			process.stdout.write(stdout);
+			return Promise.resolve(manifest);
+		})
+		.catch(err => Promise.reject(err.message));
 }
 
 export function pack(packagePath: string = null, cwd = process.cwd()): Promise<IPackageResult> {
