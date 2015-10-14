@@ -1,14 +1,11 @@
-/*global describe,it*/
-
-import { readManifest, collect, toVsixManifest } from '../out/package';
+import { readManifest, collect, toVsixManifest } from '../package';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import { parseString } from 'xml2js';
-import * as _denodeify from 'denodeify';
-const denodeify = _denodeify['default'];
-const parseXml = denodeify(parseString);
+import * as denodeify from 'denodeify';
 
+const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
 
 describe('collect', () => {
@@ -66,7 +63,8 @@ describe('toVsixManifest', () => {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
-			description: 'test extension'
+			description: 'test extension',
+			engines: Object.create(null)
 		};
 		
 		return toVsixManifest(manifest, [])
@@ -103,7 +101,8 @@ describe('toVsixManifest', () => {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
-			description: 'test extension'
+			description: 'test extension',
+			engines: Object.create(null)
 		};
 		
 		const files = [
@@ -125,7 +124,8 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			license: 'SEE LICENSE IN thelicense.md'
+			license: 'SEE LICENSE IN thelicense.md',
+			engines: Object.create(null)
 		};
 		
 		const files = [

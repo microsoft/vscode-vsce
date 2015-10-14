@@ -8,7 +8,7 @@ export interface Manifest {
 	// mandatory (npm)
 	name: string;
 	version: string;
-	engines: { vscode: string; [name: string]: string; };
+	engines: { [name: string]: string; };
 	
 	// vscode
 	publisher: string;

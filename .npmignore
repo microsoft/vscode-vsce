@@ -1,8 +1,9 @@
 src/
 typings/
-test/
+test
+out/test/
 .gitignore
-gulpfile.babel.js
+gulpfile.js
 jsconfig.json
 tsconfig.json
 tsd.json

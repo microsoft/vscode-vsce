@@ -31,6 +31,12 @@
     },
     "es6-promise/es6-promise.d.ts": {
       "commit": "14ab703f435375194360cdba3abab61afc879c18"
+    },
+    "mocha/mocha.d.ts": {
+      "commit": "b27d0d0e1ce4207a7a5b1da847cb776c16d7531e"
+    },
+    "xml2js/xml2js.d.ts": {
+      "commit": "b27d0d0e1ce4207a7a5b1da847cb776c16d7531e"
     }
   }
 }

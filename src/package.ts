@@ -49,7 +49,7 @@ function validateManifest(manifest: Manifest): Promise<Manifest> {
 		return Promise.reject('Manifest missing field: engines');
 	}
 	
-	if (!manifest.engines.vscode) {
+	if (!manifest.engines['vscode']) {
 		return Promise.reject('Manifest missing field: engines.vscode');
 	}
 	

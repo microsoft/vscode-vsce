@@ -7,3 +7,5 @@
 /// <reference path="tmp/tmp.d.ts" />
 /// <reference path="commander/commander.d.ts" />
 /// <reference path="es6-promise/es6-promise.d.ts" />
+/// <reference path="mocha/mocha.d.ts" />
+/// <reference path="xml2js/xml2js.d.ts" />
