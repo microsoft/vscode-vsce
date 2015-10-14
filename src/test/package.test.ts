@@ -157,6 +157,28 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
+	
+	it('should add homepage link property', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			homepage: 'https://homepage/test'
+		};
+		
+		return toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].Properties);
+				assert.equal(result.PackageManifest.Metadata[0].Properties.length, 1);
+				assert.ok(result.PackageManifest.Metadata[0].Properties[0].Property, 1);
+				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property.length, 1);
+				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Id, 'Microsoft.VisualStudio.Services.Links.Source');
+				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://homepage/test');
+			});
+	});
 });
 
 describe('toContentTypes', () => {

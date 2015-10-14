@@ -116,6 +116,10 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 		}
 	});
 	
+	const links = {
+		homepage: manifest.homepage
+	};
+	
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate({
@@ -126,7 +130,8 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(';'),
 			license,
-			assets
+			assets,
+			links
 		}));
 }
 
