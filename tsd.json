@@ -37,6 +37,9 @@
     },
     "xml2js/xml2js.d.ts": {
       "commit": "b27d0d0e1ce4207a7a5b1da847cb776c16d7531e"
+    },
+    "mime/mime.d.ts": {
+      "commit": "b27d0d0e1ce4207a7a5b1da847cb776c16d7531e"
     }
   }
 }

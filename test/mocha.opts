@@ -1,1 +1,1 @@
-out/test
+--require source-map-support/register out/test

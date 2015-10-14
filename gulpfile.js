@@ -2,9 +2,14 @@ var gulp = require('gulp');
 var tsb = require('gulp-tsb');
 var filter = require('gulp-filter');
 var rimraf = require('rimraf');
+var path = require('path');
 var es = require('event-stream');
+var options = require('./tsconfig.json').compilerOptions;
 
-var compilation = tsb.create(require('./tsconfig.json').compilerOptions);
+options.sourceMap = true;
+options.sourceRoot = path.join(__dirname, 'src');
+
+var compilation = tsb.create(options);
 
 var compile = function () {
 	var ts = filter('**/*.ts', { restore: true });

@@ -7,6 +7,7 @@ import { Manifest } from './manifest';
 import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
+import * as mime from 'mime';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink);
@@ -15,11 +16,11 @@ const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
+const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
 export interface IFile {
 	path: string;
 	contents?: Buffer;
-	localPath?: string;
 }
 
 export interface IPackageResult {
@@ -126,6 +127,19 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 		}));
 }
 
+export function toContentTypes(files: IFile[]): Promise<string> {
+	const extensions = Object.keys(_.indexBy(files, f => path.extname(f.path)))
+		.map(e => e.toLowerCase())
+		.filter(e => e && !_.contains(['.json', '.vsixmanifest'], e));
+	
+	const contentTypes = extensions
+		.map(extension => ({ extension, contentType: mime.lookup(extension) }));
+	
+	return readFile(contentTypesTemplatePath, 'utf8')
+		.then(contentTypesTemplateStr => _.template(contentTypesTemplateStr))
+		.then(contentTypesTemplate => contentTypesTemplate({ contentTypes }));
+}
+
 const defaultIgnore = [
 	'.vscodeignore',
 	'**/.git/**',
@@ -153,15 +167,14 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
 	return collectFiles(cwd, manifest).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		const files = fileNames.map(f => ({ path: `extension/${ f }` }));
 		
-		return toVsixManifest(manifest, files).then(vsixManifest => {
-			return [
-				{ path: 'extension.vsixmanifest', contents: new Buffer(vsixManifest, 'utf8') },
-				{ path: '[Content_Types].xml', localPath: path.join(resourcesPath, '[Content_Types].xml') },
+		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files)])
+			.then(result => [
+				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
+				{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
 				...files
-			];
-		});
+			]);
 	});
 }
 
@@ -170,7 +183,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
 		.then(() => new Promise<string>((c, e) => {
 			const zip = new yazl.ZipFile();
-			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
+			files.forEach(f => zip.addBuffer(f.contents, f.path));
 			zip.end();
 			
 			const zipStream = fs.createWriteStream(packagePath);

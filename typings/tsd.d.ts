@@ -9,3 +9,4 @@
 /// <reference path="es6-promise/es6-promise.d.ts" />
 /// <reference path="mocha/mocha.d.ts" />
 /// <reference path="xml2js/xml2js.d.ts" />
+/// <reference path="mime/mime.d.ts" />

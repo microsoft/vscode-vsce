@@ -1,4 +1,4 @@
-import { readManifest, collect, toVsixManifest } from '../package';
+import { readManifest, collect, toVsixManifest, toContentTypes } from '../package';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
@@ -138,6 +138,44 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
+			});
+	});
+});
+
+describe('toContentTypes', () => {
+	it('should produce a good xml', () => {
+		return toContentTypes([])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result);
+				assert.ok(result.Types);
+				assert.ok(result.Types.Default);
+				assert.equal(result.Types.Default.length, 2);
+				assert.ok(result.Types.Default[0].$);
+				assert.equal(result.Types.Default[0].$.Extension, '.vsixmanifest');
+				assert.equal(result.Types.Default[0].$.ContentType, 'text/xml');
+				assert.ok(result.Types.Default[1].$);
+				assert.equal(result.Types.Default[1].$.Extension, '.json');
+				assert.equal(result.Types.Default[1].$.ContentType, 'application/json');
+			});
+	});
+	
+	it('should include extra extensions', () => {
+		const files = [
+			{ path: 'hello.txt' },
+			{ path: 'hello.png' },
+			{ path: 'hello.md' },
+			{ path: 'hello' }
+		];
+		
+		return toContentTypes(files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.Types.Default);
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'));
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'));
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && d.$.ContentType === 'text/x-markdown'));
+				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
 	});
 });

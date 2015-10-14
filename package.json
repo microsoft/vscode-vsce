@@ -34,6 +34,7 @@
     "denodeify": "^1.2.1",
     "glob": "^5.0.14",
     "lodash": "^3.10.1",
+    "mime": "^1.3.4",
     "minimatch": "^2.0.10",
     "osenv": "^0.1.3",
     "read": "^1.0.7",
@@ -48,6 +49,7 @@
     "gulp-tsb": "^1.6.0",
     "mocha": "^2.3.3",
     "rimraf": "^2.4.3",
+    "source-map-support": "^0.3.2",
     "xml2js": "^0.4.12"
   }
 }
