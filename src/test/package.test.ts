@@ -10,19 +10,17 @@ const fixture = name => path.join(__dirname, 'fixtures', name);
 
 describe('collect', () => {
 	
-	it('should catch all files', cb => {
+	it('should catch all files', () => {
 		const cwd = fixture('uuid');
 		
-		readManifest(cwd)
+		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
 				assert.equal(files.length, 3);
-				cb();
-			})
-			.catch(cb);
+			});
 	});
 	
-	it('should ignore .git/**', cb => {
+	it('should ignore .git/**', () => {
 		const cwd = fixture('uuid');
 		
 		if (!fs.existsSync(path.join(cwd, '.git'))) {
@@ -33,27 +31,23 @@ describe('collect', () => {
 			fs.writeFileSync(path.join(cwd, '.git', 'hello'), 'world');
 		}
 		
-		readManifest(cwd)
+		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
 				assert.equal(files.length, 3);
-				cb();
-			})
-			.catch(cb);
+			});
 	});
 	
-	it('should ignore devDependencies', cb => {
+	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
 		
-		readManifest(cwd)
+		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
 				assert.equal(files.length, 4);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
-				cb();
-			})
-			.catch(cb);
+			});
 	});
 });
 
