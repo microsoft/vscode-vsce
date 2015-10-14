@@ -6,6 +6,7 @@
     <Description xml:space="preserve">${ description }</Description>
     <Tags>${ tags }</Tags>
     <GalleryFlags>Public</GalleryFlags>
+    <% if (license) { %><License>${ license }</License><% } %>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>

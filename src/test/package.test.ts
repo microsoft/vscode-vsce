@@ -134,6 +134,29 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
 			});
 	});
+	
+	it('should add a license metadata tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			license: 'SEE LICENSE IN thelicense.md',
+			engines: Object.create(null)
+		};
+		
+		const files = [
+			{ path: 'extension/thelicense.md' }
+		];
+		
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+			});
+	});
 });
 
 describe('toContentTypes', () => {
