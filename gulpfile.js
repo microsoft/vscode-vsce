@@ -14,7 +14,7 @@ var compilation = tsb.create(options);
 var compile = function () {
 	var ts = filter('**/*.ts', { restore: true });
 	var input = es.merge(
-		gulp.src('src/**', { base: 'src' }),
+		gulp.src('src/**', { base: 'src', dot: true }),
 		gulp.src('typings/**/*.d.ts')
 	);
 	

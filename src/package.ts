@@ -18,6 +18,8 @@ const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
+const MinimatchOptions = { dot: true };
+
 export interface IFile {
 	path: string;
 	contents?: Buffer;
@@ -206,7 +208,7 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 			.then(ignore => defaultIgnore.concat(ignore))
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
 			.then<{ ignore: string[]; negate: string[]; }>(ignore => <any> _.indexBy(_.partition(ignore, i => !/^\s*!/.test(i)), (o, i) => i ? 'negate' : 'ignore'))
-			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i)) || negate.some(i => minimatch(f, i.substr(1)))));
+			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i, MinimatchOptions)) || negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))));
 	});
 }
 
