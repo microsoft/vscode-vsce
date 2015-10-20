@@ -24,7 +24,7 @@
   },
   "scripts": {
     "test": "mocha",
-    "prepublish": "gulp compile"
+    "prepublish": "gulp compile && mocha"
   },
   "engines": {
     "node": ">= 0.12"
