@@ -52,10 +52,10 @@ abstract class BaseProcessor implements IProcessor {
 class MainProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
-		
+
 		_.assign(this.vsix, {
 			id: manifest.name,
-			displayName: manifest.name,
+			displayName: manifest.displayName || manifest.name,
 			version: manifest.version,
 			publisher: manifest.publisher,
 			description: manifest.description || '',
@@ -74,24 +74,24 @@ class ReadmeProcessor extends BaseProcessor {
 }
 
 class LicenseProcessor extends BaseProcessor {
-	
+
 	private filter: (name: string) => boolean;
-	
+
 	constructor(manifest: Manifest) {
 		super(manifest);
-		
+
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
-		
+
 		if (!match || !match[1]) {
 			this.filter = () => false;
 		} else {
 			const regexp = new RegExp('^extension/' + match[1] + '$');
 			this.filter = regexp.test.bind(regexp);
 		}
-		
+
 		this.vsix.license = null;
 	}
-	
+
 	onFile(file: IFile): void {
 		if (this.filter(file.path)) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: file.path });
@@ -101,16 +101,16 @@ class LicenseProcessor extends BaseProcessor {
 }
 
 class IconProcessor extends BaseProcessor {
-	
+
 	private icon: string;
-	
+
 	constructor(manifest: Manifest) {
 		super(manifest);
-		
+
 		this.icon = manifest.icon ? `extension/${ manifest.icon }` : null;
 		this.vsix.icon = null;
 	}
-	
+
 	onFile(file: IFile): void {
 		if (file.path === this.icon) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: file.path });
@@ -121,7 +121,7 @@ class IconProcessor extends BaseProcessor {
 
 export function readManifest(cwd: string): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
-	
+
 	return readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${ manifestPath }`))
 		.then<Manifest>(manifestStr => {
@@ -135,23 +135,23 @@ export function readManifest(cwd: string): Promise<Manifest> {
 			if (!manifest.publisher) {
 				return Promise.reject('Manifest missing field: publisher');
 			}
-			
+
 			if (!manifest.name) {
 				return Promise.reject('Manifest missing field: name');
 			}
-			
+
 			if (!manifest.version) {
 				return Promise.reject('Manifest missing field: version');
 			}
-			
+
 			if (!manifest.engines) {
 				return Promise.reject('Manifest missing field: engines');
 			}
-			
+
 			if (!manifest.engines['vscode']) {
 				return Promise.reject('Manifest missing field: engines.vscode');
 			}
-			
+
 			return Promise.resolve(manifest);
 		});
 }
@@ -163,12 +163,12 @@ export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<stri
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
 	];
-	
+
 	files.forEach(f => processors.forEach(p => p.onFile(f)));
-	
+
 	const assets = _.flatten(processors.map(p => p.assets));
 	const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-	
+
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
@@ -178,10 +178,10 @@ export function toContentTypes(files: IFile[]): Promise<string> {
 	const extensions = Object.keys(_.indexBy(files, f => path.extname(f.path)))
 		.map(e => e.toLowerCase())
 		.filter(e => e && !_.contains(['.json', '.vsixmanifest'], e));
-	
+
 	const contentTypes = extensions
 		.map(extension => ({ extension, contentType: mime.lookup(extension) }));
-	
+
 	return readFile(contentTypesTemplatePath, 'utf8')
 		.then(contentTypesTemplateStr => _.template(contentTypesTemplateStr))
 		.then(contentTypesTemplate => contentTypesTemplate({ contentTypes }));
@@ -215,7 +215,7 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
 	return collectFiles(cwd, manifest).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
-		
+
 		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files)])
 			.then(result => [
 				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
@@ -232,10 +232,10 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 			const zip = new yazl.ZipFile();
 			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();
-			
+
 			const zipStream = fs.createWriteStream(packagePath);
 			zip.outputStream.pipe(zipStream);
-			
+
 			zip.outputStream.once('error', e);
 			zipStream.once('error', e);
 			zipStream.once('finish', () => c(packagePath));
@@ -250,10 +250,10 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return Promise.resolve(manifest);
 	}
-	
+
 	const script = manifest.scripts['vscode:prepublish'];
 	console.warn(`Executing prepublish script '${ script }'...`);
-	
+
 	return exec(script, { cwd })
 		.then(({ stdout }) => {
 			process.stdout.write(stdout);

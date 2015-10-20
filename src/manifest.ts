@@ -9,7 +9,7 @@ export interface Manifest {
 	name: string;
 	version: string;
 	engines: { [name: string]: string; };
-	
+
 	// vscode
 	publisher: string;
 	icon?: string;
@@ -18,9 +18,10 @@ export interface Manifest {
 	extensionDependencies?: string[];
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
-	
+
 	// optional (npm)
 	author?: string | Person;
+	displayName?: string;
 	description?: string;
 	keywords?: string[];
 	homepage?: string;
@@ -33,7 +34,7 @@ export interface Manifest {
 	dependencies?: { [name: string]: string; };
 	devDependencies?: { [name: string]: string; };
 	private?: boolean;
-	
+
 	// not supported (npm)
 	// files?: string[];
 	// bin

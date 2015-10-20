@@ -9,38 +9,38 @@ const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
 
 describe('collect', () => {
-	
+
 	it('should catch all files', () => {
 		const cwd = fixture('uuid');
-		
+
 		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
 				assert.equal(files.length, 3);
 			});
 	});
-	
+
 	it('should ignore .git/**', () => {
 		const cwd = fixture('uuid');
-		
+
 		if (!fs.existsSync(path.join(cwd, '.git'))) {
 			fs.mkdirSync(path.join(cwd, '.git'));
 		}
-		
+
 		if (!fs.existsSync(path.join(cwd, '.git', 'hello'))) {
 			fs.writeFileSync(path.join(cwd, '.git', 'hello'), 'world');
 		}
-		
+
 		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
 				assert.equal(files.length, 3);
 			});
 	});
-	
+
 	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
-		
+
 		return readManifest(cwd)
 			.then(manifest => collect(cwd, manifest))
 			.then(files => {
@@ -60,7 +60,7 @@ describe('toVsixManifest', () => {
 			description: 'test extension',
 			engines: Object.create(null)
 		};
-		
+
 		return toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -89,7 +89,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
 			});
 	});
-	
+
 	it('should treat README.md as asset', () => {
 		const manifest = {
 			name: 'test',
@@ -98,11 +98,11 @@ describe('toVsixManifest', () => {
 			description: 'test extension',
 			engines: Object.create(null)
 		};
-		
+
 		const files = [
 			{ path: 'extension/readme.md' }
 		];
-		
+
 		return toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -111,7 +111,24 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
-	
+
+	it('should respect display name', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			displayName: 'Test Extension',
+			engines: Object.create(null)
+		};
+
+		return toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
+			});
+	});
+
 	it('should treat any license file as asset', () => {
 		const manifest = {
 			name: 'test',
@@ -121,11 +138,11 @@ describe('toVsixManifest', () => {
 			license: 'SEE LICENSE IN thelicense.md',
 			engines: Object.create(null)
 		};
-		
+
 		const files = [
 			{ path: 'extension/thelicense.md' }
 		];
-		
+
 		return toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -134,7 +151,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
 			});
 	});
-	
+
 	it('should add a license metadata tag', () => {
 		const manifest = {
 			name: 'test',
@@ -144,11 +161,11 @@ describe('toVsixManifest', () => {
 			license: 'SEE LICENSE IN thelicense.md',
 			engines: Object.create(null)
 		};
-		
+
 		const files = [
 			{ path: 'extension/thelicense.md' }
 		];
-		
+
 		return toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -157,7 +174,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
-	
+
 	it('should add homepage link property', () => {
 		const manifest = {
 			name: 'test',
@@ -167,7 +184,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			homepage: 'https://homepage/test'
 		};
-		
+
 		return toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -179,7 +196,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://homepage/test');
 			});
 	});
-	
+
 	it('should add an icon metadata tag', () => {
 		const manifest = {
 			name: 'test',
@@ -189,11 +206,11 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			icon: 'fake.png'
 		};
-		
+
 		const files = [
 			{ path: 'extension/fake.png' }
 		];
-		
+
 		return toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -202,7 +219,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
 			});
 	});
-	
+
 	it('should add an icon asset', () => {
 		const manifest = {
 			name: 'test',
@@ -212,11 +229,11 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			icon: 'fake.png'
 		};
-		
+
 		const files = [
 			{ path: 'extension/fake.png' }
 		];
-		
+
 		return toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
@@ -242,7 +259,7 @@ describe('toContentTypes', () => {
 				assert.equal(result.Types.Default[1].$.ContentType, 'application/json');
 			});
 	});
-	
+
 	it('should include extra extensions', () => {
 		const files = [
 			{ path: 'hello.txt' },
@@ -250,7 +267,7 @@ describe('toContentTypes', () => {
 			{ path: 'hello.md' },
 			{ path: 'hello' }
 		];
-		
+
 		return toContentTypes(files)
 			.then(xml => parseXml(xml))
 			.then(result => {
