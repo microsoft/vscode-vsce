@@ -7,7 +7,7 @@
     <Tags>${ tags }</Tags>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
-      <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.homepage }" /><% } %>
+      <% if (links.repository) { %><Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.repository }" /><% } %>
     </Properties>
     <% if (license) { %><License>${ license }</License><% } %>
     <% if (icon) { %><Icon>${ icon }</Icon><% } %>

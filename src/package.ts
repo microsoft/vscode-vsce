@@ -60,7 +60,7 @@ class MainProcessor extends BaseProcessor {
 			publisher: manifest.publisher,
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(','),
-			links: { homepage: manifest.homepage }
+			links: { repository: manifest.repository }
 		});
 	}
 }

@@ -175,14 +175,15 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should add homepage link property', () => {
+	it('should add repository link property', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			homepage: 'https://homepage/test'
+			homepage: 'https://homepage/test',
+			repository: 'https://repository/test'
 		};
 
 		return toVsixManifest(manifest, [])
@@ -193,7 +194,7 @@ describe('toVsixManifest', () => {
 				assert.ok(result.PackageManifest.Metadata[0].Properties[0].Property);
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property.length, 1);
 				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Id, 'Microsoft.VisualStudio.Services.Links.Source');
-				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://homepage/test');
+				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://repository/test');
 			});
 	});
 
