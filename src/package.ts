@@ -4,6 +4,7 @@ import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest } from './manifest';
+import * as util from './util';
 import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
@@ -67,8 +68,9 @@ class MainProcessor extends BaseProcessor {
 
 class ReadmeProcessor extends BaseProcessor {
 	onFile(file: IFile): void {
-		if (/^extension\/README.md$/i.test(file.path)) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: file.path });
+		const normalizedPath = util.normalize(file.path);
+		if (/^extension\/README.md$/i.test(normalizedPath)) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: normalizedPath });
 		}
 	}
 }
@@ -93,9 +95,10 @@ class LicenseProcessor extends BaseProcessor {
 	}
 
 	onFile(file: IFile): void {
-		if (this.filter(file.path)) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: file.path });
-			this.vsix.license = file.path;
+		const normalizedPath = util.normalize(file.path);
+		if (this.filter(normalizedPath)) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
+			this.vsix.license = normalizedPath;
 		}
 	}
 }
@@ -112,8 +115,9 @@ class IconProcessor extends BaseProcessor {
 	}
 
 	onFile(file: IFile): void {
-		if (file.path === this.icon) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: file.path });
+		const normalizedPath = util.normalize(file.path);
+		if (normalizedPath === this.icon) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: normalizedPath });
 			this.vsix.icon = this.icon;
 		}
 	}

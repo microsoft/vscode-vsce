@@ -9,10 +9,10 @@ export function fatal<T>(message: any, ...args: any[]): Promise<T> {
 		if (/^cancell?ed$/i.test(message.message)) {
 			return;
 		}
-		
+
 		message = message.message;
 	}
-	
+
 	console.error('Error:', message, ...args);
 	process.exit(1);
 	return Promise.resolve<T>(null);
@@ -37,4 +37,8 @@ export function getRawGalleryAPI(pat: string): IGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
 	return vsoapi.getGalleryApi('https://app.market.visualstudio.com');
+}
+
+export function normalize(path: string): string {
+	return path.replace(/\\/g, '/');
 }

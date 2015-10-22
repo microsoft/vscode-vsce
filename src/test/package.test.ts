@@ -244,6 +244,32 @@ describe('toVsixManifest', () => {
 				assert.ok(result.PackageManifest.Assets[0].Asset.some(d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'));
 			});
 	});
+
+	it('should add asset with win path', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			icon: 'fake.png',
+			license: 'SEE LICENSE IN thelicense.md'
+		};
+
+		const files = [
+			{ path: 'extension\\fake.png' },
+			{ path: 'extension\\thelicense.md' }
+		];
+
+		return toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].Icon);
+				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+			});
+	});
 });
 
 describe('toContentTypes', () => {
