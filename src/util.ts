@@ -50,11 +50,11 @@ export function normalize(path: string): string {
 
 export function massageMarkdownLinks(pathToMarkdown: string, prefix: string): Promise<string> {
 	return readFile(pathToMarkdown, 'utf8').then(markdown => markdown.replace(/\[[^\[]+\]\(([^\)]+)\)/g, (titleAndLink, link) =>
-		titleAndLink.replace(link, prepandRelativeLink(link, prefix))
+		titleAndLink.replace(link, prependRelativeLink(link, prefix))
 	));
 }
 
-function prepandRelativeLink(link: string, prefix: string): string {
-	// Prepand only relative links, also ignore links to the sections in markdown (they contain #).
+function prependRelativeLink(link: string, prefix: string): string {
+	// Prepend only relative links, also ignore links to the sections in markdown (they contain #).
 	return /^(?:\w+:)\/\//.test(link) || link.indexOf('#') !== -1 ? link : urljoin(prefix, link);
 }

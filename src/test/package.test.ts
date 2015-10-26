@@ -313,7 +313,7 @@ describe('toContentTypes', () => {
 });
 
 describe('readmeMassaging', () => {
-	it('should prepand links', () => {
+	it('should prepend links', () => {
 		return util.massageMarkdownLinks(path.join(process.cwd(), '/src/test/assets/relativeLinks1.md'), 'https://github.com/Microsoft/')
 		.then(result => readFile(path.join(process.cwd(), '/src/test/assets/absoluteLinks1.md'), 'utf-8')
 			.then(expected => {
@@ -322,7 +322,7 @@ describe('readmeMassaging', () => {
 		);
 	});
 
-	it('should prepand links 2', () => {
+	it('should prepend links 2', () => {
 		return util.massageMarkdownLinks(path.join(process.cwd(), '/src/test/assets/relativeLinks2.md'), 'https://github.com/Microsoft/vscode-SpellMD/raw/master/')
 		.then(result => readFile(path.join(process.cwd(), '/src/test/assets/absoluteLinks2.md'), 'utf-8')
 			.then(expected => {
