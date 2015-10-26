@@ -4,7 +4,9 @@ import * as fs from 'fs';
 import * as assert from 'assert';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
+import * as util from '../util';
 
+const readFile = denodeify<string, string, string>(fs.readFile);
 const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
 
@@ -307,5 +309,25 @@ describe('toContentTypes', () => {
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && d.$.ContentType === 'text/x-markdown'));
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
+	});
+});
+
+describe('readmeMassaging', () => {
+	it('should prepand links', () => {
+		return util.massageMarkdownLinks(path.join(process.cwd(), '/src/test/assets/relativeLinks1.md'), 'https://github.com/Microsoft/')
+		.then(result => readFile(path.join(process.cwd(), '/src/test/assets/absoluteLinks1.md'), 'utf-8')
+			.then(expected => {
+				assert.equal(result, expected);
+			})
+		);
+	});
+
+	it('should prepand links 2', () => {
+		return util.massageMarkdownLinks(path.join(process.cwd(), '/src/test/assets/relativeLinks2.md'), 'https://github.com/Microsoft/vscode-SpellMD/raw/master/')
+		.then(result => readFile(path.join(process.cwd(), '/src/test/assets/absoluteLinks2.md'), 'utf-8')
+			.then(expected => {
+				assert.equal(result, expected);
+			})
+		);
 	});
 });

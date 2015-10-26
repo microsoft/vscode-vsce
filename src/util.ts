@@ -1,8 +1,13 @@
 import { assign } from 'lodash';
 import * as _read from 'read';
+import * as fs from 'fs';
+import * as path from 'path';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
+import urljoin = require('url-join');
+
+const readFile = denodeify<string, string, string>(fs.readFile);
 
 export function fatal<T>(message: any, ...args: any[]): Promise<T> {
 	if (message instanceof Error) {
@@ -41,4 +46,15 @@ export function getRawGalleryAPI(pat: string): IGalleryApi {
 
 export function normalize(path: string): string {
 	return path.replace(/\\/g, '/');
+}
+
+export function massageMarkdownLinks(pathToMarkdown: string, prefix: string): Promise<string> {
+	return readFile(pathToMarkdown, 'utf8').then(markdown => markdown.replace(/\[[^\[]+\]\(([^\)]+)\)/g, (titleAndLink, link) =>
+		titleAndLink.replace(link, prepandRelativeLink(link, prefix))
+	));
+}
+
+function prepandRelativeLink(link: string, prefix: string): string {
+	// Prepand only relative links, also ignore links to the sections in markdown (they contain #).
+	return /^(?:\w+:)\/\//.test(link) || link.indexOf('#') !== -1 ? link : urljoin(prefix, link);
 }
