@@ -49,8 +49,8 @@ export function normalize(path: string): string {
 }
 
 export function massageMarkdownLinks(pathToMarkdown: string, prefix: string): Promise<string> {
-	return readFile(pathToMarkdown, 'utf8').then(markdown => markdown.replace(/\[[^\[]+\]\(([^\)]+)\)/g, (titleAndLink, link) =>
-		titleAndLink.replace(link, prependRelativeLink(link, prefix))
+	return readFile(pathToMarkdown, 'utf8').then(markdown => markdown.replace(/\[([^\[]+)\]\(([^\)]+)\)/g, (titleAndLink, title, link) =>
+		titleAndLink.substr(0, title.length) + titleAndLink.substr(title.length).replace(link, prependRelativeLink(link, prefix))
 	));
 }
 

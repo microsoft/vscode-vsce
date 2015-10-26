@@ -24,6 +24,8 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 ![Add to dictionary](/images/SpellMDDemo3.gif)
 
+![issue](issue)
+
 # Install
 This extension is published in the VS Code Gallery.  So simply hit 'F1' and type 'ext inst' from there select `SpellMD` and follow instructions.
 
