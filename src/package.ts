@@ -66,10 +66,12 @@ class MainProcessor extends BaseProcessor {
 	}
 }
 
+const README_REGEX = /^extension\/README.md$/i
+
 class ReadmeProcessor extends BaseProcessor {
 	onFile(file: IFile): void {
 		const normalizedPath = util.normalize(file.path);
-		if (/^extension\/README.md$/i.test(normalizedPath)) {
+		if (README_REGEX.test(normalizedPath)) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: normalizedPath });
 		}
 	}
@@ -216,16 +218,36 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 	});
 }
 
-export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
-	return collectFiles(cwd, manifest).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+function getUrlPrefix(manifest: Manifest): string {
+	let repository = null;
+	if (typeof manifest.repository === 'string') {
+		repository = manifest.repository;
+	}
+	if (manifest.repository && manifest.repository['url']) {
+		repository = manifest.repository['url'];
+	}
 
-		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files)])
-			.then(result => [
-				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
-				{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
-				...files
-			]);
+	return repository ? `${ repository }/blob/master` : '';
+}
+
+export function collect(cwd: string, manifest: Manifest, baseContentUri = null): Promise<IFile[]> {
+	return collectFiles(cwd, manifest).then(fileNames => {
+		const files:IFile[] = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		const readme = files.filter(f => README_REGEX.test(util.normalize(f.path)))[0];
+		const prefix = baseContentUri ? baseContentUri : getUrlPrefix(manifest);
+
+		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files), readme ? util.massageMarkdownLinks(readme.localPath, prefix) : ''])
+			.then(result => {
+				if (readme) {
+					readme.contents = new Buffer(result[2], 'utf8');
+				}
+
+				return [
+					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
+					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
+					...files
+				];
+			});
 	});
 }
 
@@ -266,16 +288,16 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
-export function pack(packagePath: string = null, cwd = process.cwd()): Promise<IPackageResult> {
+export function pack(packagePath: string = null, baseContentUri: string = null, cwd = process.cwd()): Promise<IPackageResult> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collect(cwd, manifest)
+		.then(manifest => collect(cwd, manifest, baseContentUri)
 			.then(files => writeVsix(files, path.resolve(packagePath || defaultPackagePath(cwd, manifest)))
 				.then(packagePath => ({ manifest, packagePath }))));
 }
 
-export function packageCommand(packagePath: string = null, cwd = process.cwd()): Promise<any> {
-	return pack(packagePath, cwd)
+export function packageCommand(packagePath: string = null, baseContentUri: string = null, cwd = process.cwd()): Promise<any> {
+	return pack(packagePath, baseContentUri, cwd)
 		.then(({ packagePath }) => console.log(`Created: ${ packagePath }`));
 }
 
