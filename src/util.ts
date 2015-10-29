@@ -1,8 +1,12 @@
 import { assign } from 'lodash';
 import * as _read from 'read';
+import * as fs from 'fs';
+import * as path from 'path';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
+
+const readFile = denodeify<string, string, string>(fs.readFile);
 
 export function fatal<T>(message: any, ...args: any[]): Promise<T> {
 	if (message instanceof Error) {
@@ -41,4 +45,16 @@ export function getRawGalleryAPI(pat: string): IGalleryApi {
 
 export function normalize(path: string): string {
 	return path.replace(/\\/g, '/');
+}
+
+function chain2<A,B>(a: A, b: B[], fn: (a: A, b: B)=>Promise<A>, index = 0): Promise<A> {
+	if (index >= b.length) {
+		return Promise.resolve(a);
+	}
+	
+	return fn(a, b[index]).then(a => chain2(a, b, fn, index + 1));
+}
+
+export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>Promise<T>): Promise<T> {
+	return chain2(initial, processors, process);
 }

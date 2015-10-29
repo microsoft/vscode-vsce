@@ -15,7 +15,7 @@ const galleryUrl = 'https://app.market.visualstudio.com';
 
 export function publish(cwd = process.cwd()): Promise<any> {
 	return tmpName()
-		.then(packagePath => pack(packagePath, cwd))
+		.then(packagePath => pack({ packagePath, cwd }))
 		.then(result => {
 			const { manifest, packagePath } = result;
 			

@@ -1,10 +1,12 @@
-import { readManifest, collect, toVsixManifest, toContentTypes } from '../package';
+import { readManifest, collect, toVsixManifest, toContentTypes, ReadmeProcessor, read } from '../package';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
+import * as util from '../util';
 
+const readFile = denodeify<string, string, string>(fs.readFile);
 const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
 
@@ -14,7 +16,7 @@ describe('collect', () => {
 		const cwd = fixture('uuid');
 
 		return readManifest(cwd)
-			.then(manifest => collect(cwd, manifest))
+			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
 				assert.equal(files.length, 3);
 			});
@@ -32,7 +34,7 @@ describe('collect', () => {
 		}
 
 		return readManifest(cwd)
-			.then(manifest => collect(cwd, manifest))
+			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
 				assert.equal(files.length, 3);
 			});
@@ -42,7 +44,7 @@ describe('collect', () => {
 		const cwd = fixture('devDependencies');
 
 		return readManifest(cwd)
-			.then(manifest => collect(cwd, manifest))
+			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
 				assert.equal(files.length, 4);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
@@ -306,6 +308,94 @@ describe('toContentTypes', () => {
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'));
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && d.$.ContentType === 'text/x-markdown'));
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
+			});
+	});
+});
+
+describe('ReadmeProcessor', () => {
+	
+	it('should be no-op when no baseContentUri is provided', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null)
+		};
+		
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest);
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+		
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actualBuffer => {
+				const actual = actualBuffer.toString('utf8');
+				
+				return readFile(path.join(root, 'readme.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					})
+			});
+	});
+	
+	it('should take baseContentUri', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null)
+		};
+		
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, { baseContentUrl: 'https://raw.githubusercontent.com/username/repository/master' });
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+		
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actualBuffer => {
+				const actual = actualBuffer.toString('utf8');
+				
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					})
+			});
+	});
+	
+	it('should infer baseContentUri if its a github repo', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository'
+		};
+		
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest);
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+		
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actualBuffer => {
+				const actual = actualBuffer.toString('utf8');
+				
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					})
 			});
 	});
 });

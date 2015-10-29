@@ -9,8 +9,14 @@ import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
 import * as mime from 'mime';
+import * as urljoin from 'url-join';
 
-const readFile = denodeify<string, string, string>(fs.readFile);
+interface IReadFile {
+	(filePath: string): Promise<Buffer>;
+	(filePath: string, encoding?: string): Promise<string>;
+}
+
+const readFile: IReadFile = <any> denodeify(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink);
 const exec = denodeify<string, { cwd?: string; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
@@ -27,6 +33,14 @@ export interface IFile {
 	localPath?: string;
 }
 
+export function read(file: IFile): Promise<Buffer> {
+	if (file.contents) {
+		return Promise.resolve(file.contents);
+	} else {
+		return readFile(file.localPath);
+	}
+}
+
 export interface IPackageResult {
 	manifest: Manifest;
 	packagePath: string;
@@ -37,17 +51,23 @@ export interface IAsset {
 	path: string;
 }
 
-interface IProcessor {
-	onFile(file: IFile): void;
+export interface IPackageOptions {
+	cwd?: string;
+	packagePath?: string;
+	baseContentUrl?: string;
+}
+
+export interface IProcessor {
+	onFile(file: IFile): Promise<IFile>;
 	assets: IAsset[];
 	vsix: any;
 }
 
-abstract class BaseProcessor implements IProcessor {
+export abstract class BaseProcessor implements IProcessor {
 	constructor(protected manifest: Manifest) {}
 	public assets: IAsset[] = [];
 	public vsix: any = Object.create(null);
-	onFile(file: IFile): void {}
+	abstract onFile(file: IFile): Promise<IFile>;
 }
 
 class MainProcessor extends BaseProcessor {
@@ -64,13 +84,73 @@ class MainProcessor extends BaseProcessor {
 			links: { repository: manifest.repository }
 		});
 	}
+	onFile(file: IFile): Promise<IFile> {
+		return Promise.resolve(file);
+	}
 }
 
-class ReadmeProcessor extends BaseProcessor {
-	onFile(file: IFile): void {
-		const normalizedPath = util.normalize(file.path);
-		if (/^extension\/README.md$/i.test(normalizedPath)) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path: normalizedPath });
+export class ReadmeProcessor extends BaseProcessor {
+	
+	private baseContentUrl: string;
+	
+	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+		super(manifest);
+		this.baseContentUrl = options.baseContentUrl || this.guessBaseContentUrl();
+	}
+	
+	onFile(file: IFile): Promise<IFile> {
+		const path = util.normalize(file.path);
+		
+		if (/^extension\/readme.md$/i.test(path)) {
+			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
+			
+			if (this.baseContentUrl) {
+				return read(file)
+					.then(buffer => buffer.toString('utf8'))
+					.then(contents => contents.replace(/\[([^\[]+)\]\(([^\)]+)\)/g, (all, title, link) =>
+						all.substr(0, title.length) + all.substr(title.length).replace(link, this.prependBaseContentUrl(link))
+					))
+					.then(contents => ({
+						path: file.path,
+						contents: new Buffer(contents)
+					}));
+			}
+		}
+		
+		return Promise.resolve(file);
+	}
+	
+	private prependBaseContentUrl(link: string): string {
+		if (/^(?:\w+:)\/\//.test(link)) {
+			return link;
+		}
+		
+		if (link[0] === '#') {
+			return link;
+		}
+		
+		return urljoin(this.baseContentUrl, link);
+	}
+	
+	// GitHub heuristics
+	private guessBaseContentUrl(): string {
+		let repository = null;
+		
+		if (typeof this.manifest.repository === 'string') {
+			repository = this.manifest.repository;
+		} else if (this.manifest.repository && typeof this.manifest.repository['url'] === 'string') {
+			repository = this.manifest.repository['url'];
+		}
+		
+		if (!repository) {
+			return null;
+		}
+		
+		const regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
+		const match = regex.exec(repository);
+		
+		if (match) {
+			return `https://raw.githubusercontent.com/${ match[1] }/${ match[2] }/master`;
 		}
 	}
 }
@@ -94,12 +174,13 @@ class LicenseProcessor extends BaseProcessor {
 		this.vsix.license = null;
 	}
 
-	onFile(file: IFile): void {
+	onFile(file: IFile): Promise<IFile> {
 		const normalizedPath = util.normalize(file.path);
 		if (this.filter(normalizedPath)) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
 			this.vsix.license = normalizedPath;
 		}
+		return Promise.resolve(file);
 	}
 }
 
@@ -114,12 +195,13 @@ class IconProcessor extends BaseProcessor {
 		this.vsix.icon = null;
 	}
 
-	onFile(file: IFile): void {
+	onFile(file: IFile): Promise<IFile> {
 		const normalizedPath = util.normalize(file.path);
 		if (normalizedPath === this.icon) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: normalizedPath });
 			this.vsix.icon = this.icon;
 		}
+		return Promise.resolve(file);
 	}
 }
 
@@ -160,22 +242,23 @@ export function readManifest(cwd: string): Promise<Manifest> {
 		});
 }
 
-export function toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
+export function toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors: IProcessor[] = [
 		new MainProcessor(manifest),
-		new ReadmeProcessor(manifest),
+		new ReadmeProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
 	];
 
-	files.forEach(f => processors.forEach(p => p.onFile(f)));
-
-	const assets = _.flatten(processors.map(p => p.assets));
-	const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-
-	return readFile(vsixManifestTemplatePath, 'utf8')
-		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
+	return Promise.all(files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file))))
+	.then(files => {
+		const assets = _.flatten(processors.map(p => p.assets));
+		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
+	
+		return readFile(vsixManifestTemplatePath, 'utf8')
+			.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
+			.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
+	});
 }
 
 export function toContentTypes(files: IFile[]): Promise<string> {
@@ -216,16 +299,20 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 	});
 }
 
-export function collect(cwd: string, manifest: Manifest): Promise<IFile[]> {
+export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
+	const cwd = options.cwd || process.cwd();
+	
 	return collectFiles(cwd, manifest).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		const files:IFile[] = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
 
-		return Promise.all([toVsixManifest(manifest, files), toContentTypes(files)])
-			.then(result => [
-				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
-				{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
-				...files
-			]);
+		return Promise.all([toVsixManifest(manifest, files, options), toContentTypes(files)])
+			.then(result => {
+				return [
+					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
+					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
+					...files
+				];
+			});
 	});
 }
 
@@ -266,16 +353,18 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
-export function pack(packagePath: string = null, cwd = process.cwd()): Promise<IPackageResult> {
+export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
+	const cwd = options.cwd || process.cwd();
+	
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collect(cwd, manifest)
-			.then(files => writeVsix(files, path.resolve(packagePath || defaultPackagePath(cwd, manifest)))
+		.then(manifest => collect(manifest, options)
+			.then(files => writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)))
 				.then(packagePath => ({ manifest, packagePath }))));
 }
 
-export function packageCommand(packagePath: string = null, cwd = process.cwd()): Promise<any> {
-	return pack(packagePath, cwd)
+export function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	return pack(options)
 		.then(({ packagePath }) => console.log(`Created: ${ packagePath }`));
 }
 
