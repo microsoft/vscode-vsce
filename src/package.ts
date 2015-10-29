@@ -54,7 +54,7 @@ export interface IAsset {
 export interface IPackageOptions {
 	cwd?: string;
 	packagePath?: string;
-	baseContentUri?: string;
+	baseContentUrl?: string;
 }
 
 export interface IProcessor {
@@ -91,11 +91,11 @@ class MainProcessor extends BaseProcessor {
 
 export class ReadmeProcessor extends BaseProcessor {
 	
-	private baseContentUri: string;
+	private baseContentUrl: string;
 	
 	constructor(manifest: Manifest, options: IPackageOptions= {}) {
 		super(manifest);
-		this.baseContentUri = options.baseContentUri || this.guessBaseContentUri();
+		this.baseContentUrl = options.baseContentUrl || this.guessBaseContentUrl();
 	}
 	
 	onFile(file: IFile): Promise<IFile> {
@@ -104,11 +104,11 @@ export class ReadmeProcessor extends BaseProcessor {
 		if (/^extension\/readme.md$/i.test(path)) {
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
 			
-			if (this.baseContentUri) {
+			if (this.baseContentUrl) {
 				return read(file)
 					.then(buffer => buffer.toString('utf8'))
 					.then(contents => contents.replace(/\[([^\[]+)\]\(([^\)]+)\)/g, (all, title, link) =>
-						all.substr(0, title.length) + all.substr(title.length).replace(link, this.prependBaseContentUri(link))
+						all.substr(0, title.length) + all.substr(title.length).replace(link, this.prependBaseContentUrl(link))
 					))
 					.then(contents => ({
 						path: file.path,
@@ -120,7 +120,7 @@ export class ReadmeProcessor extends BaseProcessor {
 		return Promise.resolve(file);
 	}
 	
-	private prependBaseContentUri(link: string): string {
+	private prependBaseContentUrl(link: string): string {
 		if (/^(?:\w+:)\/\//.test(link)) {
 			return link;
 		}
@@ -129,11 +129,11 @@ export class ReadmeProcessor extends BaseProcessor {
 			return link;
 		}
 		
-		return urljoin(this.baseContentUri, link);
+		return urljoin(this.baseContentUrl, link);
 	}
 	
 	// GitHub heuristics
-	private guessBaseContentUri(): string {
+	private guessBaseContentUrl(): string {
 		let repository = null;
 		
 		if (typeof this.manifest.repository === 'string') {

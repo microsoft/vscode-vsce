@@ -18,8 +18,8 @@ module.exports = function (argv: string[]): void {
 		.command('package')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Location of the package')
-		.option('--baseContentUri [uri]', 'Base absolute URI that all relative URIs in the readme will get transformed as')
-		.action(({ out, baseContentUri }) => catchFatal(packageCommand({ packagePath: out, baseContentUri })));
+		.option('--baseContentUrl [url]', 'If found, all relative links in README.md will be prepended with this url.')
+		.action(({ out, baseContentUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl })));
 
 	program
 		.command('publish')
