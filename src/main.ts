@@ -19,7 +19,7 @@ module.exports = function (argv: string[]): void {
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Location of the package')
 		.option('--baseContentUri [uri]', 'Base absolute URI that all relative URIs in the readme will get transformed as')
-		.action(({ out, baseContentUri }) => catchFatal(packageCommand(out, baseContentUri)));
+		.action(({ out, baseContentUri }) => catchFatal(packageCommand({ packagePath: out, baseContentUri })));
 
 	program
 		.command('publish')

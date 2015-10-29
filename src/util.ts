@@ -5,7 +5,6 @@ import * as path from 'path';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
-import urljoin = require('url-join');
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 
@@ -48,13 +47,14 @@ export function normalize(path: string): string {
 	return path.replace(/\\/g, '/');
 }
 
-export function massageMarkdownLinks(pathToMarkdown: string, prefix: string): Promise<string> {
-	return readFile(pathToMarkdown, 'utf8').then(markdown => markdown.replace(/\[([^\[]+)\]\(([^\)]+)\)/g, (titleAndLink, title, link) =>
-		titleAndLink.substr(0, title.length) + titleAndLink.substr(title.length).replace(link, prependRelativeLink(link, prefix))
-	));
+function chain2<A,B>(a: A, b: B[], fn: (a: A, b: B)=>Promise<A>, index = 0): Promise<A> {
+	if (index >= b.length) {
+		return Promise.resolve(a);
+	}
+	
+	return fn(a, b[index]).then(a => chain2(a, b, fn, index + 1));
 }
 
-function prependRelativeLink(link: string, prefix: string): string {
-	// Prepend only relative links, also ignore links to the sections in markdown (they contain #).
-	return /^(?:\w+:)\/\//.test(link) || link.indexOf('#') !== -1 ? link : urljoin(prefix, link);
+export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>Promise<T>): Promise<T> {
+	return chain2(initial, processors, process);
 }
