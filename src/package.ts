@@ -150,7 +150,7 @@ export class ReadmeProcessor extends BaseProcessor {
 		const match = regex.exec(repository);
 		
 		if (match) {
-			return `https://raw.githubusercontent.com/${ match[1] }/${ match[2] }/master`;
+			return `https://github.com/${ match[1] }/${ match[2] }/raw/master`;
 		}
 	}
 }

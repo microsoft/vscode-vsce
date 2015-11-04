@@ -352,7 +352,7 @@ describe('ReadmeProcessor', () => {
 		};
 		
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, { baseContentUrl: 'https://raw.githubusercontent.com/username/repository/master' });
+		const processor = new ReadmeProcessor(manifest, { baseContentUrl: 'https://github.com/username/repository/raw/master' });
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
