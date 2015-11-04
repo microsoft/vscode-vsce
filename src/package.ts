@@ -150,7 +150,9 @@ export class ReadmeProcessor extends BaseProcessor {
 		const match = regex.exec(repository);
 		
 		if (match) {
-			return `https://github.com/${ match[1] }/${ match[2] }/raw/master`;
+			const account = match[1];
+			const repository = match[2].replace(/\.git$/i, '');
+			return `https://github.com/${ account }/${ repository }/raw/master`;
 		}
 	}
 }
