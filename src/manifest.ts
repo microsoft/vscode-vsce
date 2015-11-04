@@ -16,6 +16,7 @@ export interface Manifest {
 	contributes?: { [contributionType: string]: any; };
 	activationEvents?: string[];
 	extensionDependencies?: string[];
+	galleryBanner?: { color?: string; theme?: string; };
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
 

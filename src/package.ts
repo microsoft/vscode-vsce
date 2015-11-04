@@ -81,7 +81,8 @@ class MainProcessor extends BaseProcessor {
 			publisher: manifest.publisher,
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(','),
-			links: { repository: manifest.repository }
+			links: { repository: manifest.repository },
+			galleryBanner: manifest.galleryBanner || {}
 		});
 	}
 	onFile(file: IFile): Promise<IFile> {

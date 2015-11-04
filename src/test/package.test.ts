@@ -272,6 +272,27 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
+	
+	it('should understand gallery color and theme', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			galleryBanner: {
+				color: '#5c2d91',
+				theme: 'dark'
+			}
+		};
+
+		return toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
