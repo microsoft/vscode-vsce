@@ -7,7 +7,12 @@
     <Tags>${ tags }</Tags>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
-      <% if (links.repository) { %><Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.repository }" /><% } %>
+      <% if (links.repository) { %>
+        <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.repository }" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${ links.repository }" />
+      <% } %>
+      <% if (links.bugs) { %><Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${ links.bugs }" /><% } %>
+      <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${ links.homepage }" /><% } %>
       <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${ galleryBanner.color }" /><% } %>
       <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${ galleryBanner.theme }" /><% } %>
     </Properties>

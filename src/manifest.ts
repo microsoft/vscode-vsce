@@ -30,7 +30,7 @@ export interface Manifest {
 	license?: string;
 	contributors?: string | Person[];
 	main?: string;
-	repository?: string | { type: string; url: string; };
+	repository?: string | { type?: string; url?: string; };
 	scripts?: { [name: string]: string; };
 	dependencies?: { [name: string]: string; };
 	devDependencies?: { [name: string]: string; };

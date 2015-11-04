@@ -177,29 +177,6 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should add repository link property', () => {
-		const manifest = {
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			description: 'test extension',
-			engines: Object.create(null),
-			homepage: 'https://homepage/test',
-			repository: 'https://repository/test'
-		};
-
-		return toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
-			.then(result => {
-				assert.ok(result.PackageManifest.Metadata[0].Properties);
-				assert.equal(result.PackageManifest.Metadata[0].Properties.length, 1);
-				assert.ok(result.PackageManifest.Metadata[0].Properties[0].Property);
-				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Id, 'Microsoft.VisualStudio.Services.Links.Source');
-				assert.equal(result.PackageManifest.Metadata[0].Properties[0].Property[0].$.Value, 'https://repository/test');
-			});
-	});
-
 	it('should add an icon metadata tag', () => {
 		const manifest = {
 			name: 'test',
@@ -291,6 +268,33 @@ describe('toVsixManifest', () => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91'));
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark'));
+			});
+	});
+	
+	it('should understand all link types', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: {
+				type: "git",
+				url: "https://github.com/Microsoft/vscode-spell-check.git"
+			},
+			bugs: {
+				url: "https://github.com/Microsoft/vscode-spell-check/issues"
+			},
+			homepage: "https://github.com/Microsoft/vscode-spell-check",
+		};
+
+		return toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Support' && p.Value === 'https://github.com/Microsoft/vscode-spell-check/issues'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://github.com/Microsoft/vscode-spell-check'));
 			});
 	});
 });

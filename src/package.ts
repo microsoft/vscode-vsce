@@ -70,6 +70,18 @@ export abstract class BaseProcessor implements IProcessor {
 	abstract onFile(file: IFile): Promise<IFile>;
 }
 
+function getUrl(url: string | { url?: string; }): string {
+	if (!url) {
+		return null;
+	}
+	
+	if (typeof url === 'string') {
+		return <string> url;
+	}
+	
+	return (<any> url).url;
+}
+
 class MainProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
@@ -81,7 +93,11 @@ class MainProcessor extends BaseProcessor {
 			publisher: manifest.publisher,
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(','),
-			links: { repository: manifest.repository },
+			links: {
+				repository: getUrl(manifest.repository),
+				bugs: getUrl(manifest.bugs),
+				homepage: manifest.homepage
+			},
 			galleryBanner: manifest.galleryBanner || {}
 		});
 	}
