@@ -93,6 +93,7 @@ class MainProcessor extends BaseProcessor {
 			publisher: manifest.publisher,
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(','),
+			categories: (manifest.categories || []).join(','),
 			links: {
 				repository: getUrl(manifest.repository),
 				bugs: getUrl(manifest.bugs),

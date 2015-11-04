@@ -5,6 +5,7 @@
     <DisplayName>${ displayName }</DisplayName>
     <Description xml:space="preserve">${ description }</Description>
     <Tags>${ tags }</Tags>
+    <Categories>${ categories }</Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
       <% if (links.repository) { %>

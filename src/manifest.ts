@@ -25,6 +25,7 @@ export interface Manifest {
 	displayName?: string;
 	description?: string;
 	keywords?: string[];
+	categories?: string[];
 	homepage?: string;
 	bugs?: string | { url?: string; email?: string };
 	license?: string;

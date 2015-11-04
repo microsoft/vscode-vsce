@@ -298,6 +298,24 @@ describe('toVsixManifest', () => {
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://github.com/Microsoft/vscode-spell-check'));
 			});
 	});
+	
+	it('should understand categories', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			categories: ['hello', 'world']
+		};
+
+		return toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				const categories = result.PackageManifest.Metadata[0].Categories[0].split(',');
+				assert.ok(categories.some(c => c === 'hello'));
+				assert.ok(categories.some(c => c === 'world'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
