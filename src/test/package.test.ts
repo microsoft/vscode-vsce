@@ -293,6 +293,7 @@ describe('toVsixManifest', () => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Support' && p.Value === 'https://github.com/Microsoft/vscode-spell-check/issues'));
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://github.com/Microsoft/vscode-spell-check'));
 			});

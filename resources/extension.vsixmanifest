@@ -10,6 +10,7 @@
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.repository }" />
         <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${ links.repository }" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${ links.repository }" />
       <% } %>
       <% if (links.bugs) { %><Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${ links.bugs }" /><% } %>
       <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${ links.homepage }" /><% } %>
