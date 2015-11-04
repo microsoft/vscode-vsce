@@ -40,7 +40,7 @@
     "read": "^1.0.7",
     "tmp": "0.0.27",
     "url-join": "0.0.1",
-    "vso-node-api": "^0.4.2",
+    "vso-node-api": "^0.5.0",
     "yazl": "^2.2.2"
   },
   "devDependencies": {
