@@ -262,23 +262,10 @@ export function readManifest(cwd: string): Promise<Manifest> {
 		});
 }
 
-export function toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
-	const processors: IProcessor[] = [
-		new MainProcessor(manifest),
-		new ReadmeProcessor(manifest, options),
-		new LicenseProcessor(manifest),
-		new IconProcessor(manifest)
-	];
-
-	return Promise.all(files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file))))
-	.then(files => {
-		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-	
+export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {
 		return readFile(vsixManifestTemplatePath, 'utf8')
 			.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 			.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
-	});
 }
 
 export function toContentTypes(files: IFile[]): Promise<string> {
@@ -319,20 +306,38 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 	});
 }
 
+export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
+	return Promise.all(files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)))).then(files => {
+		const assets = _.flatten(processors.map(p => p.assets));
+		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
+		
+		return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
+			return [
+				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
+				{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
+				...files
+			];
+		});
+	});
+}
+
+export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
+	return [
+		new MainProcessor(manifest),
+		new ReadmeProcessor(manifest, options),
+		new LicenseProcessor(manifest),
+		new IconProcessor(manifest)
+	];
+}
+
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
+	const processors = createDefaultProcessors(manifest, options);
 	
 	return collectFiles(cwd, manifest).then(fileNames => {
-		const files:IFile[] = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
-
-		return Promise.all([toVsixManifest(manifest, files, options), toContentTypes(files)])
-			.then(result => {
-				return [
-					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
-					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
-					...files
-				];
-			});
+		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		
+		return processFiles(processors, files, options);
 	});
 }
 
@@ -378,7 +383,7 @@ export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collect(manifest, options)
+		.then(manifest => collect(manifest)
 			.then(files => writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)))
 				.then(packagePath => ({ manifest, packagePath }))));
 }

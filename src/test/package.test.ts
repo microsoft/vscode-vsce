@@ -1,14 +1,26 @@
-import { readManifest, collect, toVsixManifest, toContentTypes, ReadmeProcessor, read } from '../package';
+import { readManifest, collect, toContentTypes, ReadmeProcessor, read, processFiles, createDefaultProcessors, toVsixManifest, IFile } from '../package';
+import { Manifest } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as util from '../util';
+import * as _ from 'lodash';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
+
+function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
+	const processors = createDefaultProcessors(manifest);
+	return processFiles(processors, files).then(() => {
+		const assets = _.flatten(processors.map(p => p.assets));
+		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
+		
+		return toVsixManifest(assets, vsix);
+	});
+}
 
 describe('collect', () => {
 
@@ -63,7 +75,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null)
 		};
 
-		return toVsixManifest(manifest, [])
+		return _toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result);
@@ -105,7 +117,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension/readme.md' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
@@ -123,7 +135,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null)
 		};
 
-		return toVsixManifest(manifest, [])
+		return _toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
@@ -145,7 +157,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension/thelicense.md' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
@@ -168,7 +180,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension/thelicense.md' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
@@ -193,7 +205,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension/thelicense.md' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
@@ -217,7 +229,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension/fake.png' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Assets[0].Asset.some(d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'));
@@ -240,7 +252,7 @@ describe('toVsixManifest', () => {
 			{ path: 'extension\\thelicense.md' }
 		];
 
-		return toVsixManifest(manifest, files)
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXml(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
@@ -262,7 +274,7 @@ describe('toVsixManifest', () => {
 			}
 		};
 
-		return toVsixManifest(manifest, [])
+		return _toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
@@ -287,7 +299,7 @@ describe('toVsixManifest', () => {
 			homepage: "https://github.com/Microsoft/vscode-spell-check",
 		};
 
-		return toVsixManifest(manifest, [])
+		return _toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
@@ -308,7 +320,7 @@ describe('toVsixManifest', () => {
 			categories: ['hello', 'world']
 		};
 
-		return toVsixManifest(manifest, [])
+		return _toVsixManifest(manifest, [])
 			.then(xml => parseXml(xml))
 			.then(result => {
 				const categories = result.PackageManifest.Metadata[0].Categories[0].split(',');
