@@ -34,13 +34,13 @@ export function read(prompt: string, options: _read.Options = {}): Promise<strin
 export function getGalleryAPI(pat: string): IQGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
-	return vsoapi.getQGalleryApi('https://app.market.visualstudio.com');
+	return vsoapi.getQGalleryApi('https://marketplace.visualstudio.com');
 }
 
 export function getRawGalleryAPI(pat: string): IGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
-	return vsoapi.getGalleryApi('https://app.market.visualstudio.com');
+	return vsoapi.getGalleryApi('https://marketplace.visualstudio.com');
 }
 
 export function normalize(path: string): string {

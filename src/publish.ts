@@ -11,7 +11,7 @@ import * as denodeify from 'denodeify';
 const tmpName = denodeify<string>(tmp.tmpName);
 const readFile = denodeify<string, string, string>(fs.readFile);
 
-const galleryUrl = 'https://app.market.visualstudio.com';
+const galleryUrl = 'https://marketplace.visualstudio.com';
 
 export function publish(cwd = process.cwd()): Promise<any> {
 	return tmpName()
