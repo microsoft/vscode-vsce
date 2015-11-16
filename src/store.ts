@@ -43,13 +43,6 @@ function load(): Promise<IStore> {
 
 function save(store: IStore): Promise<IStore> {
 	return writeFile(storePath, JSON.stringify(store))
-		.then(() => {
-			if (process.platform !== 'win32') {
-				return Promise.resolve(null);
-			}
-			
-			return exec(`attrib +H ${ storePath }`);
-		})
 		.then(() => store);
 }
 
