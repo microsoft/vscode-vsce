@@ -60,8 +60,12 @@ function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 	return read(`Personal Access Token for publisher '${ publisherName }':`, { silent: true, replace: '*' })
 		.then(pat => {
 			const api = getGalleryAPI(pat);
-			
+
 			return api.getPublisher(publisherName).then(p => {
+				if (p.publisherName !== publisherName) {
+					return Promise.reject(`Wrong publisher name '${ publisherName }'. Found '${ p.publisherName }' instead.`);
+				}
+
 				console.log(`Authentication successful. Found publisher '${ p.displayName }'.`);
 				return pat;
 			});
@@ -71,7 +75,7 @@ function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 
 export function getPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
-	
+
 	return load().then(store => {
 		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
 		return publisher ? Promise.resolve(publisher) : requestPAT(store, publisherName);
@@ -80,17 +84,17 @@ export function getPublisher(publisherName: string): Promise<IPublisher> {
 
 export function loginPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
-	
+
 	return load()
 		.then<IStore>(store => {
 			const publisher = store.publishers.filter(p => p.name === publisherName)[0];
-			
+
 			if (publisher) {
 				console.log(`Publisher '${ publisherName }' is already known`);
 				return read('Do you want to overwrite its PAT? [y/N] ')
 					.then(answer => /^y$/i.test(answer) ? store : Promise.reject('Aborted'));
 			}
-			
+
 			return Promise.resolve(store);
 		})
 		.then(store => requestPAT(store, publisherName));
@@ -98,14 +102,14 @@ export function loginPublisher(publisherName: string): Promise<IPublisher> {
 
 export function logoutPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
-	
+
 	return load().then(store => {
 		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
-		
+
 		if (!publisher) {
 			return Promise.reject(`Unknown publisher '${ publisherName }'`);
 		}
-		
+
 		return removePublisherFromStore(store, publisherName);
 	});
 }
@@ -125,7 +129,7 @@ export function createPublisher(publisherName: string): Promise<any> {
 					publisherId: null,
 					shortDescription: ''
 				};
-				
+
 				return api.createPublisher(raw)
 					.then(() => ({ name: publisherName, pat }));
 			})
