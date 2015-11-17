@@ -274,13 +274,21 @@ export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOpt
 			.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
 }
 
-export function toContentTypes(files: IFile[]): Promise<string> {
-	const extensions = Object.keys(_.indexBy(files, f => path.extname(f.path)))
-		.map(e => e.toLowerCase())
-		.filter(e => e && !_.contains(['.json', '.vsixmanifest'], e));
+const defaultExtensions = {
+	'.json': 'application/json',
+	'.vsixmanifest': 'text/xml'
+};
 
-	const contentTypes = extensions
-		.map(extension => ({ extension, contentType: mime.lookup(extension) }));
+export function toContentTypes(files: IFile[]): Promise<string> {
+	const extensions = Object.keys(_.indexBy(files, f => path.extname(f.path).toLowerCase()))
+		.filter(e => !!e)
+		.reduce((r, e) => _.assign(r, { [e]: mime.lookup(e) }), {});
+
+	const allExtensions = _.assign({}, extensions, defaultExtensions);
+	const contentTypes = Object.keys(allExtensions).map(extension => ({
+		extension,
+		contentType: allExtensions[extension]
+	}));
 
 	return readFile(contentTypesTemplatePath, 'utf8')
 		.then(contentTypesTemplateStr => _.template(contentTypesTemplateStr))

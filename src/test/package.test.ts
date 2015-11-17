@@ -354,12 +354,8 @@ describe('toContentTypes', () => {
 				assert.ok(result.Types);
 				assert.ok(result.Types.Default);
 				assert.equal(result.Types.Default.length, 2);
-				assert.ok(result.Types.Default[0].$);
-				assert.equal(result.Types.Default[0].$.Extension, '.vsixmanifest');
-				assert.equal(result.Types.Default[0].$.ContentType, 'text/xml');
-				assert.ok(result.Types.Default[1].$);
-				assert.equal(result.Types.Default[1].$.Extension, '.json');
-				assert.equal(result.Types.Default[1].$.ContentType, 'application/json');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.vsixmanifest' && d.$.ContentType === 'text/xml'));
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.json' && d.$.ContentType === 'application/json'));
 			});
 	});
 
