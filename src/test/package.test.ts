@@ -1,4 +1,8 @@
-import { readManifest, collect, toContentTypes, ReadmeProcessor, read, processFiles, createDefaultProcessors, toVsixManifest, IFile } from '../package';
+import {
+	readManifest, collect, toContentTypes, ReadmeProcessor,
+	read, processFiles, createDefaultProcessors,
+	toVsixManifest, IFile, validateManifest
+} from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -62,6 +66,17 @@ describe('collect', () => {
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});
+	});
+});
+
+describe('validateManifest', () => {
+	it('should catch missing fields', () => {
+		assert(validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: { vscode: '0.10.1' }}));
+		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: 'engines', engines: { vscode: '0.10.1' }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: 'engines', engines: { vscode: '0.10.1' }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: null}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: { vscode: null }}); });
 	});
 });
 

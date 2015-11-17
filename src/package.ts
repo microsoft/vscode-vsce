@@ -225,6 +225,30 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
+export function validateManifest(manifest: Manifest): Manifest {
+	if (!manifest.publisher) {
+		throw new Error('Manifest missing field: publisher');
+	}
+
+	if (!manifest.name) {
+		throw new Error('Manifest missing field: name');
+	}
+
+	if (!manifest.version) {
+		throw new Error('Manifest missing field: version');
+	}
+
+	if (!manifest.engines) {
+		throw new Error('Manifest missing field: engines');
+	}
+
+	if (!manifest.engines['vscode']) {
+		throw new Error('Manifest missing field: engines.vscode');
+	}
+
+	return manifest;
+}
+
 export function readManifest(cwd: string): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 
@@ -237,29 +261,7 @@ export function readManifest(cwd: string): Promise<Manifest> {
 				return Promise.reject(`Error parsing manifest file: not a valid JSON file.`);
 			}
 		})
-		.then(manifest => {
-			if (!manifest.publisher) {
-				return Promise.reject('Manifest missing field: publisher');
-			}
-
-			if (!manifest.name) {
-				return Promise.reject('Manifest missing field: name');
-			}
-
-			if (!manifest.version) {
-				return Promise.reject('Manifest missing field: version');
-			}
-
-			if (!manifest.engines) {
-				return Promise.reject('Manifest missing field: engines');
-			}
-
-			if (!manifest.engines['vscode']) {
-				return Promise.reject('Manifest missing field: engines.vscode');
-			}
-
-			return Promise.resolve(manifest);
-		});
+		.then(validateManifest);
 }
 
 export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {
