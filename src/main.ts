@@ -62,6 +62,10 @@ module.exports = function (argv: string[]): void {
 		.description('Remove a publisher from the known publishers list')
 		.action(name => catchFatal(logoutPublisher(name)));
 
+	program
+		.command('*')
+		.action(() => program.help());
+
 	program.parse(argv);
 
 	if (process.argv.length <= 2) {
