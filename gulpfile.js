@@ -4,6 +4,7 @@ var filter = require('gulp-filter');
 var rimraf = require('rimraf');
 var path = require('path');
 var es = require('event-stream');
+var cp = require('child_process');
 var options = require('./tsconfig.json').compilerOptions;
 
 options.sourceMap = true;
@@ -28,4 +29,12 @@ var compile = function () {
 gulp.task('clean', function (cb) { rimraf('out', cb); });
 gulp.task('compile', ['clean'], compile);
 gulp.task('compile-only', compile);
-gulp.task('watch', ['compile'], function () { gulp.watch(['src/**', 'typings/**'], ['compile-only']); });
+
+gulp.task('test', function (cb) {
+	var child = cp.spawn('mocha', ['--reporter=dot'], { stdio: 'inherit' });
+	child.on('exit', function (code) { cb(); });
+});
+
+gulp.task('watch', ['compile', 'test'], function () {
+	gulp.watch(['src/**', 'typings/**'], ['compile-only', 'test']);
+});
