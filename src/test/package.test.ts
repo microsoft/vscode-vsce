@@ -21,7 +21,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-		
+
 		return toVsixManifest(assets, vsix);
 	});
 }
@@ -276,7 +276,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
-	
+
 	it('should understand gallery color and theme', () => {
 		const manifest = {
 			name: 'test',
@@ -297,7 +297,7 @@ describe('toVsixManifest', () => {
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark'));
 			});
 	});
-	
+
 	it('should understand all link types', () => {
 		const manifest = {
 			name: 'test',
@@ -325,7 +325,7 @@ describe('toVsixManifest', () => {
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://github.com/Microsoft/vscode-spell-check'));
 			});
 	});
-	
+
 	it('should understand categories', () => {
 		const manifest = {
 			name: 'test',
@@ -384,8 +384,8 @@ describe('toContentTypes', () => {
 });
 
 describe('ReadmeProcessor', () => {
-	
-	it('should be no-op when no baseContentUri is provided', () => {
+
+	it('should be no-op when no baseContentUrl is provided', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -393,27 +393,27 @@ describe('ReadmeProcessor', () => {
 			description: 'test extension',
 			engines: Object.create(null)
 		};
-		
+
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
 		};
-		
+
 		return processor.onFile(readme)
 			.then(file => read(file))
 			.then(actualBuffer => {
 				const actual = actualBuffer.toString('utf8');
-				
+
 				return readFile(path.join(root, 'readme.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
 					})
 			});
 	});
-	
-	it('should take baseContentUri', () => {
+
+	it('should take baseContentUrl', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -421,27 +421,30 @@ describe('ReadmeProcessor', () => {
 			description: 'test extension',
 			engines: Object.create(null)
 		};
-		
+
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, { baseContentUrl: 'https://github.com/username/repository/raw/master' });
+		const processor = new ReadmeProcessor(manifest, {
+			baseContentUrl: 'https://github.com/username/repository',
+			baseImagesUrl: 'https://github.com/username/repository/raw/master'
+		});
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
 		};
-		
+
 		return processor.onFile(readme)
 			.then(file => read(file))
 			.then(actualBuffer => {
 				const actual = actualBuffer.toString('utf8');
-				
+
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
 					})
 			});
 	});
-	
-	it('should infer baseContentUri if its a github repo', () => {
+
+	it('should infer baseContentUrl if its a github repo', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -450,27 +453,27 @@ describe('ReadmeProcessor', () => {
 			engines: Object.create(null),
 			repository: 'https://github.com/username/repository'
 		};
-		
+
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
 		};
-		
+
 		return processor.onFile(readme)
 			.then(file => read(file))
 			.then(actualBuffer => {
 				const actual = actualBuffer.toString('utf8');
-				
+
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
 					})
 			});
 	});
-	
-	it('should infer baseContentUri if its a github repo (.git)', () => {
+
+	it('should infer baseContentUrl if its a github repo (.git)', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -479,19 +482,19 @@ describe('ReadmeProcessor', () => {
 			engines: Object.create(null),
 			repository: 'https://github.com/username/repository.git'
 		};
-		
+
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
 		};
-		
+
 		return processor.onFile(readme)
 			.then(file => read(file))
 			.then(actualBuffer => {
 				const actual = actualBuffer.toString('utf8');
-				
+
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);

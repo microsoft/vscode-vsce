@@ -26,6 +26,9 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 ![issue](https://github.com/username/repository/raw/master/issue)
 
+[mono](https://github.com/username/repository/monkey)
+[not](http://shouldnottouchthis/)
+
 # Install
 This extension is published in the VS Code Gallery.  So simply hit 'F1' and type 'ext inst' from there select `SpellMD` and follow instructions.
 

@@ -56,6 +56,7 @@ export interface IPackageOptions {
 	cwd?: string;
 	packagePath?: string;
 	baseContentUrl?: string;
+	baseImagesUrl?: string;
 }
 
 export interface IProcessor {
@@ -75,11 +76,11 @@ function getUrl(url: string | { url?: string; }): string {
 	if (!url) {
 		return null;
 	}
-	
+
 	if (typeof url === 'string') {
 		return <string> url;
 	}
-	
+
 	return (<any> url).url;
 }
 
@@ -109,70 +110,77 @@ class MainProcessor extends BaseProcessor {
 }
 
 export class ReadmeProcessor extends BaseProcessor {
-	
+
 	private baseContentUrl: string;
-	
+	private baseImagesUrl: string;
+
 	constructor(manifest: Manifest, options: IPackageOptions= {}) {
 		super(manifest);
-		this.baseContentUrl = options.baseContentUrl || this.guessBaseContentUrl();
+
+		const guess = this.guessBaseUrls();
+
+		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
+		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 	}
-	
+
 	onFile(file: IFile): Promise<IFile> {
 		const path = util.normalize(file.path);
-		
-		if (/^extension\/readme.md$/i.test(path)) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
-			
-			if (this.baseContentUrl) {
-				return read(file)
-					.then(buffer => buffer.toString('utf8'))
-					.then(contents => contents.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, (all, title, link) =>
-						all.substr(0, title.length) + all.substr(title.length).replace(link, this.prependBaseContentUrl(link))
-					))
-					.then(contents => ({
-						path: file.path,
-						contents: new Buffer(contents)
-					}));
-			}
+
+		if (!/^extension\/readme.md$/i.test(path)) {
+			return Promise.resolve(file);
 		}
-		
-		return Promise.resolve(file);
+
+		this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
+
+		if (!this.baseContentUrl && !this.baseImagesUrl) {
+			return Promise.resolve(file);
+		}
+
+		return read(file)
+			.then(buffer => buffer.toString('utf8'))
+			.then(contents => contents.replace(/(!?)\[([^\]]+)\]\(([^\)]+)\)/g, (all, isImage, title, link) => {
+				const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+
+				if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
+					return all;
+				}
+
+				return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
+			}))
+			.then(contents => ({
+				path: file.path,
+				contents: new Buffer(contents)
+			}));
 	}
-	
-	private prependBaseContentUrl(link: string): string {
-		if (/^(?:\w+:)\/\//.test(link)) {
-			return link;
-		}
-		
-		if (link[0] === '#') {
-			return link;
-		}
-		
-		return urljoin(this.baseContentUrl, link);
-	}
-	
+
 	// GitHub heuristics
-	private guessBaseContentUrl(): string {
+	private guessBaseUrls(): { content: string; images: string; } {
 		let repository = null;
-		
+
 		if (typeof this.manifest.repository === 'string') {
 			repository = this.manifest.repository;
 		} else if (this.manifest.repository && typeof this.manifest.repository['url'] === 'string') {
 			repository = this.manifest.repository['url'];
 		}
-		
+
 		if (!repository) {
 			return null;
 		}
-		
+
 		const regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
 		const match = regex.exec(repository);
-		
-		if (match) {
-			const account = match[1];
-			const repository = match[2].replace(/\.git$/i, '');
-			return `https://github.com/${ account }/${ repository }/raw/master`;
+
+		if (!match) {
+			return null;
 		}
+
+		const account = match[1];
+		const repositoryName = match[2].replace(/\.git$/i, '');
+
+		return {
+			content: `https://github.com/${ account }/${ repositoryName }`,
+			images: `https://github.com/${ account }/${ repositoryName }/raw/master`
+		};
 	}
 }
 
@@ -241,7 +249,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	if (!manifest.engines['vscode']) {
 		throw new Error('Manifest missing field: engines.vscode');
 	}
-	
+
 	return manifest;
 }
 
@@ -308,7 +316,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	return Promise.all(files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)))).then(files => {
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-		
+
 		return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
 			return [
 				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
@@ -331,10 +339,10 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const processors = createDefaultProcessors(manifest, options);
-	
+
 	return collectFiles(cwd, manifest).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
-		
+
 		return processFiles(processors, files, options);
 	});
 }
@@ -378,7 +386,7 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 
 export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
-	
+
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => collect(manifest)

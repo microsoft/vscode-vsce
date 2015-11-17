@@ -19,7 +19,8 @@ module.exports = function (argv: string[]): void {
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Location of the package')
 		.option('--baseContentUrl [url]', 'If found, all relative links in README.md will be prepended with this url.')
-		.action(({ out, baseContentUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl })));
+		.option('--baseImagesUrl [url]', 'If found, all relative image links in README.md will be prepended with this url.')
+		.action(({ out, baseContentUrl, baseImagesUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
 
 	program
 		.command('publish')
