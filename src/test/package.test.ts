@@ -67,6 +67,16 @@ describe('collect', () => {
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});
 	});
+
+	it('should ignore **/.vsixmanifest', () => {
+		const cwd = fixture('vsixmanifest');
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd }))
+			.then(files => {
+				assert.equal(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
+			});
+	});
 });
 
 describe('validateManifest', () => {

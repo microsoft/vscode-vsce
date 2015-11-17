@@ -299,7 +299,8 @@ const defaultIgnore = [
 	'.vscodeignore',
 	'**/.git/**',
 	'**/*.vsix',
-	'**/.DS_Store'
+	'**/.DS_Store',
+	'**/*.vsixmanifest'
 ];
 
 function devDependenciesIgnore(manifest: Manifest): string[] {
