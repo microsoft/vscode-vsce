@@ -10,6 +10,7 @@ import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
+import { validatePublisher, validateExtensionName } from './validation';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -226,13 +227,8 @@ class IconProcessor extends BaseProcessor {
 }
 
 export function validateManifest(manifest: Manifest): Manifest {
-	if (!manifest.publisher) {
-		throw new Error('Manifest missing field: publisher');
-	}
-
-	if (!manifest.name) {
-		throw new Error('Manifest missing field: name');
-	}
+	validatePublisher(manifest.publisher);
+	validateExtensionName(manifest.name);
 
 	if (!manifest.version) {
 		throw new Error('Manifest missing field: version');
@@ -245,7 +241,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	if (!manifest.engines['vscode']) {
 		throw new Error('Manifest missing field: engines.vscode');
 	}
-
+	
 	return manifest;
 }
 
