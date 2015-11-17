@@ -126,7 +126,7 @@ export class ReadmeProcessor extends BaseProcessor {
 			if (this.baseContentUrl) {
 				return read(file)
 					.then(buffer => buffer.toString('utf8'))
-					.then(contents => contents.replace(/\[([^\[]+)\]\(([^\)]+)\)/g, (all, title, link) =>
+					.then(contents => contents.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, (all, title, link) =>
 						all.substr(0, title.length) + all.substr(title.length).replace(link, this.prependBaseContentUrl(link))
 					))
 					.then(contents => ({
