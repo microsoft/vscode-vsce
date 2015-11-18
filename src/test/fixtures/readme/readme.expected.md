@@ -26,7 +26,7 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 ![issue](https://github.com/username/repository/raw/master/issue)
 
-[mono](https://github.com/username/repository/monkey)
+[mono](https://github.com/username/repository/blob/master/monkey)
 [not](http://shouldnottouchthis/)
 
 # Install

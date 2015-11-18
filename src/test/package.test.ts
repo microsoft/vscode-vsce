@@ -430,7 +430,7 @@ describe('ReadmeProcessor', () => {
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {
-			baseContentUrl: 'https://github.com/username/repository',
+			baseContentUrl: 'https://github.com/username/repository/blob/master',
 			baseImagesUrl: 'https://github.com/username/repository/raw/master'
 		});
 		const readme = {

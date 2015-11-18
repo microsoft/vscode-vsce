@@ -178,7 +178,7 @@ export class ReadmeProcessor extends BaseProcessor {
 		const repositoryName = match[2].replace(/\.git$/i, '');
 
 		return {
-			content: `https://github.com/${ account }/${ repositoryName }`,
+			content: `https://github.com/${ account }/${ repositoryName }/blob/master`,
 			images: `https://github.com/${ account }/${ repositoryName }/raw/master`
 		};
 	}
