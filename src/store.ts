@@ -115,6 +115,8 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 }
 
 export function createPublisher(publisherName: string): Promise<any> {
+	validatePublisher(publisherName);
+	
 	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
 		return read(`Personal Access Token:`, { silent: true, replace: '*' })
 			.then(pat => {
