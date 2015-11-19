@@ -25,6 +25,11 @@ export interface IGetOptions {
 	promptIfMissing?: boolean;
 }
 
+export interface ILoginOptions {
+	publisher?: string;
+	pat?: string;
+}
+
 function load(): Promise<IStore> {
 	return readFile(storePath, 'utf8')
 		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
@@ -56,21 +61,22 @@ function removePublisherFromStore(store: IStore, publisherName: string): Promise
 	return save(store);
 }
 
+function authenticatePAT(store: IStore, publisherName: string, pat : string) : Promise<IPublisher> {
+    const api = getGalleryAPI(pat);
+
+    return api.getPublisher(publisherName).then(p => {
+        if (p.publisherName !== publisherName) {
+            return Promise.reject(`Wrong publisher name '${ publisherName }'. Found '${ p.publisherName }' instead.`);
+        }    
+        console.log(`Authentication successful. Found publisher '${ p.displayName }'.`);
+        return pat;
+    })
+    .then(pat => addPublisherToStore(store, { name: publisherName, pat }));
+}
+
 function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 	return read(`Personal Access Token for publisher '${ publisherName }':`, { silent: true, replace: '*' })
-		.then(pat => {
-			const api = getGalleryAPI(pat);
-
-			return api.getPublisher(publisherName).then(p => {
-				if (p.publisherName !== publisherName) {
-					return Promise.reject(`Wrong publisher name '${ publisherName }'. Found '${ p.publisherName }' instead.`);
-				}
-
-				console.log(`Authentication successful. Found publisher '${ p.displayName }'.`);
-				return pat;
-			});
-		})
-		.then(pat => addPublisherToStore(store, { name: publisherName, pat }));
+		.then(pat => authenticatePAT(store, publisherName, pat));
 }
 
 export function getPublisher(publisherName: string): Promise<IPublisher> {
@@ -82,22 +88,28 @@ export function getPublisher(publisherName: string): Promise<IPublisher> {
 	});
 }
 
-export function loginPublisher(publisherName: string): Promise<IPublisher> {
-	validatePublisher(publisherName);
+export function loginPublisher(publisher: ILoginOptions): Promise<IPublisher> {
+	validatePublisher(publisher.publisher);
 
 	return load()
 		.then<IStore>(store => {
-			const publisher = store.publishers.filter(p => p.name === publisherName)[0];
+			const publisher = store.publishers.filter(p => p.name === publisher.publisher)[0];
 
 			if (publisher) {
-				console.log(`Publisher '${ publisherName }' is already known`);
+				console.log(`Publisher '${ publisher.publisher }' is already known`);
 				return read('Do you want to overwrite its PAT? [y/N] ')
 					.then(answer => /^y$/i.test(answer) ? store : Promise.reject('Aborted'));
 			}
-
 			return Promise.resolve(store);
 		})
-		.then(store => requestPAT(store, publisherName));
+		.then(store => {
+            if(publisher.pat) {
+                return authenticatePAT(store,publisher.publisher, publisher.pat);
+            }
+            else {
+                return requestPAT(store, publisher.publisher);
+            }
+        });
 }
 
 export function logoutPublisher(publisherName: string): Promise<any> {

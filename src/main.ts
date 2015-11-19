@@ -55,7 +55,8 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('login <publisher>')
 		.description('Add a publisher to the known publishers list')
-		.action(name => catchFatal(loginPublisher(name)));
+        .option('-p, --pat [token]', 'Personal Access Token')
+		.action((name,pat) => catchFatal(loginPublisher({ publisher: name, pat: pat})));
 
 	program
 		.command('logout <publisher>')
