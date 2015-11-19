@@ -1,7 +1,7 @@
 # vsce
 > *The Visual Studio Code Extension Manager*
 
-![build status](https://travis-ci.org/Microsoft/vscode-vsce.svg?branch=master)
+[![build status](https://travis-ci.org/Microsoft/vscode-vsce.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-vsce)
 
 ### About
 
