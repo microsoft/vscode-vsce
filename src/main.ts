@@ -25,12 +25,14 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('publish')
 		.description('Publishes an extension')
-		.action(() => catchFatal(publish()));
+		.option('-p, --pat <token>', 'Personal Access Token')
+		.action(({ pat }) => catchFatal(publish({ pat })));
 
 	program
 		.command('unpublish [publisher] [name]')
 		.description('Unpublishes an extension')
-		.action((publisher, name) => catchFatal(unpublish(publisher, name)));
+		.option('-p, --pat <token>', 'Personal Access Token')
+		.action((publisher, name, { pat }) => catchFatal(unpublish(publisher, name, { pat })));
 
 	program
 		.command('list <publisher>')
