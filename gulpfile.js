@@ -18,7 +18,7 @@ function compile() {
 		gulp.src('src/**', { base: 'src', dot: true }),
 		gulp.src('typings/**/*.d.ts')
 	);
-	
+
 	return input
 		.pipe(ts)
 		.pipe(compilation())
@@ -41,3 +41,5 @@ gulp.task('just-test', ['just-compile'], test);
 gulp.task('watch', ['test'], function () {
 	gulp.watch(['src/**', 'typings/**'], ['just-test']);
 });
+
+gulp.task('default', ['watch']);
