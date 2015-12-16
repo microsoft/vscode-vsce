@@ -40,6 +40,9 @@
     },
     "mime/mime.d.ts": {
       "commit": "b27d0d0e1ce4207a7a5b1da847cb776c16d7531e"
+    },
+    "semver/semver.d.ts": {
+      "commit": "11322524f8db9cdb921427cad84cd22fe2d4f965"
     }
   }
 }

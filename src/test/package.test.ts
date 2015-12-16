@@ -81,12 +81,13 @@ describe('collect', () => {
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert(validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: { vscode: '0.10.1' }}));
-		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: 'engines', engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: 'engines', engines: { vscode: '0.10.1' }}); });
+		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' }}));
+		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' }}); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: null}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: 'engines', engines: { vscode: null }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' }}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null}); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null }}); });
 	});
 });
 

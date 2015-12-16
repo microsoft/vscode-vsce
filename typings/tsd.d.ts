@@ -10,3 +10,4 @@
 /// <reference path="mocha/mocha.d.ts" />
 /// <reference path="xml2js/xml2js.d.ts" />
 /// <reference path="mime/mime.d.ts" />
+/// <reference path="semver/semver.d.ts" />

@@ -10,7 +10,7 @@ import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
-import { validatePublisher, validateExtensionName } from './validation';
+import { validatePublisher, validateExtensionName, validateVersion } from './validation';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -237,6 +237,7 @@ class IconProcessor extends BaseProcessor {
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
+  validateVersion(manifest.version);
 
 	if (!manifest.version) {
 		throw new Error('Manifest missing field: version');
