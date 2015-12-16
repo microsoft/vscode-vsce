@@ -29,7 +29,7 @@ module.exports = function (argv: string[]): void {
 		.action(({ pat }) => catchFatal(publish({ pat })));
 
 	program
-		.command('unpublish [publisher] [name]')
+		.command('unpublish <publisher> <name>')
 		.description('Unpublishes an extension')
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.action((publisher, name, { pat }) => catchFatal(unpublish(publisher, name, { pat })));
