@@ -23,10 +23,10 @@ module.exports = function (argv: string[]): void {
 		.action(({ out, baseContentUrl, baseImagesUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
 
 	program
-		.command('publish')
+		.command('publish [package]')
 		.description('Publishes an extension')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action(({ pat }) => catchFatal(publish({ pat })));
+		.action((packagePath, { pat }) => catchFatal(publish({ pat, packagePath })));
 
 	program
 		.command('unpublish <publisher> <name>')
