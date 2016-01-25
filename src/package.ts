@@ -399,7 +399,7 @@ export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collect(manifest)
+		.then(manifest => collect(manifest, options)
 			.then(files => writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)))
 				.then(packagePath => ({ manifest, packagePath }))));
 }
