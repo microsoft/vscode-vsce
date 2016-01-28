@@ -11,7 +11,7 @@ import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
-import {getDependencyFiles} from './npmdeps';
+import { getDependencies } from './npm';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -305,9 +305,21 @@ const defaultIgnore = [
 	'**/*.vsixmanifest'
 ];
 
+function collectAllFiles(cwd: string): Promise<string[]> {
+	return getDependencies(cwd).then(deps => {
+		const promises = deps.map(dep => {
+			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
+				.then(files => files
+					.map(f => path.relative(cwd, path.join(dep, f)))
+					.map(f => f.replace(/\\/g, '/')));
+		});
+
+		return Promise.all(promises).then(util.flatten);
+	});
+}
+
 function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
-	return getDependencyFiles(cwd)
-		.then(files => {
+	return collectAllFiles(cwd).then(files => {
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))

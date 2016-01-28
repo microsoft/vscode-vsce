@@ -51,10 +51,14 @@ function chain2<A,B>(a: A, b: B[], fn: (a: A, b: B)=>Promise<A>, index = 0): Pro
 	if (index >= b.length) {
 		return Promise.resolve(a);
 	}
-	
+
 	return fn(a, b[index]).then(a => chain2(a, b, fn, index + 1));
 }
 
 export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>Promise<T>): Promise<T> {
 	return chain2(initial, processors, process);
+}
+
+export function flatten<T>(arr: T[][]): T[] {
+	return [].concat.apply([], arr) as T[];
 }
