@@ -38,8 +38,8 @@ function test(cb) {
 gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
-gulp.task('watch', ['test'], function () {
-	gulp.watch(['src/**', 'typings/**'], ['just-test']);
+gulp.task('watch', ['compile'], function () {
+	gulp.watch(['src/**', 'typings/**'], ['just-compile']);
 });
 
 gulp.task('default', ['watch']);
