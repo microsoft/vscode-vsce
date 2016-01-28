@@ -11,6 +11,7 @@ import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
+import { getDependencies } from './npm';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -304,17 +305,24 @@ const defaultIgnore = [
 	'**/*.vsixmanifest'
 ];
 
-function devDependenciesIgnore(manifest: Manifest): string[] {
-	const devDependencies = Object.keys(manifest.devDependencies || {});
-	return devDependencies.map(d => `node_modules/${ d }/**`);
+function collectAllFiles(cwd: string): Promise<string[]> {
+	return getDependencies(cwd).then(deps => {
+		const promises = deps.map(dep => {
+			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
+				.then(files => files
+					.map(f => path.relative(cwd, path.join(dep, f)))
+					.map(f => f.replace(/\\/g, '/')));
+		});
+
+		return Promise.all(promises).then(util.flatten);
+	});
 }
 
 function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
-	return glob('**', { cwd, nodir: true, dot: true }).then(files => {
+	return collectAllFiles(cwd).then(files => {
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
-			.then(ignore => devDependenciesIgnore(manifest).concat(ignore))
 			.then(ignore => defaultIgnore.concat(ignore))
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
 			.then<{ ignore: string[]; negate: string[]; }>(ignore => <any> _.indexBy(_.partition(ignore, i => !/^\s*!/.test(i)), (o, i) => i ? 'negate' : 'ignore'))

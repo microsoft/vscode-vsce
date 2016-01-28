@@ -58,11 +58,10 @@ describe('collect', () => {
 
 	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
-
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 4);
+				assert.equal(files.length, 5);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});

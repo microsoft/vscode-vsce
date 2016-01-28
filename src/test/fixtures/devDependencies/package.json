@@ -1,5 +1,5 @@
 {
-	"name": "uuid",
+	"name": "root-test-package",
 	"publisher": "joaomoreno",
 	"version": "1.0.0",
 	"engines": { "vscode": "*" },
