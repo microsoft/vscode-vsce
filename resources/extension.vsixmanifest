@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Language="en-US" Id="${ id }" Version="${ version }" Publisher="${ publisher }"/>
+    <Identity Language="en-US" Id="<%- id %>" Version="<%- version %>" Publisher="<%- publisher %>"/>
     <DisplayName><%- displayName %></DisplayName>
     <Description xml:space="preserve"><%- description %></Description>
     <Tags><%- tags %></Tags>
@@ -9,14 +9,14 @@
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
       <% if (links.repository) { %>
-        <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${ links.repository }" />
-        <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${ links.repository }" />
-        <Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${ links.repository }" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="<%- links.repository %>" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="<%- links.repository %>" />
       <% } %>
-      <% if (links.bugs) { %><Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${ links.bugs }" /><% } %>
-      <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${ links.homepage }" /><% } %>
-      <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${ galleryBanner.color }" /><% } %>
-      <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${ galleryBanner.theme }" /><% } %>
+      <% if (links.bugs) { %><Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="<%- links.bugs %>" /><% } %>
+      <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="<%- links.homepage %>" /><% } %>
+      <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="<%- galleryBanner.color %>" /><% } %>
+      <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="<%- galleryBanner.theme %>" /><% } %>
     </Properties>
     <% if (license) { %><License><%- license %></License><% } %>
     <% if (icon) { %><Icon><%- icon %></Icon><% } %>
@@ -27,6 +27,6 @@
   <Dependencies/>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
-    <% _.forEach(assets, function (asset) { %><Asset Type="${ asset.type }" Path="${ asset.path }" Addressable="true" /><% }); %>
+    <% _.forEach(assets, function (asset) { %><Asset Type="<%- asset.type %>" Path="<%- asset.path %>" Addressable="true" /><% }); %>
   </Assets>
 </PackageManifest>
