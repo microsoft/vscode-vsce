@@ -2,10 +2,10 @@
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
     <Identity Language="en-US" Id="${ id }" Version="${ version }" Publisher="${ publisher }"/>
-    <DisplayName>${ displayName }</DisplayName>
-    <Description xml:space="preserve">${ description }</Description>
-    <Tags>${ tags }</Tags>
-    <Categories>${ categories }</Categories>
+    <DisplayName><%- displayName %></DisplayName>
+    <Description xml:space="preserve"><%- description %></Description>
+    <Tags><%- tags %></Tags>
+    <Categories><%- categories %></Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
       <% if (links.repository) { %>
@@ -18,8 +18,8 @@
       <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${ galleryBanner.color }" /><% } %>
       <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${ galleryBanner.theme }" /><% } %>
     </Properties>
-    <% if (license) { %><License>${ license }</License><% } %>
-    <% if (icon) { %><Icon>${ icon }</Icon><% } %>
+    <% if (license) { %><License><%- license %></License><% } %>
+    <% if (icon) { %><Icon><%- icon %></Icon><% } %>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
