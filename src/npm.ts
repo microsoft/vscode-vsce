@@ -1,41 +1,40 @@
 import * as path from 'path';
 import * as cp from 'child_process';
+import { assign } from 'lodash';
 
-const listCmd = 'npm list --production --parseable';
-
-export function getDependencies(cwd: string): Promise<string[]> {
-	return isBadNpmVersion()
-		.then((isBadVersion) => {
-			if(isBadVersion) {
-				console.warn('You are using a npm version, that does not work well with vsce! Consider to update with "npm install -g npm".')
-			}
-		}).then(() => {
-			return new Promise<string[]>((c, e) => {
-				cp.exec(listCmd, { cwd }, (err, stdout, stderr) => {
-						if (err) return e(err);
-
-						c(stdout.toString('utf8')
-							.split(/[\r\n]/)
-							.filter(dir => path.isAbsolute(dir)));
-					}
-				);
-			});
-		});
+interface IOptions {
+	cwd?: string;
+	stdio?: any;
+	customFds?: any;
+	env?: any;
+	timeout?: number;
+	maxBuffer?: number;
+	killSignal?: string;
 }
 
-const versionCmd = 'npm -v';
-
-const badNpmVersions = [
-	/3.7.[0123]/
-];
-
-export function isBadNpmVersion(): Promise<boolean> {
-	return new Promise<boolean>((c, e) => {
-		cp.exec(versionCmd, (err, stdout, stderr) => {
+function exec(command: string, options: IOptions = {}): Promise<{ stdout: string; stderr: string; }> {
+	return new Promise((c, e) => {
+		cp.exec(command, assign(options, { encoding: 'utf8' }), (err, stdout: string, stderr: string) => {
 			if (err) return e(err);
-			
-			let version = stdout.toString('utf8').trim();
-			c(badNpmVersions.some((regex) => regex.test(version)));
+			c({ stdout, stderr });
 		});
 	});
+}
+
+function checkNPM(): Promise<void> {
+	return exec('npm -v').then(({ stdout }) => {
+		const version = stdout.trim();
+
+		if (/^3\.7\.[0123]$/.test(version)) {
+			return Promise.reject(`npm@${ version } doesn't work with vsce. Please update npm: npm install -g npm`);
+		}
+	});
+}
+
+export function getDependencies(cwd: string): Promise<string[]> {
+	return checkNPM()
+		.then(() => exec('npm list --production --parseable', { cwd }))
+		.then(({ stdout }) => stdout
+			.split(/[\r\n]/)
+			.filter(dir => path.isAbsolute(dir)));
 }
