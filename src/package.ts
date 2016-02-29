@@ -86,6 +86,7 @@ function getUrl(url: string | { url?: string; }): string {
 }
 
 class MainProcessor extends BaseProcessor {
+
 	constructor(manifest: Manifest) {
 		super(manifest);
 
@@ -105,6 +106,7 @@ class MainProcessor extends BaseProcessor {
 			galleryBanner: manifest.galleryBanner || {}
 		});
 	}
+
 	onFile(file: IFile): Promise<IFile> {
 		return Promise.resolve(file);
 	}
@@ -187,6 +189,7 @@ export class ReadmeProcessor extends BaseProcessor {
 
 class LicenseProcessor extends BaseProcessor {
 
+	private didFindLicense = false;
 	private filter: (name: string) => boolean;
 
 	constructor(manifest: Manifest) {
@@ -195,7 +198,7 @@ class LicenseProcessor extends BaseProcessor {
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
 
 		if (!match || !match[1]) {
-			this.filter = () => false;
+			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
 		} else {
 			const regexp = new RegExp('^extension/' + match[1] + '$');
 			this.filter = regexp.test.bind(regexp);
@@ -205,11 +208,16 @@ class LicenseProcessor extends BaseProcessor {
 	}
 
 	onFile(file: IFile): Promise<IFile> {
-		const normalizedPath = util.normalize(file.path);
-		if (this.filter(normalizedPath)) {
-			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
-			this.vsix.license = normalizedPath;
+		if (!this.didFindLicense) {
+			const normalizedPath = util.normalize(file.path);
+
+			if (this.filter(normalizedPath)) {
+				this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
+				this.vsix.license = normalizedPath;
+				this.didFindLicense = true;
+			}
 		}
+
 		return Promise.resolve(file);
 	}
 }

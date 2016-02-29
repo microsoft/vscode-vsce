@@ -225,6 +225,28 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should automatically detect license files', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null)
+		};
+
+		const files = [
+			{ path: 'extension/LICENSE.md' }
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
+			});
+	});
+
 	it('should add an icon metadata tag', () => {
 		const manifest = {
 			name: 'test',
