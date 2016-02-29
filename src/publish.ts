@@ -132,7 +132,6 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
   }
 
 	return promise.then(({ manifest, packagePath }) => {
-		process.exit(1);
 		const patPromise = options.pat
 			? Promise.resolve(options.pat)
 			: getPublisher(manifest.publisher).then(p => p.pat);
