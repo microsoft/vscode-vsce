@@ -140,6 +140,29 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it("should escape special characters", () => {
+		const specialCharacters = '\'"<>&`';
+
+		const name = `name${specialCharacters}`;
+		const publisher = `publisher${specialCharacters}`;
+		const version = `version${specialCharacters}`;
+		const description = `description${specialCharacters}`;
+
+		const manifest = {
+			name, publisher, version, description,
+			engines: Object.create(null)
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
+				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
+				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], name);
+				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, description);
+			});
+	});
+
 	it('should treat README.md as asset', () => {
 		const manifest = {
 			name: 'test',
