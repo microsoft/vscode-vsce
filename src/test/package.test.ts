@@ -61,7 +61,18 @@ describe('collect', () => {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 5);
+				//   ..extension.vsixmanifest
+				// [Content_Types].xml
+				// extension/package.json
+				// extension/node_modules/real/dependency.js
+				// extension/node_modules/real/package.json
+				// extension/node_modules/real2/dependency.js
+				// extension/node_modules/real2/package.json
+				// extension/node_modules/real_sub/dependency.js
+				// extension/node_modules/real_sub/package.json
+				// extension/node_modules/real/node_modules/real_sub/dependency.js
+				// extension/node_modules/real/node_modules/real_sub/package.json
+				assert.equal(files.length, 11);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 
-const cmd = 'npm list --production --parseable --depth';
+const cmd = 'npm list --production --parseable';
 
 export function getDependencies(cwd: string): Promise<string[]> {
 	return new Promise<string[]>((c, e) => {
