@@ -33,7 +33,7 @@ function checkNPM(): Promise<void> {
 
 export function getDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
-		.then(() => exec('npm list --production --parseable', { cwd }))
+		.then(() => exec('npm list --production --parseable --depth=99999', { cwd }))
 		.then(({ stdout }) => stdout
 			.split(/[\r\n]/)
 			.filter(dir => path.isAbsolute(dir)));
