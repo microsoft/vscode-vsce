@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackageResult } from './package';
+import { pack, readManifest, writeManifest, IPackageResult } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, getRawGalleryAPI, read } from './util';
@@ -8,6 +8,7 @@ import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
+import * as semver from 'semver';
 
 const tmpName = denodeify<string>(tmp.tmpName);
 const readFile = denodeify<string, string, string>(fs.readFile);
@@ -80,27 +81,63 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 
 export interface IPublishOptions {
   packagePath?: string;
+	version?: string;
 	cwd?: string;
 	pat?: string;
+}
+
+function versionBump(cwd: string = process.cwd(), version?: string): Promise<void> {
+	if (!version) {
+		return Promise.resolve(null);
+	}
+
+	return readManifest(cwd)
+		.then(manifest => {
+			switch (version) {
+				case 'major':
+				case 'minor':
+				case 'patch':
+					return { manifest, version: semver.inc(manifest.version, version) };
+				default:
+					const updatedVersion = semver.valid(version);
+
+					if (!updatedVersion) {
+						return Promise.reject(`Invalid version ${ version }`);
+					}
+
+					return { manifest, version: updatedVersion };
+			}
+		}).then(({ manifest, version }) => {
+			if (version !== manifest.version) {
+				manifest.version = version;
+				return writeManifest(cwd, manifest);
+			}
+		});
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
   let promise: Promise<IPackageResult>;
 
   if (options.packagePath) {
+		if (options.version) {
+			return Promise.reject(`Not supported: packagePath and version.`);
+		}
+
     promise = readManifestFromPackage(options.packagePath)
       .then(manifest => ({ manifest, packagePath: options.packagePath }))
   } else {
-    promise = tmpName()
-      .then(packagePath => pack({ packagePath, cwd: options.cwd }));
+		promise = versionBump(options.cwd, options.version)
+			.then(() => tmpName())
+      .then(packagePath => pack({ packagePath, version: options.version, cwd: options.cwd }));
   }
 
 	return promise.then(({ manifest, packagePath }) => {
-    const patPromise = options.pat
-      ? Promise.resolve(options.pat)
-      : getPublisher(manifest.publisher).then(p => p.pat);
+		process.exit(1);
+		const patPromise = options.pat
+			? Promise.resolve(options.pat)
+			: getPublisher(manifest.publisher).then(p => p.pat);
 
-    return patPromise.then(pat => _publish(packagePath, pat, manifest));
+		return patPromise.then(pat => _publish(packagePath, pat, manifest));
   });
 }
 

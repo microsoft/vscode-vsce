@@ -12,13 +12,15 @@ import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
 import { getDependencies } from './npm';
+import * as semver from 'semver';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
 	(filePath: string, encoding?: string): Promise<string>;
 }
 
-const readFile: IReadFile = <any> denodeify(fs.readFile);
+const readFile = denodeify<string, string, string>(fs.readFile);
+const writeFile = denodeify<string, string, string, void>(fs.writeFile);
 const unlink = denodeify<string, void>(fs.unlink);
 const exec = denodeify<string, { cwd?: string; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
@@ -35,11 +37,11 @@ export interface IFile {
 	localPath?: string;
 }
 
-export function read(file: IFile): Promise<Buffer> {
+export function read(file: IFile): Promise<string> {
 	if (file.contents) {
-		return Promise.resolve(file.contents);
+		return Promise.resolve(file.contents).then(b => b.toString('utf8'));
 	} else {
-		return readFile(file.localPath);
+		return readFile(file.localPath, 'utf8');
 	}
 }
 
@@ -56,6 +58,7 @@ export interface IAsset {
 export interface IPackageOptions {
 	cwd?: string;
 	packagePath?: string;
+	version?: string;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 }
@@ -140,7 +143,6 @@ export class ReadmeProcessor extends BaseProcessor {
 		}
 
 		return read(file)
-			.then(buffer => buffer.toString('utf8'))
 			.then(contents => contents.replace(/(!?)\[([^\]]+)\]\(([^\)]+)\)/g, (all, isImage, title, link) => {
 				const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
 
@@ -276,6 +278,11 @@ export function readManifest(cwd: string): Promise<Manifest> {
 			}
 		})
 		.then(validateManifest);
+}
+
+export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
+	const manifestPath = path.join(cwd, 'package.json');
+	return writeFile(manifestPath, JSON.stringify(manifest, null, 4), 'utf8');
 }
 
 export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {

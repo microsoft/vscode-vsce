@@ -442,9 +442,7 @@ describe('ReadmeProcessor', () => {
 
 		return processor.onFile(readme)
 			.then(file => read(file))
-			.then(actualBuffer => {
-				const actual = actualBuffer.toString('utf8');
-
+			.then(actual => {
 				return readFile(path.join(root, 'readme.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
@@ -473,9 +471,7 @@ describe('ReadmeProcessor', () => {
 
 		return processor.onFile(readme)
 			.then(file => read(file))
-			.then(actualBuffer => {
-				const actual = actualBuffer.toString('utf8');
-
+			.then(actual => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
@@ -502,9 +498,7 @@ describe('ReadmeProcessor', () => {
 
 		return processor.onFile(readme)
 			.then(file => read(file))
-			.then(actualBuffer => {
-				const actual = actualBuffer.toString('utf8');
-
+			.then(actual => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
@@ -531,9 +525,7 @@ describe('ReadmeProcessor', () => {
 
 		return processor.onFile(readme)
 			.then(file => read(file))
-			.then(actualBuffer => {
-				const actual = actualBuffer.toString('utf8');
-
+			.then(actual => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
@@ -564,9 +556,7 @@ describe('ReadmeProcessor', () => {
 
 		return processor.onFile(readme)
 			.then(file => read(file))
-			.then(actualBuffer => {
-				const actual = actualBuffer.toString('utf8');
-
+			.then(actual => {
 				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
