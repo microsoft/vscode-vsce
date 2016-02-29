@@ -1,11 +1,11 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 
-const cmd = 'npm list --production --parseable';
+const listCmd = 'npm list --production --parseable';
 
 export function getDependencies(cwd: string): Promise<string[]> {
 	return new Promise<string[]>((c, e) => {
-		cp.exec(cmd, { cwd }, (err, stdout, stderr) => {
+		cp.exec(listCmd, { cwd }, (err, stdout, stderr) => {
 				if (err) return e(err);
 
 				c(stdout.toString('utf8')
