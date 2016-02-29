@@ -4,16 +4,23 @@ import * as cp from 'child_process';
 const listCmd = 'npm list --production --parseable';
 
 export function getDependencies(cwd: string): Promise<string[]> {
-	return new Promise<string[]>((c, e) => {
-		cp.exec(listCmd, { cwd }, (err, stdout, stderr) => {
-				if (err) return e(err);
-
-				c(stdout.toString('utf8')
-					.split(/[\r\n]/)
-					.filter(dir => path.isAbsolute(dir)));
+	return isBadNpmVersion()
+		.then((isBadVersion) => {
+			if(isBadVersion) {
+				console.warn('You are using a npm version, that does not work well with vsce! Consider to update with "npm install -g npm".')
 			}
-		);
-	});
+		}).then(() => {
+			return new Promise<string[]>((c, e) => {
+				cp.exec(listCmd, { cwd }, (err, stdout, stderr) => {
+						if (err) return e(err);
+
+						c(stdout.toString('utf8')
+							.split(/[\r\n]/)
+							.filter(dir => path.isAbsolute(dir)));
+					}
+				);
+			});
+		});
 }
 
 const versionCmd = 'npm -v';
