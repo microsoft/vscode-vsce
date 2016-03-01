@@ -65,6 +65,7 @@ export interface IPackageOptions {
 
 export interface IProcessor {
 	onFile(file: IFile): Promise<IFile>;
+	onEnd(): void;
 	assets: IAsset[];
 	vsix: any;
 }
@@ -74,6 +75,7 @@ export abstract class BaseProcessor implements IProcessor {
 	public assets: IAsset[] = [];
 	public vsix: any = Object.create(null);
 	abstract onFile(file: IFile): Promise<IFile>;
+	onEnd() {}
 }
 
 function getUrl(url: string | { url?: string; }): string {
@@ -232,6 +234,7 @@ class LicenseProcessor extends BaseProcessor {
 class IconProcessor extends BaseProcessor {
 
 	private icon: string;
+	private didFindIcon = false;
 
 	constructor(manifest: Manifest) {
 		super(manifest);
@@ -243,10 +246,17 @@ class IconProcessor extends BaseProcessor {
 	onFile(file: IFile): Promise<IFile> {
 		const normalizedPath = util.normalize(file.path);
 		if (normalizedPath === this.icon) {
+			this.didFindIcon = true;
 			this.assets.push({ type: 'Microsoft.VisualStudio.Services.Icons.Default', path: normalizedPath });
 			this.vsix.icon = this.icon;
 		}
 		return Promise.resolve(file);
+	}
+
+	onEnd(): void {
+		if (this.icon && !this.didFindIcon) {
+			throw new Error(`The specified icon '${ this.icon }' wasn't found in the extension.`);
+		}
 	}
 }
 
@@ -351,7 +361,11 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 }
 
 export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
-	return Promise.all(files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)))).then(files => {
+	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
+
+	return Promise.all(processedFiles).then(files => {
+		processors.forEach(p => p.onEnd());
+
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
 
