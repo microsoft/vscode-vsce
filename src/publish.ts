@@ -65,7 +65,7 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
       .catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
       .then(extension => {
         if (extension && extension.versions.some(v => v.version === manifest.version)) {
-          return Promise.reject(`${ fullName } already exists.`);
+          return Promise.reject(`${ fullName } already exists. Version number cannot be the same.`);
         }
 
         var promise = extension
