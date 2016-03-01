@@ -211,9 +211,14 @@ class LicenseProcessor extends BaseProcessor {
 
 	onFile(file: IFile): Promise<IFile> {
 		if (!this.didFindLicense) {
-			const normalizedPath = util.normalize(file.path);
+			let normalizedPath = util.normalize(file.path);
 
 			if (this.filter(normalizedPath)) {
+				if (!path.extname(normalizedPath)) {
+					file.path += '.txt';
+					normalizedPath += '.txt';
+				}
+
 				this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
 				this.vsix.license = normalizedPath;
 				this.didFindLicense = true;

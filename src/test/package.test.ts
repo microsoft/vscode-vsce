@@ -267,6 +267,9 @@ describe('toVsixManifest', () => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
 				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
+				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
 			});
 	});
 
