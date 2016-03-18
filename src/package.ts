@@ -12,7 +12,6 @@ import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
 import { getDependencies } from './npm';
-import * as semver from 'semver';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;

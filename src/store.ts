@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as cp from 'child_process';
 import { home } from 'osenv';
 import { read, getGalleryAPI, getRawGalleryAPI } from './util';
 import { validatePublisher } from './validation';
@@ -9,7 +8,6 @@ import * as denodeify from 'denodeify';
 const readFile = denodeify<string, string, string>(fs.readFile);
 const writeFile = denodeify<string, string, void>(fs.writeFile);
 const storePath = path.join(home(), '.vsce');
-const exec = denodeify<string, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 
 export interface IPublisher {
 	name: string;
@@ -116,7 +114,7 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 
 export function createPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
-	
+
 	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
 		return read(`Personal Access Token:`, { silent: true, replace: '*' })
 			.then(pat => {

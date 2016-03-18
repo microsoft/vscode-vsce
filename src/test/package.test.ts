@@ -9,7 +9,6 @@ import * as fs from 'fs';
 import * as assert from 'assert';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
-import * as util from '../util';
 import * as _ from 'lodash';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
@@ -472,7 +471,7 @@ describe('ReadmeProcessor', () => {
 				return readFile(path.join(root, 'readme.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					})
+					});
 			});
 	});
 
@@ -501,7 +500,7 @@ describe('ReadmeProcessor', () => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					})
+					});
 			});
 	});
 
@@ -528,7 +527,7 @@ describe('ReadmeProcessor', () => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					})
+					});
 			});
 	});
 
@@ -555,7 +554,7 @@ describe('ReadmeProcessor', () => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					})
+					});
 			});
 	});
 
@@ -571,7 +570,7 @@ describe('ReadmeProcessor', () => {
 
 		const options = {
 			baseImagesUrl: 'https://github.com/username/repository/path/to'
-		}
+		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, options);
@@ -586,7 +585,7 @@ describe('ReadmeProcessor', () => {
 				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					})
+					});
 			});
 	});
 });

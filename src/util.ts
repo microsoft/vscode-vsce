@@ -1,12 +1,8 @@
 import { assign } from 'lodash';
 import * as _read from 'read';
-import * as fs from 'fs';
-import * as path from 'path';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
-
-const readFile = denodeify<string, string, string>(fs.readFile);
 
 export function fatal<T>(message: any, ...args: any[]): Promise<T> {
 	if (message instanceof Error) {

@@ -13,8 +13,6 @@ import * as semver from 'semver';
 const tmpName = denodeify<string>(tmp.tmpName);
 const readFile = denodeify<string, string, string>(fs.readFile);
 
-const galleryUrl = 'https://marketplace.visualstudio.com';
-
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
   return new Promise<Manifest>((c, e) => {
     yauzl.open(packagePath, (err, zipfile) => {
@@ -124,7 +122,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		}
 
     promise = readManifestFromPackage(options.packagePath)
-      .then(manifest => ({ manifest, packagePath: options.packagePath }))
+      .then(manifest => ({ manifest, packagePath: options.packagePath }));
   } else {
 		promise = versionBump(options.cwd, options.version)
 			.then(() => tmpName())

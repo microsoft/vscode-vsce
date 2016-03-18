@@ -15,7 +15,7 @@ interface IOptions {
 function exec(command: string, options: IOptions = {}): Promise<{ stdout: string; stderr: string; }> {
 	return new Promise((c, e) => {
 		cp.exec(command, assign(options, { encoding: 'utf8' }), (err, stdout: string, stderr: string) => {
-			if (err) return e(err);
+			if (err) { return e(err); }
 			c({ stdout, stderr });
 		});
 	});
