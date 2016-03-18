@@ -6,7 +6,7 @@
     <Description xml:space="preserve"><%- description %></Description>
     <Tags><%- tags %></Tags>
     <Categories><%- categories %></Categories>
-    <GalleryFlags>Public</GalleryFlags>
+    <GalleryFlags><%- flags %></GalleryFlags>
     <Properties>
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />

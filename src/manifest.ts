@@ -17,6 +17,7 @@ export interface Manifest {
 	activationEvents?: string[];
 	extensionDependencies?: string[];
 	galleryBanner?: { color?: string; theme?: string; };
+	preview?: boolean;
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
 

@@ -411,6 +411,22 @@ describe('toVsixManifest', () => {
 				assert.ok(categories.some(c => c === 'world'));
 			});
 	});
+
+	it('should respect preview flag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			preview: true
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXml(xml))
+			.then(result => {
+				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public Preview']);
+			});
+	});
 });
 
 describe('toContentTypes', () => {

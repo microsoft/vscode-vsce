@@ -94,6 +94,12 @@ class MainProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 
+		const flags = ['Public'];
+
+		if (manifest.preview) {
+			flags.push('Preview');
+		}
+
 		_.assign(this.vsix, {
 			id: manifest.name,
 			displayName: manifest.displayName || manifest.name,
@@ -102,6 +108,7 @@ class MainProcessor extends BaseProcessor {
 			description: manifest.description || '',
 			tags: (manifest.keywords || []).concat('vscode').join(','),
 			categories: (manifest.categories || []).join(','),
+			flags: flags.join(' '),
 			links: {
 				repository: getUrl(manifest.repository),
 				bugs: getUrl(manifest.bugs),
