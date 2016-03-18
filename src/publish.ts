@@ -157,12 +157,21 @@ export function list(publisher: string): Promise<any> {
 		});
 }
 
-export function unpublish(publisher: string, name: string, options: IPublishOptions = {}): Promise<any> {
-	const details = publisher && name
-		? Promise.resolve(({ publisher, name }))
-		: readManifest(options.cwd);
+export interface IUnpublishOptions extends IPublishOptions {
+	id?: string;
+}
 
-	return details.then(({ publisher, name }) => {
+export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+	let promise: Promise<{ publisher: string; name: string; }>;
+
+	if (options.id) {
+		const [publisher, name] = options.id.split('.');
+		promise = Promise.resolve(({ publisher, name }));
+	} else {
+		promise = readManifest(options.cwd);
+	}
+
+	return promise.then(({ publisher, name }) => {
 		const fullName = `${ publisher }.${ name }`;
 		const pat = options.pat
 			? Promise.resolve(options.pat)

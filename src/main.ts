@@ -29,10 +29,10 @@ module.exports = function (argv: string[]): void {
 		.action((version, { pat }) => catchFatal(publish({ pat, version })));
 
 	program
-		.command('unpublish <publisher> <name>')
-		.description('Unpublishes an extension')
+		.command('unpublish [<extensionid>]')
+		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action((publisher, name, { pat }) => catchFatal(unpublish(publisher, name, { pat })));
+		.action((id, { pat }) => catchFatal(unpublish({ id, pat })));
 
 	program
 		.command('list <publisher>')

@@ -286,7 +286,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd: string): Promise<Manifest> {
+export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 
 	return readFile(manifestPath, 'utf8')
