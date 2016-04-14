@@ -111,7 +111,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(parseXml)
 			.then(result => {
 				assert.ok(result);
 				assert.ok(result.PackageManifest);
@@ -126,7 +126,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
-				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['vscode']);
+				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['']);
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public']);
 				assert.equal(result.PackageManifest.Installation.length, 1);
 				assert.equal(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
