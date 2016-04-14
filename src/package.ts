@@ -64,7 +64,7 @@ export interface IPackageOptions {
 
 export interface IProcessor {
 	onFile(file: IFile): Promise<IFile>;
-	onEnd(): void;
+	onEnd(): Promise<void>;
 	assets: IAsset[];
 	vsix: any;
 }
@@ -74,7 +74,7 @@ export abstract class BaseProcessor implements IProcessor {
 	public assets: IAsset[] = [];
 	public vsix: any = Object.create(null);
 	abstract onFile(file: IFile): Promise<IFile>;
-	onEnd() {}
+	onEnd() { return Promise.resolve(null); }
 }
 
 function getUrl(url: string | { url?: string; }): string {
@@ -106,7 +106,7 @@ class MainProcessor extends BaseProcessor {
 			version: manifest.version,
 			publisher: manifest.publisher,
 			description: manifest.description || '',
-			tags: (manifest.keywords || []).join(','),
+			tags: (manifest.keywords || []).slice(0, 5).join(','),
 			categories: (manifest.categories || []).join(','),
 			flags: flags.join(' '),
 			links: {
@@ -120,6 +120,18 @@ class MainProcessor extends BaseProcessor {
 
 	onFile(file: IFile): Promise<IFile> {
 		return Promise.resolve(file);
+	}
+
+	onEnd(): Promise<void> {
+		const keywords = this.manifest.keywords || [];
+
+		if (keywords.length > 5) {
+			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${ keywords.slice(0, 5).join(', ') }].`);
+			return util.read('Do you want to continue? [y/N] ')
+				.then(answer => /^y$/i.test(answer) ? Promise.resolve(null) : Promise.reject('Aborted'));
+		}
+
+		return Promise.resolve(null);
 	}
 }
 
@@ -259,10 +271,12 @@ class IconProcessor extends BaseProcessor {
 		return Promise.resolve(file);
 	}
 
-	onEnd(): void {
+	onEnd(): Promise<void> {
 		if (this.icon && !this.didFindIcon) {
-			throw new Error(`The specified icon '${ this.icon }' wasn't found in the extension.`);
+			return Promise.reject(new Error(`The specified icon '${ this.icon }' wasn't found in the extension.`));
 		}
+
+		return Promise.resolve(null);
 	}
 }
 
@@ -370,17 +384,17 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
 	return Promise.all(processedFiles).then(files => {
-		processors.forEach(p => p.onEnd());
+		return Promise.all(processors.map(p => p.onEnd())).then(() => {
+			const assets = _.flatten(processors.map(p => p.assets));
+			const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
 
-		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
-
-		return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
-			return [
-				{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
-				{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
-				...files
-			];
+			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
+				return [
+					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
+					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
+					...files
+				];
+			});
 		});
 	});
 }
