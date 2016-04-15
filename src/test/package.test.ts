@@ -427,6 +427,52 @@ describe('toVsixManifest', () => {
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public Preview']);
 			});
 	});
+
+	it('should automatically add theme tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['theme']));
+	});
+
+	it('should not automatically add theme tag when themes are empty', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				themes: []
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['']));
+	});
+
+	it('should remove duplicate tags', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			keywords: ['theme', 'theme']
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['theme']));
+	});
 });
 
 describe('toContentTypes', () => {

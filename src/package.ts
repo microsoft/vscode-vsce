@@ -124,15 +124,24 @@ export class TagsProcessor extends BaseProcessor {
 		const keywords = this.manifest.keywords || [];
 		const trimmedKeywords = keywords.slice(0, 5);
 
-		let promise = Promise.resolve(null);
+		let promise = Promise.resolve(trimmedKeywords);
 
 		if (keywords.length > 5) {
 			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${ trimmedKeywords.join(', ') }].`);
 			promise = util.read('Do you want to continue? [y/N] ')
-				.then(answer => /^y$/i.test(answer) ? Promise.resolve(null) : Promise.reject('Aborted'));
+				.then(answer => /^y$/i.test(answer) ? Promise.resolve(trimmedKeywords) : Promise.reject('Aborted'));
 		}
 
-		return promise.then<any>(() => this.vsix.tags = trimmedKeywords.join(','));
+		return promise.then<any>(keywords => {
+			const contributes = this.manifest.contributes;
+			const themes = contributes && contributes['themes'];
+
+			if (themes && themes.length > 0) {
+				keywords = [...keywords, 'theme'];
+			}
+
+			this.vsix.tags = _.unique(keywords).join(',');
+		});
 	}
 }
 
