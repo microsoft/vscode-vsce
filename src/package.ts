@@ -134,19 +134,24 @@ export class TagsProcessor extends BaseProcessor {
 
 		return promise.then<any>(keywords => {
 			const contributes = this.manifest.contributes;
-			const themes = contributes && contributes['themes'];
-
-			if (themes && themes.length > 0) {
-				keywords = [...keywords, 'theme'];
-			}
-
 			const activationEvents = this.manifest.activationEvents || [];
-			const languages = activationEvents
+
+			const themes = contributes && contributes['themes'] && contributes['themes'].length > 0 ? ['theme'] : [];
+
+			const languageContributions = ((contributes && contributes['languages']) || [])
+				.map(l => l.id);
+
+			const languageActivations = activationEvents
 				.map(e => /^onLanguage:(.*)$/.exec(e))
 				.filter(r => !!r)
 				.map(r => r[1]);
 
-			keywords = [...keywords, ...languages];
+			keywords = [
+				...keywords,
+				...themes,
+				...languageContributions,
+				...languageActivations
+			];
 
 			this.vsix.tags = _.unique(keywords).join(',');
 		});

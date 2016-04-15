@@ -460,13 +460,29 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
 	});
 
-	it('should automatically add language tag', () => {
+	it('should automatically add language tag with activationEvent', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
 			activationEvents: ['onLanguage:go']
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
+	});
+
+	it('should automatically add language tag with language contribution', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{ id: 'go' }]
+			}
 		};
 
 		return _toVsixManifest(manifest, [])
