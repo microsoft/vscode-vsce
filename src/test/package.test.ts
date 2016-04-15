@@ -490,6 +490,22 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
 	});
 
+	it('should automatically add snippets tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				snippets: [{ language: 'go', path: 'gosnippets.json' }]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet'));
+	});
+
 	it('should remove duplicate tags', () => {
 		const manifest = {
 			name: 'test',

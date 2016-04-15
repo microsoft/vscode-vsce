@@ -137,6 +137,7 @@ export class TagsProcessor extends BaseProcessor {
 			const activationEvents = this.manifest.activationEvents || [];
 
 			const themes = contributes && contributes['themes'] && contributes['themes'].length > 0 ? ['theme'] : [];
+			const snippets = contributes && contributes['snippets'] && contributes['snippets'].length > 0 ? ['snippet'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.map(l => l.id);
@@ -149,6 +150,7 @@ export class TagsProcessor extends BaseProcessor {
 			keywords = [
 				...keywords,
 				...themes,
+				...snippets,
 				...languageContributions,
 				...languageActivations
 			];
