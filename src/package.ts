@@ -89,7 +89,7 @@ function getUrl(url: string | { url?: string; }): string {
 	return (<any> url).url;
 }
 
-class MainProcessor extends BaseProcessor {
+class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
 		super(manifest);
@@ -401,7 +401,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 
 export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
 	return [
-		new MainProcessor(manifest),
+		new ManifestProcessor(manifest),
 		new ReadmeProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
