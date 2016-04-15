@@ -69,11 +69,11 @@ export interface IProcessor {
 	vsix: any;
 }
 
-export abstract class BaseProcessor implements IProcessor {
+export class BaseProcessor implements IProcessor {
 	constructor(protected manifest: Manifest) {}
-	public assets: IAsset[] = [];
-	public vsix: any = Object.create(null);
-	abstract onFile(file: IFile): Promise<IFile>;
+	assets: IAsset[] = [];
+	vsix: any = Object.create(null);
+	onFile(file: IFile): Promise<IFile> { return Promise.resolve(file); }
 	onEnd() { return Promise.resolve(null); }
 }
 
@@ -106,7 +106,6 @@ class ManifestProcessor extends BaseProcessor {
 			version: manifest.version,
 			publisher: manifest.publisher,
 			description: manifest.description || '',
-			tags: (manifest.keywords || []).slice(0, 5).join(','),
 			categories: (manifest.categories || []).join(','),
 			flags: flags.join(' '),
 			links: {
@@ -117,21 +116,23 @@ class ManifestProcessor extends BaseProcessor {
 			galleryBanner: manifest.galleryBanner || {}
 		});
 	}
+}
 
-	onFile(file: IFile): Promise<IFile> {
-		return Promise.resolve(file);
-	}
+export class TagsProcessor extends BaseProcessor {
 
 	onEnd(): Promise<void> {
 		const keywords = this.manifest.keywords || [];
+		const trimmedKeywords = keywords.slice(0, 5);
+
+		let promise = Promise.resolve(null);
 
 		if (keywords.length > 5) {
-			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${ keywords.slice(0, 5).join(', ') }].`);
-			return util.read('Do you want to continue? [y/N] ')
+			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${ trimmedKeywords.join(', ') }].`);
+			promise = util.read('Do you want to continue? [y/N] ')
 				.then(answer => /^y$/i.test(answer) ? Promise.resolve(null) : Promise.reject('Aborted'));
 		}
 
-		return Promise.resolve(null);
+		return promise.then<any>(() => this.vsix.tags = trimmedKeywords.join(','));
 	}
 }
 
@@ -402,6 +403,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
 	return [
 		new ManifestProcessor(manifest),
+		new TagsProcessor(manifest),
 		new ReadmeProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
