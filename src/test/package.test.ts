@@ -441,7 +441,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXml)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['theme']));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
 
 	it('should not automatically add theme tag when themes are empty', () => {
@@ -457,7 +457,21 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXml)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['']));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
+	});
+
+	it('should automatically add language tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			activationEvents: ['onLanguage:go']
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
 	});
 
 	it('should remove duplicate tags', () => {
@@ -471,7 +485,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXml)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['theme']));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
 });
 

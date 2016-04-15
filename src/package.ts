@@ -140,6 +140,14 @@ export class TagsProcessor extends BaseProcessor {
 				keywords = [...keywords, 'theme'];
 			}
 
+			const activationEvents = this.manifest.activationEvents || [];
+			const languages = activationEvents
+				.map(e => /^onLanguage:(.*)$/.exec(e))
+				.filter(r => !!r)
+				.map(r => r[1]);
+
+			keywords = [...keywords, ...languages];
+
 			this.vsix.tags = _.unique(keywords).join(',');
 		});
 	}
