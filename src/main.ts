@@ -26,7 +26,8 @@ module.exports = function (argv: string[]): void {
 		.command('publish [<version>]')
 		.description('Publishes an extension')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action((version, { pat }) => catchFatal(publish({ pat, version })));
+		.option('--packagePath [path]', 'If found, the specified package will be published instead of packaging a new one.')
+		.action((version, { pat, packagePath }) => catchFatal(publish({ pat, version, packagePath })));
 
 	program
 		.command('unpublish [<extensionid>]')
