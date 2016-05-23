@@ -18,16 +18,18 @@ module.exports = function (argv: string[]): void {
 		.command('package')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Location of the package')
-		.option('--baseContentUrl [url]', 'If found, all relative links in README.md will be prepended with this url.')
-		.option('--baseImagesUrl [url]', 'If found, all relative image links in README.md will be prepended with this url.')
+		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
 		.action(({ out, baseContentUrl, baseImagesUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
 
 	program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.option('--packagePath [path]', 'If found, the specified package will be published instead of packaging a new one.')
-		.action((version, { pat, packagePath }) => catchFatal(publish({ pat, version, packagePath })));
+		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
+		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => catchFatal(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
 
 	program
 		.command('unpublish [<extensionid>]')
