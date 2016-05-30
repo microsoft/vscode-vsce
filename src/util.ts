@@ -58,3 +58,16 @@ export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>P
 export function flatten<T>(arr: T[][]): T[] {
 	return [].concat.apply([], arr) as T[];
 }
+
+export function getHomeDirectory () : string {
+	if  (process.platform === 'win32' )
+	{
+		return process.env.USERPROFILE
+	}
+	else
+	{
+		return process.env.HOME
+	}
+	
+	
+}

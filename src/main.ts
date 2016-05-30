@@ -3,6 +3,7 @@ import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
 import { catchFatal } from './util';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
+import { linkPlugin } from './link'
 const packagejson = require('../package.json');
 
 module.exports = function (argv: string[]): void {
@@ -66,6 +67,12 @@ module.exports = function (argv: string[]): void {
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
 		.action(name => catchFatal(logoutPublisher(name)));
+		
+	program
+		.command('link [dir]')
+		.description('Creates symlink between current folder and VSCode plugin folder')
+		.option('-t, --target <target>', 'Target installation. One of: Stable (default), Insiders, Alpha, OSS, OSSBuilt')
+		.action((dir, {target}) => catchFatal(linkPlugin(dir, target)));
 
 	program
 		.command('*')
