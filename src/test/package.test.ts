@@ -565,6 +565,28 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'debuggers'));
 			});
 	});
+
+	it('should detect json validation rules', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				jsonValidation: [{
+					fileMatch: ".jshintrc",
+					url: "http://json.schemastore.org/jshintrc"
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags as string[];
+				assert(tags.some(tag => tag === 'json'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {

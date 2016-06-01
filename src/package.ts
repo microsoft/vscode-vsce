@@ -140,6 +140,7 @@ export class TagsProcessor extends BaseProcessor {
 			const snippets = contributes && contributes['snippets'] && contributes['snippets'].length > 0 ? ['snippet'] : [];
 			const keybindings = contributes && contributes['keybindings'] && contributes['keybindings'].length > 0 ? ['keybindings'] : [];
 			const debuggers = contributes && contributes['debuggers'] && contributes['debuggers'].length > 0 ? ['debuggers'] : [];
+			const json = contributes && contributes['jsonValidation'] && contributes['jsonValidation'].length > 0 ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.map(l => l.id);
@@ -155,6 +156,7 @@ export class TagsProcessor extends BaseProcessor {
 				...snippets,
 				...keybindings,
 				...debuggers,
+				...json,
 				...languageContributions,
 				...languageActivations
 			];
