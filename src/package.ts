@@ -120,6 +120,45 @@ class ManifestProcessor extends BaseProcessor {
 
 export class TagsProcessor extends BaseProcessor {
 
+	private static Keywords = {
+		'git': ['git'],
+		'npm': ['node'],
+		'spell': ['markdown'],
+		'bootstrap': ['bootstrap'],
+		'lint': ['linters'],
+		'linting': ['linters'],
+		'react': ['javascript'],
+		'js': ['javsacript'],
+		'node': ['javascript', 'node'],
+		'C plus plus': ['c++'],
+		'Cplusplus': ['c++'],
+		'xml': ['xml'],
+		'angular': ['javascript'],
+		'jquery': ['javascript'],
+		'php': ['php'],
+		'python': ['python'],
+		'latex': ['latex'],
+		'ruby': ['ruby'],
+		'java': ['java'],
+		'erlang': ['erlang'],
+		'sql': ['sql'],
+		'nodejs': ['node'],
+		'c#': ['c#'],
+		'css': ['css'],
+		'javascript': ['javascript'],
+		'ftp': ['ftp'],
+		'haskell': ['haskell'],
+		'unity': ['unity'],
+		'terminal': ['terminal'],
+		'powershell': ['powershell'],
+		'laravel': ['laravel'],
+		'meteor': ['meteor'],
+		'emmet': ['emmet'],
+		'eslint': ['linters'],
+		'tfs': ['tfs'],
+		'rust': ['rust']
+	};
+
 	onEnd(): Promise<void> {
 		const keywords = this.manifest.keywords || [];
 		const trimmedKeywords = keywords.slice(0, 5);
@@ -150,6 +189,10 @@ export class TagsProcessor extends BaseProcessor {
 				.filter(r => !!r)
 				.map(r => r[1]);
 
+			const description = this.manifest.description || '';
+			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
+				.reduce((r, k) => r.concat(new RegExp(k, 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
+
 			keywords = [
 				...keywords,
 				...themes,
@@ -158,7 +201,8 @@ export class TagsProcessor extends BaseProcessor {
 				...debuggers,
 				...json,
 				...languageContributions,
-				...languageActivations
+				...languageActivations,
+				...descriptionKeywords
 			];
 
 			this.vsix.tags = _.unique(keywords).join(',');
