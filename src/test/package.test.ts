@@ -519,6 +519,27 @@ describe('toVsixManifest', () => {
 			.then(parseXml)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
+
+	it('should detect keybindings', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				keybindings: [
+					{ command: 'hello', 'key': 'ctrl+f1' }
+				]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags as string[];
+				assert(tags.some(tag => tag === 'keybindings'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
