@@ -189,6 +189,9 @@ export class TagsProcessor extends BaseProcessor {
 				.filter(r => !!r)
 				.map(r => r[1]);
 
+			const grammars = ((contributes && contributes['grammars']) || [])
+				.map(g => g.language);
+
 			const description = this.manifest.description || '';
 			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
 				.reduce((r, k) => r.concat(new RegExp(k, 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
@@ -202,6 +205,7 @@ export class TagsProcessor extends BaseProcessor {
 				...json,
 				...languageContributions,
 				...languageActivations,
+				...grammars,
 				...descriptionKeywords
 			];
 

@@ -606,6 +606,29 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'javascript'), 'detect javascript');
 			});
 	});
+
+	it('should detect language grammars', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				grammars: [{
+					language: "shellscript",
+					scopeName: "source.shell",
+					path: "./syntaxes/Shell-Unix-Bash.tmLanguage"
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'shellscript'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
