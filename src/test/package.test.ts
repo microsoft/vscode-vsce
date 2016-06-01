@@ -653,6 +653,29 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'google-go'));
 			});
 	});
+
+	it('should detect language extensions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					extensions: ['go', 'golang']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === '$ext_go'));
+				assert(tags.some(tag => tag === '$ext_golang'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
