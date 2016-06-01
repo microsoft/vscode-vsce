@@ -139,6 +139,7 @@ export class TagsProcessor extends BaseProcessor {
 			const themes = contributes && contributes['themes'] && contributes['themes'].length > 0 ? ['theme'] : [];
 			const snippets = contributes && contributes['snippets'] && contributes['snippets'].length > 0 ? ['snippet'] : [];
 			const keybindings = contributes && contributes['keybindings'] && contributes['keybindings'].length > 0 ? ['keybindings'] : [];
+			const debuggers = contributes && contributes['debuggers'] && contributes['debuggers'].length > 0 ? ['debuggers'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.map(l => l.id);
@@ -153,6 +154,7 @@ export class TagsProcessor extends BaseProcessor {
 				...themes,
 				...snippets,
 				...keybindings,
+				...debuggers,
 				...languageContributions,
 				...languageActivations
 			];

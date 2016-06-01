@@ -540,6 +540,31 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'keybindings'));
 			});
 	});
+
+	it('should detect debuggers', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				debuggers: [{
+					type: "node",
+					label: "Node Debug",
+					program: "./out/node/nodeDebug.js",
+					runtime: "node",
+					enableBreakpointsFor: { "languageIds": ["javascript", "javascriptreact"] }
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags as string[];
+				assert(tags.some(tag => tag === 'debuggers'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
