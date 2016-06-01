@@ -42,4 +42,8 @@ gulp.task('watch', ['compile'], function () {
 	gulp.watch(['src/**', 'typings/**'], ['just-compile']);
 });
 
+gulp.task('watch-test', ['compile'], function () {
+	gulp.watch(['src/**', 'typings/**'], ['just-test']);
+});
+
 gulp.task('default', ['watch']);
