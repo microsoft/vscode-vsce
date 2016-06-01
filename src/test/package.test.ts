@@ -629,6 +629,30 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'shellscript'));
 			});
 	});
+
+	it('should detect language aliases', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					aliases: ['golang', 'google-go']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'go'));
+				assert(tags.some(tag => tag === 'golang'));
+				assert(tags.some(tag => tag === 'google-go'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {

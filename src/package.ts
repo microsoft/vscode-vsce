@@ -182,7 +182,7 @@ export class TagsProcessor extends BaseProcessor {
 			const json = contributes && contributes['jsonValidation'] && contributes['jsonValidation'].length > 0 ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
-				.map(l => l.id);
+				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []), []);
 
 			const languageActivations = activationEvents
 				.map(e => /^onLanguage:(.*)$/.exec(e))
