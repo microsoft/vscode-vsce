@@ -4,24 +4,6 @@ import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi, IQGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 
-export function fatal<T>(message: any, ...args: any[]): Promise<T> {
-	if (message instanceof Error) {
-		if (/^cancell?ed$/i.test(message.message)) {
-			return;
-		}
-
-		message = message.message;
-	}
-
-	console.error('Error:', message, ...args);
-	process.exit(1);
-	return Promise.resolve<T>(null);
-}
-
-export function catchFatal<T>(promise: Promise<T>): Promise<T> {
-	return promise.catch<T>(fatal);
-}
-
 const __read = denodeify<_read.Options,string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
 	return __read(assign({ prompt }, options));
@@ -57,4 +39,39 @@ export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>P
 
 export function flatten<T>(arr: T[][]): T[] {
 	return [].concat.apply([], arr) as T[];
+}
+
+const CancelledError = 'Cancelled';
+
+export function isCancelledError(error: any) {
+	return error === CancelledError;
+}
+
+export class CancellationToken {
+
+	private listeners: Function[] = [];
+	private _cancelled: boolean = false;
+	get isCancelled(): boolean { return this._cancelled; }
+
+	subscribe(fn: Function): Function {
+		this.listeners.push(fn);
+
+		return () => {
+			const index = this.listeners.indexOf(fn);
+
+			if (index > -1) {
+				this.listeners.splice(index, 1);
+			}
+		};
+	}
+
+	cancel(): void {
+		const emit = !this._cancelled;
+		this._cancelled = true;
+
+		if (emit) {
+			this.listeners.forEach(l => l(CancelledError));
+			this.listeners = [];
+		}
+	}
 }

@@ -1,18 +1,56 @@
 import * as program from 'commander';
 import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
-import { catchFatal } from './util';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
-const packagejson = require('../package.json');
+import { getLatestVersion } from './npm';
+import { CancellationToken, isCancelledError } from './util';
+import * as semver from 'semver';
+import { isatty } from 'tty';
+const pkg = require('../package.json');
+
+function fatal<T>(message: any, ...args: any[]): void {
+	if (message instanceof Error) {
+		if (/^cancell?ed$/i.test(message.message)) {
+			return;
+		}
+
+		message = message.message;
+	}
+
+	console.error('Error:', message, ...args);
+	process.exit(1);
+}
+
+function main<T>(task: Promise<any>): void {
+	let latestVersion: string = null;
+
+	const token = new CancellationToken();
+
+	if (isatty(1)) {
+		getLatestVersion(pkg.name, token)
+			.then(version => latestVersion = version)
+			.catch(err => !isCancelledError(err) && console.error(err));
+	}
+
+	task
+		.catch(fatal)
+		.then(() => {
+			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
+				console.log(`\nThe latest version of ${ pkg.name } is ${ latestVersion } and you have ${ pkg.version }.\nUpdate it now: npm install -g ${ pkg.name }`);
+			} else {
+				token.cancel();
+			}
+		});
+}
 
 module.exports = function (argv: string[]): void {
 	program
-		.version(packagejson.version);
+		.version(pkg.version);
 
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
-		.action(() => catchFatal(ls()));
+		.action(() => main(ls()));
 
 	program
 		.command('package')
@@ -20,7 +58,7 @@ module.exports = function (argv: string[]): void {
 		.option('-o, --out [path]', 'Location of the package')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
-		.action(({ out, baseContentUrl, baseImagesUrl }) => catchFatal(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
+		.action(({ out, baseContentUrl, baseImagesUrl }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
 
 	program
 		.command('publish [<version>]')
@@ -29,43 +67,43 @@ module.exports = function (argv: string[]): void {
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
-		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => catchFatal(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
 
 	program
 		.command('unpublish [<extensionid>]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action((id, { pat }) => catchFatal(unpublish({ id, pat })));
+		.action((id, { pat }) => main(unpublish({ id, pat })));
 
 	program
 		.command('list <publisher>')
 		.description('Lists all extensions published by the given publisher')
-		.action(publisher => catchFatal(list(publisher)));
+		.action(publisher => main(list(publisher)));
 
 	program
 		.command('ls-publishers')
 		.description('List all known publishers')
-		.action(() => catchFatal(listPublishers()));
+		.action(() => main(listPublishers()));
 
 	program
 		.command('create-publisher <publisher>')
 		.description('Creates a new publisher')
-		.action(publisher => catchFatal(createPublisher(publisher)));
+		.action(publisher => main(createPublisher(publisher)));
 
 	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher')
-		.action(publisher => catchFatal(deletePublisher(publisher)));
+		.action(publisher => main(deletePublisher(publisher)));
 
 	program
 		.command('login <publisher>')
 		.description('Add a publisher to the known publishers list')
-		.action(name => catchFatal(loginPublisher(name)));
+		.action(name => main(loginPublisher(name)));
 
 	program
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
-		.action(name => catchFatal(logoutPublisher(name)));
+		.action(name => main(logoutPublisher(name)));
 
 	program
 		.command('*')

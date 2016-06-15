@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as cp from 'child_process';
+import { CancellationToken } from './util';
 import { assign } from 'lodash';
 
 interface IOptions {
@@ -12,17 +13,31 @@ interface IOptions {
 	killSignal?: string;
 }
 
-function exec(command: string, options: IOptions = {}): Promise<{ stdout: string; stderr: string; }> {
+function exec(command: string, options: IOptions = {}, cancellationToken?: CancellationToken): Promise<{ stdout: string; stderr: string; }> {
 	return new Promise((c, e) => {
-		cp.exec(command, assign(options, { encoding: 'utf8' }), (err, stdout: string, stderr: string) => {
+		let disposeCancellationListener: Function = null;
+
+		const child = cp.exec(command, assign(options, { encoding: 'utf8' }), (err, stdout: string, stderr: string) => {
+			if (disposeCancellationListener) {
+				disposeCancellationListener();
+				disposeCancellationListener = null;
+			}
+
 			if (err) { return e(err); }
 			c({ stdout, stderr });
 		});
+
+		if (cancellationToken) {
+			disposeCancellationListener = cancellationToken.subscribe(err => {
+				child.kill();
+				e(err);
+			});
+		}
 	});
 }
 
-function checkNPM(): Promise<void> {
-	return exec('npm -v').then(({ stdout }) => {
+function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
+	return exec('npm -v', {}, cancellationToken).then(({ stdout }) => {
 		const version = stdout.trim();
 
 		if (/^3\.7\.[0123]$/.test(version)) {
@@ -37,4 +52,12 @@ export function getDependencies(cwd: string): Promise<string[]> {
 		.then(({ stdout }) => stdout
 			.split(/[\r\n]/)
 			.filter(dir => path.isAbsolute(dir)));
+}
+
+export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
+	return checkNPM(cancellationToken)
+		.then(() => exec(`npm show ${ name } version`, {}, cancellationToken))
+		.then(({ stdout }) => stdout
+			.split(/[\r\n]/)
+			.filter(line => !!line)[0]);
 }
