@@ -130,7 +130,6 @@ export class TagsProcessor extends BaseProcessor {
 		'react': ['javascript'],
 		'js': ['javsacript'],
 		'node': ['javascript', 'node'],
-		'C plus plus': ['c++'],
 		'Cplusplus': ['c++'],
 		'xml': ['xml'],
 		'angular': ['javascript'],
@@ -182,7 +181,7 @@ export class TagsProcessor extends BaseProcessor {
 			const json = contributes && contributes['jsonValidation'] && contributes['jsonValidation'].length > 0 ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
-				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []).concat((l.extensions || []).map(e => `$ext_${e}`)), []);
+				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []).concat((l.extensions || []).map(e => `__ext_${e}`)), []);
 
 			const languageActivations = activationEvents
 				.map(e => /^onLanguage:(.*)$/.exec(e))
@@ -194,7 +193,7 @@ export class TagsProcessor extends BaseProcessor {
 
 			const description = this.manifest.description || '';
 			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
-				.reduce((r, k) => r.concat(new RegExp(k, 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
+				.reduce((r, k) => r.concat(new RegExp('\b' + k + '\b', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
 
 			keywords = [
 				...keywords,
