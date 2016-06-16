@@ -200,7 +200,7 @@ export class TagsProcessor extends BaseProcessor {
 
 			const description = this.manifest.description || '';
 			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
-				.reduce((r, k) => r.concat(new RegExp('\\b' + escapeRegExp(k) + '\\b', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
+				.reduce((r, k) => r.concat(new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
 
 			keywords = [
 				...keywords,
