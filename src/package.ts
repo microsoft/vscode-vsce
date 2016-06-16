@@ -89,6 +89,12 @@ function getUrl(url: string | { url?: string; }): string {
 	return (<any> url).url;
 }
 
+// Contributed by Mozilla develpoer authors
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+function escapeRegExp(string){
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}
+
 class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
@@ -130,6 +136,7 @@ export class TagsProcessor extends BaseProcessor {
 		'react': ['javascript'],
 		'js': ['javsacript'],
 		'node': ['javascript', 'node'],
+		'c++': ['c++'],
 		'Cplusplus': ['c++'],
 		'xml': ['xml'],
 		'angular': ['javascript'],
@@ -193,7 +200,7 @@ export class TagsProcessor extends BaseProcessor {
 
 			const description = this.manifest.description || '';
 			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
-				.reduce((r, k) => r.concat(new RegExp('\b' + k + '\b', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
+				.reduce((r, k) => r.concat(new RegExp('\\b' + escapeRegExp(k) + '\\b', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
 
 			keywords = [
 				...keywords,
