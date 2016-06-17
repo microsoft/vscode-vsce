@@ -519,6 +519,164 @@ describe('toVsixManifest', () => {
 			.then(parseXml)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
+
+	it('should detect keybindings', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				keybindings: [
+					{ command: 'hello', 'key': 'ctrl+f1' }
+				]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'keybindings'));
+			});
+	});
+
+	it('should detect debuggers', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				debuggers: [{
+					type: "node",
+					label: "Node Debug",
+					program: "./out/node/nodeDebug.js",
+					runtime: "node",
+					enableBreakpointsFor: { "languageIds": ["javascript", "javascriptreact"] }
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'debuggers'));
+			});
+	});
+
+	it('should detect json validation rules', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				jsonValidation: [{
+					fileMatch: ".jshintrc",
+					url: "http://json.schemastore.org/jshintrc"
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'json'));
+			});
+	});
+
+	it('should detect keywords in description', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			description: 'This C++ extension likes combines ftp with javascript'
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'c++'), 'detect c++');
+				assert(tags.some(tag => tag === 'ftp'), 'detect ftp');
+				assert(tags.some(tag => tag === 'javascript'), 'detect javascript');
+				assert(!_.contains(tags, 'java'), "don't detect java");
+			});
+	});
+
+	it('should detect language grammars', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				grammars: [{
+					language: "shellscript",
+					scopeName: "source.shell",
+					path: "./syntaxes/Shell-Unix-Bash.tmLanguage"
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'shellscript'));
+			});
+	});
+
+	it('should detect language aliases', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					aliases: ['golang', 'google-go']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'go'));
+				assert(tags.some(tag => tag === 'golang'));
+				assert(tags.some(tag => tag === 'google-go'));
+			});
+	});
+
+	it('should detect language extensions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					extensions: ['go', 'golang']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXml)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === '__ext_go'));
+				assert(tags.some(tag => tag === '__ext_golang'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {

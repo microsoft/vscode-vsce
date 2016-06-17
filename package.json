@@ -23,7 +23,7 @@
     "vsce": "out/vsce"
   },
   "scripts": {
-    "test": "mocha",
+    "test": "gulp compile && mocha",
     "prepublish": "gulp compile && mocha"
   },
   "engines": {

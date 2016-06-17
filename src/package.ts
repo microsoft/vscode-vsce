@@ -89,6 +89,12 @@ function getUrl(url: string | { url?: string; }): string {
 	return (<any> url).url;
 }
 
+// Contributed by Mozilla develpoer authors
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+function escapeRegExp(string){
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}
+
 class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
@@ -120,6 +126,45 @@ class ManifestProcessor extends BaseProcessor {
 
 export class TagsProcessor extends BaseProcessor {
 
+	private static Keywords = {
+		'git': ['git'],
+		'npm': ['node'],
+		'spell': ['markdown'],
+		'bootstrap': ['bootstrap'],
+		'lint': ['linters'],
+		'linting': ['linters'],
+		'react': ['javascript'],
+		'js': ['javsacript'],
+		'node': ['javascript', 'node'],
+		'c++': ['c++'],
+		'Cplusplus': ['c++'],
+		'xml': ['xml'],
+		'angular': ['javascript'],
+		'jquery': ['javascript'],
+		'php': ['php'],
+		'python': ['python'],
+		'latex': ['latex'],
+		'ruby': ['ruby'],
+		'java': ['java'],
+		'erlang': ['erlang'],
+		'sql': ['sql'],
+		'nodejs': ['node'],
+		'c#': ['c#'],
+		'css': ['css'],
+		'javascript': ['javascript'],
+		'ftp': ['ftp'],
+		'haskell': ['haskell'],
+		'unity': ['unity'],
+		'terminal': ['terminal'],
+		'powershell': ['powershell'],
+		'laravel': ['laravel'],
+		'meteor': ['meteor'],
+		'emmet': ['emmet'],
+		'eslint': ['linters'],
+		'tfs': ['tfs'],
+		'rust': ['rust']
+	};
+
 	onEnd(): Promise<void> {
 		const keywords = this.manifest.keywords || [];
 		const trimmedKeywords = keywords.slice(0, 5);
@@ -138,21 +183,36 @@ export class TagsProcessor extends BaseProcessor {
 
 			const themes = contributes && contributes['themes'] && contributes['themes'].length > 0 ? ['theme'] : [];
 			const snippets = contributes && contributes['snippets'] && contributes['snippets'].length > 0 ? ['snippet'] : [];
+			const keybindings = contributes && contributes['keybindings'] && contributes['keybindings'].length > 0 ? ['keybindings'] : [];
+			const debuggers = contributes && contributes['debuggers'] && contributes['debuggers'].length > 0 ? ['debuggers'] : [];
+			const json = contributes && contributes['jsonValidation'] && contributes['jsonValidation'].length > 0 ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
-				.map(l => l.id);
+				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []).concat((l.extensions || []).map(e => `__ext_${e}`)), []);
 
 			const languageActivations = activationEvents
 				.map(e => /^onLanguage:(.*)$/.exec(e))
 				.filter(r => !!r)
 				.map(r => r[1]);
 
+			const grammars = ((contributes && contributes['grammars']) || [])
+				.map(g => g.language);
+
+			const description = this.manifest.description || '';
+			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
+				.reduce((r, k) => r.concat(new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
+
 			keywords = [
 				...keywords,
 				...themes,
 				...snippets,
+				...keybindings,
+				...debuggers,
+				...json,
 				...languageContributions,
-				...languageActivations
+				...languageActivations,
+				...grammars,
+				...descriptionKeywords
 			];
 
 			this.vsix.tags = _.unique(keywords).join(',');
