@@ -594,7 +594,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			description: 'This C plus plus extension likes combines ftp with javascript'
+			description: 'This C++ extension likes combines ftp with javascript'
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -604,6 +604,7 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'c++'), 'detect c++');
 				assert(tags.some(tag => tag === 'ftp'), 'detect ftp');
 				assert(tags.some(tag => tag === 'javascript'), 'detect javascript');
+				assert(!_.contains(tags, 'java'), "don't detect java");
 			});
 	});
 
@@ -672,8 +673,8 @@ describe('toVsixManifest', () => {
 			.then(parseXml)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === '$ext_go'));
-				assert(tags.some(tag => tag === '$ext_golang'));
+				assert(tags.some(tag => tag === '__ext_go'));
+				assert(tags.some(tag => tag === '__ext_golang'));
 			});
 	});
 });
