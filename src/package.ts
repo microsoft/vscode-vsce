@@ -249,9 +249,7 @@ export class ReadmeProcessor extends BaseProcessor {
 
 		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
 		const urlReplace = (all, isImage, title, link) => {
-			if(title.match(markdownPathRegex)) {
-				title = title.replace(markdownPathRegex, urlReplace)
-			}
+			title = title.replace(markdownPathRegex, urlReplace)
 			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
 
 			if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
