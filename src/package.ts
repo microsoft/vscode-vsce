@@ -247,16 +247,19 @@ export class ReadmeProcessor extends BaseProcessor {
 			return Promise.resolve(file);
 		}
 
+		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
+		const urlReplace = (all, isImage, title, link) => {
+			title = title.replace(markdownPathRegex, urlReplace)
+			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+
+			if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
+				return `${ isImage }[${ title }](${ link })`;
+			}
+
+			return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
+		};
 		return read(file)
-			.then(contents => contents.replace(/(!?)\[([^\]]+)\]\(([^\)]+)\)/g, (all, isImage, title, link) => {
-				const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
-
-				if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
-					return all;
-				}
-
-				return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
-			}))
+			.then(contents => contents.replace(markdownPathRegex, urlReplace))
 			.then(contents => ({
 				path: file.path,
 				contents: new Buffer(contents)

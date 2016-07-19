@@ -18,7 +18,8 @@ Load up a Markdown file and get highlights and hovers for existing issues.  Chec
 
 The status bar lets you quickly navigate to any issue and you can see all positions in the gutter.
 
-![Jump to issues](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)
+[![Jump to issues](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
+[![Jump to issues](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)](https://github.com/username/repository/blob/master/monkey)
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.
 
