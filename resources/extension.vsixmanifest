@@ -7,6 +7,7 @@
     <Tags><%- tags %></Tags>
     <Categories><%- categories %></Categories>
     <GalleryFlags><%- flags %></GalleryFlags>
+    <Badges><% _.forEach(badges, function (badge) { %><Badge Link="<%- badge.href %>" ImgUri="<%- badge.url %>" Description="<%- badge.description %>" /><% }); %></Badges>
     <Properties>
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />

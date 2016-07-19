@@ -131,7 +131,8 @@ class ManifestProcessor extends BaseProcessor {
 				bugs: getUrl(manifest.bugs),
 				homepage: manifest.homepage
 			},
-			galleryBanner: manifest.galleryBanner || {}
+			galleryBanner: manifest.galleryBanner || {},
+			badges: manifest.badges
 		});
 
 		if (/^https:\/\/github\.com\/|^git@github\.com:/.test(repository)) {
