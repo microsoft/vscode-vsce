@@ -11,9 +11,38 @@ import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 
-const readFile = denodeify<string, string, string>(fs.readFile);
-const parseXml = denodeify<string,any>(parseString);
 const fixture = name => path.join(__dirname, 'fixtures', name);
+const readFile = denodeify<string, string, string>(fs.readFile);
+function xmlParser<T>() { return denodeify<string,T>(parseString); }
+
+type XMLManifest = {
+	PackageManifest: {
+		$: { Version: string, xmlns: string, },
+		Metadata: {
+			Description: { _: string; }[],
+			DisplayName: string[],
+			Identity: { $: { Id: string, Version: string, Publisher: string } }[],
+			Tags: string[],
+			GalleryFlags: string[],
+			License: string[],
+			Icon: string[],
+			Properties: { Property: { $: { Id: string, Value: string } }[] }[],
+			Categories: string[]
+		}[],
+		Installation: { InstallationTarget: { $: { Id: string } }[] }[]
+		Dependencies: string[]
+		Assets: { Asset: { $: { Type: string, Path: string } }[] }[]
+	}
+};
+
+type ContentTypes = {
+	Types: {
+		Default: { $: { Extension: string, ContentType } }[]
+	}
+};
+
+const parseXmlManifest = xmlParser<XMLManifest>();
+const parseContentTypes = xmlParser<ContentTypes>();
 
 function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const processors = createDefaultProcessors(manifest);
@@ -111,7 +140,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				assert.ok(result);
 				assert.ok(result.PackageManifest);
@@ -153,7 +182,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
@@ -176,7 +205,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
@@ -194,7 +223,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
 				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
@@ -216,7 +245,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
@@ -239,7 +268,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
 				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
@@ -261,7 +290,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
 				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
@@ -289,7 +318,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
 				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
@@ -313,7 +342,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Assets[0].Asset.some(d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'));
 			});
@@ -336,7 +365,7 @@ describe('toVsixManifest', () => {
 		];
 
 		return _toVsixManifest(manifest, files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
 				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
@@ -358,7 +387,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91'));
@@ -383,7 +412,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
 				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
@@ -404,7 +433,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const categories = result.PackageManifest.Metadata[0].Categories[0].split(',');
 				assert.ok(categories.some(c => c === 'hello'));
@@ -422,7 +451,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(xml => parseXml(xml))
+			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public Preview']);
 			});
@@ -440,7 +469,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
 
@@ -456,7 +485,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
 	});
 
@@ -470,7 +499,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
 	});
 
@@ -486,7 +515,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
 	});
 
@@ -502,7 +531,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet'));
 	});
 
@@ -516,7 +545,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
 	});
 
@@ -534,7 +563,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'keybindings'));
@@ -559,7 +588,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'debuggers'));
@@ -581,7 +610,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'json'));
@@ -598,7 +627,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'c++'), 'detect c++');
@@ -624,7 +653,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'shellscript'));
@@ -646,7 +675,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'go'));
@@ -670,7 +699,7 @@ describe('toVsixManifest', () => {
 		};
 
 		return _toVsixManifest(manifest, [])
-			.then(parseXml)
+			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === '__ext_go'));
@@ -682,7 +711,7 @@ describe('toVsixManifest', () => {
 describe('toContentTypes', () => {
 	it('should produce a good xml', () => {
 		return toContentTypes([])
-			.then(xml => parseXml(xml))
+			.then(xml => parseContentTypes(xml))
 			.then(result => {
 				assert.ok(result);
 				assert.ok(result.Types);
@@ -702,7 +731,7 @@ describe('toContentTypes', () => {
 		];
 
 		return toContentTypes(files)
-			.then(xml => parseXml(xml))
+			.then(xml => parseContentTypes(xml))
 			.then(result => {
 				assert.ok(result.Types.Default);
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'));
