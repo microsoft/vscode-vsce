@@ -1,49 +1,55 @@
-var gulp = require('gulp');
-var tsb = require('gulp-tsb');
-var filter = require('gulp-filter');
-var rimraf = require('rimraf');
-var path = require('path');
-var es = require('event-stream');
-var cp = require('child_process');
-var options = require('./tsconfig.json').compilerOptions;
+'use strict';
 
+const gulp = require('gulp');
+const tsb = require('gulp-tsb');
+const filter = require('gulp-filter');
+const tslint = require('gulp-tslint');
+const rimraf = require('rimraf');
+const path = require('path');
+const es = require('event-stream');
+const cp = require('child_process');
+const options = require('./tsconfig.json').compilerOptions;
 options.sourceMap = true;
 options.sourceRoot = path.join(__dirname, 'src');
 
-var compilation = tsb.create(options);
+const compilation = tsb.create(options);
 
 function compile() {
-	var ts = filter('**/*.ts', { restore: true });
-	var input = es.merge(
+	const ts = filter('**/*.ts', { restore: true });
+	const tsd = filter(['**', '!**/*.d.ts'], { restore: true });
+	const input = es.merge(
 		gulp.src('src/**', { base: 'src', dot: true }),
 		gulp.src('typings/**/*.d.ts')
 	);
 
 	return input
 		.pipe(ts)
+		.pipe(tsd)
+		.pipe(tslint({ configuration: require('./tslint.json') }))
+		.pipe(tslint.report({ summarizeFailureOutput: true, emitError: false }))
+		.pipe(tsd.restore)
 		.pipe(compilation())
 		.pipe(ts.restore)
 		.pipe(gulp.dest('out'));
 }
 
-gulp.task('clean', function (cb) { rimraf('out', cb); });
+gulp.task('clean', cb => rimraf('out', cb));
 gulp.task('compile', ['clean'], compile);
 gulp.task('just-compile', compile);
 
 function test(cb) {
-	var child = cp.spawn('mocha', [], { stdio: 'inherit' });
-	child.on('exit', function (code) { cb(); });
+	const child = cp.spawn('mocha', [], { stdio: 'inherit' });
+	child.on('exit', () => cb());
 }
 
 gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
-gulp.task('watch', ['compile'], function () {
-	gulp.watch(['src/**', 'typings/**'], ['just-compile']);
-});
+function watch(task) {
+	return () => gulp.watch(['src/**', 'typings/**'], [task]);
+}
 
-gulp.task('watch-test', ['compile'], function () {
-	gulp.watch(['src/**', 'typings/**'], ['just-test']);
-});
+gulp.task('watch', ['compile'], watch('just-compile'));
+gulp.task('watch-test', ['compile'], watch('just-test'));
 
 gulp.task('default', ['watch']);

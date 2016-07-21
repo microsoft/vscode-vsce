@@ -50,6 +50,7 @@
     "gulp": "^3.9.0",
     "gulp-filter": "^3.0.1",
     "gulp-tsb": "^1.6.0",
+    "gulp-tslint": "^6.0.1",
     "mocha": "^2.3.3",
     "rimraf": "^2.4.3",
     "source-map-support": "^0.3.2",
