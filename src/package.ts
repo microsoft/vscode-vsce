@@ -538,8 +538,9 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	console.warn(`Executing prepublish script '${ script }'...`);
 
 	return exec(script, { cwd })
-		.then(({ stdout }) => {
+		.then(({ stdout, stderr }) => {
 			process.stdout.write(stdout);
+			process.stderr.write(stderr);
 			return Promise.resolve(manifest);
 		})
 		.catch(err => Promise.reject(err.message));
