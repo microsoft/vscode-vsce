@@ -53,6 +53,7 @@
     "mocha": "^2.3.3",
     "rimraf": "^2.4.3",
     "source-map-support": "^0.3.2",
+    "tslint": "^3.13.0",
     "typescript": "^1.7.5",
     "xml2js": "^0.4.12"
   }
