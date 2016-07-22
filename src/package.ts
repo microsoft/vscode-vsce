@@ -89,6 +89,16 @@ function getUrl(url: string | { url?: string; }): string {
 	return (<any> url).url;
 }
 
+function getRepositoryUrl(url: string | { url?: string; }): string {
+	const result = getUrl(url);
+
+	if (/^[^\/]+\/[^\/]+$/.test(result)) {
+		return `https://github.com/${ result }.git`;
+	}
+
+	return result;
+}
+
 // Contributed by Mozilla develpoer authors
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 function escapeRegExp(string){
@@ -106,6 +116,8 @@ class ManifestProcessor extends BaseProcessor {
 			flags.push('Preview');
 		}
 
+		const repository = getRepositoryUrl(manifest.repository);
+
 		_.assign(this.vsix, {
 			id: manifest.name,
 			displayName: manifest.displayName || manifest.name,
@@ -115,12 +127,17 @@ class ManifestProcessor extends BaseProcessor {
 			categories: (manifest.categories || []).join(','),
 			flags: flags.join(' '),
 			links: {
-				repository: getUrl(manifest.repository),
+				repository,
 				bugs: getUrl(manifest.bugs),
 				homepage: manifest.homepage
 			},
-			galleryBanner: manifest.galleryBanner || {}
+			galleryBanner: manifest.galleryBanner || {},
+			badges: manifest.badges
 		});
+
+		if (/^https:\/\/github\.com\/|^git@github\.com:/.test(repository)) {
+			this.vsix.links.github = repository;
+		}
 	}
 }
 

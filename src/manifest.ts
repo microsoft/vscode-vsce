@@ -18,6 +18,7 @@ export interface Manifest {
 	extensionDependencies?: string[];
 	galleryBanner?: { color?: string; theme?: string; };
 	preview?: boolean;
+	badges?: { url: string; href: string; description: string; }[];
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
 

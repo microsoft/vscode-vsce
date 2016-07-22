@@ -27,7 +27,8 @@ type XMLManifest = {
 			License: string[],
 			Icon: string[],
 			Properties: { Property: { $: { Id: string, Value: string } }[] }[],
-			Categories: string[]
+			Categories: string[],
+			Badges: { Badge: { $: { Link: string, ImgUri: string, Description: string } }[] }[]
 		}[],
 		Installation: { InstallationTarget: { $: { Id: string } }[] }[]
 		Dependencies: string[]
@@ -403,23 +404,62 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			repository: {
 				type: "git",
-				url: "https://github.com/Microsoft/vscode-spell-check.git"
+				url: "https://server.com/Microsoft/vscode-spell-check.git"
 			},
 			bugs: {
-				url: "https://github.com/Microsoft/vscode-spell-check/issues"
+				url: "https://server.com/Microsoft/vscode-spell-check/issues"
 			},
-			homepage: "https://github.com/Microsoft/vscode-spell-check",
+			homepage: "https://server.com/Microsoft/vscode-spell-check",
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Support' && p.Value === 'https://github.com/Microsoft/vscode-spell-check/issues'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://github.com/Microsoft/vscode-spell-check'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Support' && p.Value === 'https://server.com/Microsoft/vscode-spell-check/issues'));
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://server.com/Microsoft/vscode-spell-check'));
+			});
+	});
+
+	it('should detect github repositories', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: {
+				type: "git",
+				url: "https://github.com/Microsoft/vscode-spell-check.git"
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.every(p => p.Id !== 'Microsoft.VisualStudio.Services.Links.Repository'));
+			});
+	});
+
+	it('should detect short github repositories', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'Microsoft/vscode-spell-check'
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(properties.every(p => p.Id !== 'Microsoft.VisualStudio.Services.Links.Repository'));
 			});
 	});
 
@@ -704,6 +744,32 @@ describe('toVsixManifest', () => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === '__ext_go'));
 				assert(tags.some(tag => tag === '__ext_golang'));
+			});
+	});
+
+	it('should understand badges', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			badges: [
+				{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' },
+				{ url: 'http://anotherbadgeurl.png', href: 'http://anotherbadgeurl', description: 'this is another badge' }
+			]
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				const badges = result.PackageManifest.Metadata[0].Badges[0].Badge;
+				assert.equal(badges.length, 2);
+				assert.equal(badges[0].$.Link, 'http://badgeurl');
+				assert.equal(badges[0].$.ImgUri, 'http://badgeurl.png');
+				assert.equal(badges[0].$.Description, 'this is a badge');
+				assert.equal(badges[1].$.Link, 'http://anotherbadgeurl');
+				assert.equal(badges[1].$.ImgUri, 'http://anotherbadgeurl.png');
+				assert.equal(badges[1].$.Description, 'this is another badge');
 			});
 	});
 });
