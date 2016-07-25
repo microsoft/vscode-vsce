@@ -10,14 +10,20 @@ const pkg = require('../package.json');
 
 function fatal<T>(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
-		if (/^cancell?ed$/i.test(message.message)) {
+		message = message.message;
+
+		if (/^cancell?ed$/i.test(message)) {
 			return;
 		}
-
-		message = message.message;
 	}
 
 	console.error('Error:', message, ...args);
+
+	if (/Unauthorized\(401\)/.test(message)) {
+		console.error(`Be sure to use a Personal Access Token which has access to **all accessible accounts**.
+See https://code.visualstudio.com/docs/tools/vscecli#_common-questions for more information.`);
+	}
+
 	process.exit(1);
 }
 
