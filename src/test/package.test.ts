@@ -772,6 +772,35 @@ describe('toVsixManifest', () => {
 				assert.equal(badges[1].$.Description, 'this is another badge');
 			});
 	});
+
+	it('should not have empty keywords #114', () => {
+		const manifest: Manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			"contributes": {
+        "grammars": [
+					{
+						"language": "javascript",
+						"scopeName": "source.js.jsx",
+						"path": "./syntaxes/Babel Language.json"
+					},
+					{
+						"scopeName": "source.regexp.babel",
+						"path": "./syntaxes/Babel Regex.json"
+					}
+        ]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				tags.forEach(tag => assert(tag, `Found empty tag '${ tag }'.`));
+			});
+	});
 });
 
 describe('toContentTypes', () => {

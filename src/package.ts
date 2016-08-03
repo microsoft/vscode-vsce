@@ -232,7 +232,7 @@ export class TagsProcessor extends BaseProcessor {
 				...descriptionKeywords
 			];
 
-			this.vsix.tags = _.unique(keywords).join(',');
+			this.vsix.tags = _(keywords).uniq().compact().join(',');
 		});
 	}
 }
