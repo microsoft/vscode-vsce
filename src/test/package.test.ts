@@ -13,7 +13,7 @@ import * as _ from 'lodash';
 
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
-function xmlParser<T>() { return denodeify<string,T>(parseString); }
+function xmlParser<T>() { return denodeify<string, T>(parseString); }
 
 type XMLManifest = {
 	PackageManifest: {
@@ -49,7 +49,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const processors = createDefaultProcessors(manifest);
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
+		const vsix = (_.assign as any)({ assets }, ...processors.map(p => p.vsix));
 
 		return toVsixManifest(assets, vsix);
 	});
@@ -120,13 +120,13 @@ describe('collect', () => {
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' }}));
-		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' }}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null}); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null }}); });
+		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
+		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' } }); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' } }); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } }); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null }); });
+		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } }); });
 	});
 });
 
@@ -798,7 +798,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				tags.forEach(tag => assert(tag, `Found empty tag '${ tag }'.`));
+				tags.forEach(tag => assert(tag, `Found empty tag '${tag}'.`));
 			});
 	});
 });
