@@ -197,12 +197,14 @@ export class TagsProcessor extends BaseProcessor {
 		return promise.then<any>(keywords => {
 			const contributes = this.manifest.contributes;
 			const activationEvents = this.manifest.activationEvents || [];
+			const doesContribute = name => contributes && contributes[name] && contributes[name].length > 0;
 
-			const themes = contributes && contributes['themes'] && contributes['themes'].length > 0 ? ['theme'] : [];
-			const snippets = contributes && contributes['snippets'] && contributes['snippets'].length > 0 ? ['snippet'] : [];
-			const keybindings = contributes && contributes['keybindings'] && contributes['keybindings'].length > 0 ? ['keybindings'] : [];
-			const debuggers = contributes && contributes['debuggers'] && contributes['debuggers'].length > 0 ? ['debuggers'] : [];
-			const json = contributes && contributes['jsonValidation'] && contributes['jsonValidation'].length > 0 ? ['json'] : [];
+			const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
+			const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
+			const snippets = doesContribute('snippets') ? ['snippet'] : [];
+			const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
+			const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
+			const json = doesContribute('jsonValidation') ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []).concat((l.extensions || []).map(e => `__ext_${e}`)), []);
@@ -221,7 +223,8 @@ export class TagsProcessor extends BaseProcessor {
 
 			keywords = [
 				...keywords,
-				...themes,
+				...colorThemes,
+				...iconThemes,
 				...snippets,
 				...keybindings,
 				...debuggers,
@@ -232,7 +235,10 @@ export class TagsProcessor extends BaseProcessor {
 				...descriptionKeywords
 			];
 
-			this.vsix.tags = _(keywords).uniq().compact().join(',');
+			this.vsix.tags = _(keywords)
+				.uniq() // deduplicate
+				.compact() // remove falsey values
+				.join(',');
 		});
 	}
 }

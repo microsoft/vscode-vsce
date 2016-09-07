@@ -497,7 +497,7 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should automatically add theme tag', () => {
+	it('should automatically add theme tag for color themes', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -510,7 +510,10 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'theme'));
+			});
 	});
 
 	it('should not automatically add theme tag when themes are empty', () => {
@@ -527,6 +530,63 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
+	});
+
+	it('should automatically add color-theme tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'color-theme'));
+			});
+	});
+
+	it('should automatically add theme tag for icon themes', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'theme'));
+			});
+	});
+
+	it('should automatically add icon-theme tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'icon-theme'));
+			});
 	});
 
 	it('should automatically add language tag with activationEvent', () => {
