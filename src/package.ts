@@ -269,6 +269,7 @@ export class ReadmeProcessor extends BaseProcessor {
 		this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
 
 		if (!this.baseContentUrl && !this.baseImagesUrl) {
+			console.warn('Couldn\'t detect the repository where this extension is published. Images might be broken in its README.');
 			return Promise.resolve(file);
 		}
 
@@ -283,6 +284,7 @@ export class ReadmeProcessor extends BaseProcessor {
 
 			return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
 		};
+
 		return read(file)
 			.then(contents => contents.replace(markdownPathRegex, urlReplace))
 			.then(contents => ({

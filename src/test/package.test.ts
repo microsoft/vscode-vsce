@@ -11,6 +11,9 @@ import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 
+// don't warn in tests
+console.warn = () => null;
+
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
 function xmlParser<T>() { return denodeify<string, T>(parseString); }
