@@ -9,6 +9,7 @@
     <GalleryFlags><%- flags %></GalleryFlags>
     <Badges><% _.forEach(badges, function (badge) { %><Badge Link="<%- badge.href %>" ImgUri="<%- badge.url %>" Description="<%- badge.description %>" /><% }); %></Badges>
     <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="<%- engine %>" />
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
         <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="<%- links.repository %>" />

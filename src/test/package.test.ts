@@ -861,6 +861,27 @@ describe('toVsixManifest', () => {
 				tags.forEach(tag => assert(tag, `Found empty tag '${tag}'.`));
 			});
 	});
+
+	it('should use engine as a version property', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: { vscode: '^1.0.0' } as any
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const engineProperties = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.Engine');
+				assert.equal(engineProperties.length, 1);
+
+				const engine = engineProperties[0].$.Value;
+				assert.equal(engine, '^1.0.0');
+			});
+	});
 });
 
 describe('toContentTypes', () => {
