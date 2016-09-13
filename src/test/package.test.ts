@@ -205,7 +205,7 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/readme.md' }
+			{ path: 'extension/readme.md', contents: new Buffer('') }
 		];
 
 		return _toVsixManifest(manifest, files)

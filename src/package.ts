@@ -268,29 +268,35 @@ export class ReadmeProcessor extends BaseProcessor {
 
 		this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
 
-		if (!this.baseContentUrl && !this.baseImagesUrl) {
-			console.warn('Couldn\'t detect the repository where this extension is published. Images might be broken in its README.');
-			return Promise.resolve(file);
-		}
-
-		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
-		const urlReplace = (all, isImage, title, link) => {
-			title = title.replace(markdownPathRegex, urlReplace);
-			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
-
-			if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
-				return `${ isImage }[${ title }](${ link })`;
-			}
-
-			return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
-		};
-
 		return read(file)
-			.then(contents => contents.replace(markdownPathRegex, urlReplace))
-			.then(contents => ({
-				path: file.path,
-				contents: new Buffer(contents)
-			}));
+			.then(contents => {
+				if (/This is the README for your extension /.test(contents)) {
+					return Promise.reject(new Error(`Make sure to edit the README.md file before you publish your extension.`));
+				}
+
+				if (!this.baseContentUrl && !this.baseImagesUrl) {
+					console.warn('Couldn\'t detect the repository where this extension is published. Images might be broken in its README.');
+				} else {
+					const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
+					const urlReplace = (all, isImage, title, link) => {
+						title = title.replace(markdownPathRegex, urlReplace);
+						const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+
+						if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
+							return `${ isImage }[${ title }](${ link })`;
+						}
+
+						return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
+					};
+
+					contents = contents.replace(markdownPathRegex, urlReplace);
+				}
+
+				return {
+					path: file.path,
+					contents: new Buffer(contents)
+				};
+			});
 	}
 
 	// GitHub heuristics
