@@ -23,6 +23,7 @@
       <% if (links.homepage) { %><Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="<%- links.homepage %>" /><% } %>
       <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="<%- galleryBanner.color %>" /><% } %>
       <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="<%- galleryBanner.theme %>" /><% } %>
+      <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="<%- githubMarkdown %>" />
     </Properties>
     <% if (license) { %><License><%- license %></License><% } %>
     <% if (icon) { %><Icon><%- icon %></Icon><% } %>
