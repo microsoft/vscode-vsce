@@ -134,7 +134,8 @@ class ManifestProcessor extends BaseProcessor {
 			},
 			galleryBanner: manifest.galleryBanner || {},
 			badges: manifest.badges,
-			githubMarkdown: manifest.markdown !== 'standard'
+			githubMarkdown: manifest.markdown !== 'standard',
+			extensionDependencies: (manifest.extensionDependencies || []).join(',')
 		});
 
 		if (/^https:\/\/github\.com\/|^git@github\.com:/.test(repository)) {

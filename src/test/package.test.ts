@@ -938,6 +938,33 @@ describe('toVsixManifest', () => {
 				assert(properties.some(p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'));
 			});
 	});
+
+	it('should add extension dependencies property', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			extensionDependencies: [
+				"foo.bar",
+				"monkey.hello"
+			]
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const dependenciesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionDependencies');
+				assert.equal(dependenciesProp.length, 1);
+
+				const dependencies = dependenciesProp[0].$.Value.split(',');
+				assert.equal(dependencies.length, 2);
+				assert(dependencies.some(d => d === 'foo.bar'));
+				assert(dependencies.some(d => d === 'monkey.hello'));
+			});
+	});
 });
 
 describe('toContentTypes', () => {
