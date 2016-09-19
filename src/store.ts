@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { home } from 'osenv';
-import { read, getGalleryAPI, getRawGalleryAPI } from './util';
+import { read, getGalleryAPI } from './util';
 import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
@@ -116,24 +116,27 @@ export function createPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
 
 	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
-		return read(`Personal Access Token:`, { silent: true, replace: '*' })
-			.then(pat => {
-				const api = getGalleryAPI(pat);
-				const raw = {
-					publisherName,
-					displayName,
-					extensions: [],
-					flags: null,
-					lastUpdated: null,
-					longDescription: '',
-					publisherId: null,
-					shortDescription: ''
-				};
+		return read(`E-mail: `).then(email => {
+			return read(`Personal Access Token:`, { silent: true, replace: '*' })
+				.then(pat => {
+					const api = getGalleryAPI(pat);
+					const raw = {
+						publisherName,
+						displayName,
+						extensions: [],
+						flags: null,
+						lastUpdated: null,
+						longDescription: '',
+						publisherId: null,
+						shortDescription: '',
+						emailAddress: [email]
+					};
 
-				return api.createPublisher(raw)
-					.then(() => ({ name: publisherName, pat }));
-			})
-			.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
+					return api.createPublisher(raw)
+						.then(() => ({ name: publisherName, pat }));
+				})
+				.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
+		});
 	})
 	.then(() => console.log(`Successfully created publisher '${ publisherName }'.`));
 }
@@ -142,11 +145,8 @@ export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
 		return read(`This will FOREVER delete '${ publisherName }'! Are you sure? [y/N] `)
 			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
-			.then(() => {
-				const rawApi = getRawGalleryAPI(pat);
-				const deletePublisher = denodeify<string, void>(rawApi.deletePublisher.bind(rawApi));
-				return deletePublisher(publisherName);
-			})
+			.then(() => getGalleryAPI(pat))
+			.then(api => api.deletePublisher(publisherName))
 			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
 			.then(() => console.log(`Successfully deleted publisher '${ publisherName }'.`));
 	});

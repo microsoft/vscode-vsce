@@ -3,7 +3,6 @@
 /// <reference path="glob/glob.d.ts" />
 /// <reference path="minimatch/minimatch.d.ts" />
 /// <reference path="q/Q.d.ts" />
-/// <reference path="vso-node-api/vso-node-api.d.ts" />
 /// <reference path="tmp/tmp.d.ts" />
 /// <reference path="commander/commander.d.ts" />
 /// <reference path="es6-promise/es6-promise.d.ts" />

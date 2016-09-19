@@ -1,9 +1,9 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'vso-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, writeManifest, IPackageResult } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, getRawGalleryAPI, read } from './util';
+import { getGalleryAPI, read } from './util';
 import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
@@ -152,9 +152,9 @@ export function list(publisher: string): Promise<any> {
 		.then(p => p.pat)
 		.then(getGalleryAPI)
 		.then(api => {
-			const criteira = [{ filterType: ExtensionQueryFilterType.Tag, value: 'vscode' }];
-			const filters = [{ criteria: criteira, direction: PagingDirection.Backward, pageSize: 1000, pagingToken: null }];
-			const query = { filters, flags: ExtensionQueryFlags.IncludeVersions };
+			const criteria = [{ filterType: ExtensionQueryFilterType.InstallationTarget, value: 'Microsoft.VisualStudio.Code' }];
+			const filters = [{ criteria, direction: PagingDirection.Forward, pageNumber: 0, pageSize: 1000, pagingToken: null, sortBy: SortByType.Relevance, sortOrder: SortOrderType.Default }];
+			const query = { filters, flags: ExtensionQueryFlags.IncludeLatestVersionOnly | ExtensionQueryFlags.IncludeVersionProperties, assetTypes: [] };
 
 			return api.queryExtensions(query).then(result => {
 				return result.results[0].extensions
@@ -187,11 +187,8 @@ export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 		return read(`This will FOREVER delete '${ fullName }'! Are you sure? [y/N] `)
 			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
 			.then(() => pat)
-			.then(getRawGalleryAPI)
-			.then(api => {
-				const deleteExtension = denodeify<string, string, string, void>(api.deleteExtension.bind(api));
-				return deleteExtension(publisher, name, '');
-			})
+			.then(getGalleryAPI)
+			.then(api => api.deleteExtension(publisher, name))
 			.then(() => console.log(`Successfully deleted ${ fullName }!`));
 	});
 }
