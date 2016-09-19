@@ -454,7 +454,7 @@ const defaultExtensions = {
 };
 
 export function toContentTypes(files: IFile[]): Promise<string> {
-	const extensions = Object.keys(_.indexBy(files, f => path.extname(f.path).toLowerCase()))
+	const extensions = Object.keys(_.keyBy(files, f => path.extname(f.path).toLowerCase()))
 		.filter(e => !!e)
 		.reduce((r, e) => _.assign(r, { [e]: mime.lookup(e) }), {});
 
@@ -497,7 +497,8 @@ function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
 			.then(ignore => defaultIgnore.concat(ignore))
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
-			.then<{ ignore: string[]; negate: string[]; }>(ignore => <any> _.indexBy(_.partition(ignore, i => !/^\s*!/.test(i)), (o, i) => i ? 'negate' : 'ignore'))
+			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
+			.then(r => ({ ignore: r[0], negate: r[1] }))
 			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i, MinimatchOptions)) || negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))));
 	});
 }

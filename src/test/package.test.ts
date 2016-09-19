@@ -736,7 +736,7 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === 'c++'), 'detect c++');
 				assert(tags.some(tag => tag === 'ftp'), 'detect ftp');
 				assert(tags.some(tag => tag === 'javascript'), 'detect javascript');
-				assert(!_.contains(tags, 'java'), "don't detect java");
+				assert(!_.includes(tags, 'java'), "don't detect java");
 			});
 	});
 
