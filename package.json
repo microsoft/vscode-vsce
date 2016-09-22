@@ -18,7 +18,8 @@
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",
-  "main": "out/main.js",
+  "main": "out/api.js",
+  "typings": "out/api.d.ts",
   "bin": {
     "vsce": "out/vsce"
   },

@@ -11,6 +11,7 @@ const cp = require('child_process');
 const options = require('./tsconfig.json').compilerOptions;
 options.sourceMap = true;
 options.sourceRoot = path.join(__dirname, 'src');
+options.declaration = true;
 
 const compilation = tsb.create(options);
 
@@ -22,14 +23,22 @@ function compile() {
 		gulp.src('typings/**/*.d.ts')
 	);
 
-	return input
+	const result = input
 		.pipe(ts)
 		.pipe(tsd)
 		.pipe(tslint({ configuration: require('./tslint.json') }))
 		.pipe(tslint.report({ summarizeFailureOutput: true, emitError: false }))
 		.pipe(tsd.restore)
 		.pipe(compilation())
-		.pipe(ts.restore)
+		.pipe(ts.restore);
+
+	const api = result
+		.pipe(filter('**/api.d.ts'));
+
+	const compiled = result
+		.pipe(filter(['**', '!**/*.d.ts']));
+
+	return es.merge(api, compiled)
 		.pipe(gulp.dest('out'));
 }
 
