@@ -4,6 +4,7 @@ import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { Manifest } from './manifest';
+import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
@@ -436,8 +437,9 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
+	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
-	return readFile(manifestPath, 'utf8')
+	const manifest = readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${ manifestPath }`))
 		.then<Manifest>(manifestStr => {
 			try {
@@ -447,6 +449,20 @@ export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 			}
 		})
 		.then(validateManifest);
+
+	const manifestNLS = readFile(manifestNLSPath, 'utf8')
+		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
+		.then<ITranslations>(raw => {
+			try {
+				return Promise.resolve(JSON.parse(raw));
+			} catch (e) {
+				return Promise.reject(`Error parsing manifest translations file: not a valid JSON file.`);
+			}
+		});
+
+	return Promise.all([manifest, manifestNLS]).then(([manifest, translations]) => {
+		return patchNLS(manifest, translations);
+	});
 }
 
 export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
@@ -502,7 +518,7 @@ function collectAllFiles(cwd: string): Promise<string[]> {
 	});
 }
 
-function collectFiles(cwd: string, manifest: Manifest): Promise<string[]> {
+function collectFiles(cwd: string): Promise<string[]> {
 	return collectAllFiles(cwd).then(files => {
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
@@ -549,7 +565,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const cwd = options.cwd || process.cwd();
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, manifest).then(fileNames => {
+	return collectFiles(cwd).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files, options);
@@ -612,6 +628,6 @@ export function packageCommand(options: IPackageOptions = {}): Promise<any> {
 export function ls(cwd = process.cwd()): Promise<any> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collectFiles(cwd, manifest))
+		.then(manifest => collectFiles(cwd))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }

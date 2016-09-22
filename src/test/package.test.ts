@@ -121,6 +121,22 @@ describe('collect', () => {
 	});
 });
 
+describe('readManifest', () => {
+
+	it('should patch NLS', () => {
+		const cwd = fixture('nls');
+		const raw = require('./fixtures/nls/package.json');
+		const translations = require('./fixtures/nls/package.nls.json');
+
+		return readManifest(cwd)
+			.then((manifest: any) => {
+				assert.equal(manifest.name, raw.name);
+				assert.equal(manifest.description, translations['extension.description']);
+				assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
+			});
+	});
+});
+
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
 		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
