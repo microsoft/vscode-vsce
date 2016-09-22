@@ -1,5 +1,5 @@
 import {
-	readManifest, collect, toContentTypes, ReadmeProcessor,
+	readManifest, collect, toContentTypes, MarkdownProcessor,
 	read, processFiles, createDefaultProcessors,
 	toVsixManifest, IFile, validateManifest
 } from '../package';
@@ -214,6 +214,28 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
+			});
+	});
+
+	it('should treat CHANGELOG.md as asset', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null)
+		};
+
+		const files = [
+			{ path: 'extension/changelog.md', contents: new Buffer('') }
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
 
@@ -1001,7 +1023,7 @@ describe('toContentTypes', () => {
 	});
 });
 
-describe('ReadmeProcessor', () => {
+describe('MarkdownProcessor', () => {
 
 	it('should be no-op when no baseContentUrl is provided', () => {
 		const manifest = {
@@ -1013,7 +1035,7 @@ describe('ReadmeProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest);
+		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1039,10 +1061,10 @@ describe('ReadmeProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, {
+		const processor = new MarkdownProcessor(manifest, {
 			baseContentUrl: 'https://github.com/username/repository/blob/master',
 			baseImagesUrl: 'https://github.com/username/repository/raw/master'
-		});
+		}, /^extension\/readme.md$/i);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1069,7 +1091,7 @@ describe('ReadmeProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest);
+		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1096,7 +1118,7 @@ describe('ReadmeProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest);
+		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1127,7 +1149,7 @@ describe('ReadmeProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, options);
+		const processor = new MarkdownProcessor(manifest, options, /^extension\/readme.md$/i);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')

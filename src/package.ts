@@ -246,12 +246,12 @@ export class TagsProcessor extends BaseProcessor {
 	}
 }
 
-export class ReadmeProcessor extends BaseProcessor {
+export class MarkdownProcessor extends BaseProcessor {
 
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+	constructor(manifest: Manifest, options: IPackageOptions= {}, private fileRegExp : RegExp) {
 		super(manifest);
 
 		const guess = this.guessBaseUrls();
@@ -263,7 +263,7 @@ export class ReadmeProcessor extends BaseProcessor {
 	onFile(file: IFile): Promise<IFile> {
 		const path = util.normalize(file.path);
 
-		if (!/^extension\/readme.md$/i.test(path)) {
+		if (!this.fileRegExp.test(path)) {
 			return Promise.resolve(file);
 		}
 
@@ -526,7 +526,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	return [
 		new ManifestProcessor(manifest),
 		new TagsProcessor(manifest),
-		new ReadmeProcessor(manifest, options),
+		new MarkdownProcessor(manifest, options, /^extension\/readme.md$/i),
+		new MarkdownProcessor(manifest, options, /^extension\/changelog.md$/i),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
 	];
