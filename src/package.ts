@@ -251,7 +251,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	constructor(manifest: Manifest, private regexp : RegExp, options: IPackageOptions= {}) {
+	constructor(manifest: Manifest, private regexp : RegExp, private assetType: string, options: IPackageOptions= {}) {
 		super(manifest);
 
 		const guess = this.guessBaseUrls();
@@ -267,7 +267,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			return Promise.resolve(file);
 		}
 
-		this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.Details', path });
+		this.assets.push({ type: this.assetType, path });
 
 		return read(file)
 			.then(contents => {
@@ -334,13 +334,13 @@ export class MarkdownProcessor extends BaseProcessor {
 export class ReadmeProcessor extends MarkdownProcessor {
 
 	constructor(manifest: Manifest, options: IPackageOptions= {}) {
-		super(manifest, /^extension\/readme.md$/i, options);
+		super(manifest, /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
 	}
 }
 export class ChangelogProcessor extends MarkdownProcessor {
 
 	constructor(manifest: Manifest, options: IPackageOptions= {}) {
-		super(manifest, /^extension\/changelog.md$/i, options);
+		super(manifest, /^extension\/changelog.md$/i, 'Microsoft.VisualStudio.Services.Content.Changelog', options);
 	}
 }
 

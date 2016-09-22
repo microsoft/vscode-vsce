@@ -234,7 +234,7 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
+				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Changelog');
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
