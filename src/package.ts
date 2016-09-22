@@ -57,7 +57,6 @@ export interface IAsset {
 export interface IPackageOptions {
 	cwd?: string;
 	packagePath?: string;
-	version?: string;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 }

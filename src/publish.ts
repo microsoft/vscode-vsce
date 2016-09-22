@@ -126,14 +126,13 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
     promise = readManifestFromPackage(options.packagePath)
       .then(manifest => ({ manifest, packagePath: options.packagePath }));
   } else {
-		const version = options.version;
 		const cwd = options.cwd;
 		const baseContentUrl = options.baseContentUrl;
 		const baseImagesUrl = options.baseImagesUrl;
 
 		promise = versionBump(options.cwd, options.version)
 			.then(() => tmpName())
-      .then(packagePath => pack({ packagePath, version, cwd, baseContentUrl, baseImagesUrl }));
+      .then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl }));
   }
 
 	return promise.then(({ manifest, packagePath }) => {
