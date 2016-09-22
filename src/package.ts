@@ -251,7 +251,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	constructor(manifest: Manifest, options: IPackageOptions= {}, private fileRegExp : RegExp) {
+	constructor(manifest: Manifest, private regexp : RegExp, options: IPackageOptions= {}) {
 		super(manifest);
 
 		const guess = this.guessBaseUrls();
@@ -263,7 +263,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	onFile(file: IFile): Promise<IFile> {
 		const path = util.normalize(file.path);
 
-		if (!this.fileRegExp.test(path)) {
+		if (!this.regexp.test(path)) {
 			return Promise.resolve(file);
 		}
 
@@ -328,6 +328,19 @@ export class MarkdownProcessor extends BaseProcessor {
 			content: `https://github.com/${ account }/${ repositoryName }/blob/master`,
 			images: `https://github.com/${ account }/${ repositoryName }/raw/master`
 		};
+	}
+}
+
+export class ReadmeProcessor extends MarkdownProcessor {
+
+	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+		super(manifest, /^extension\/readme.md$/i, options);
+	}
+}
+export class ChangelogProcessor extends MarkdownProcessor {
+
+	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+		super(manifest, /^extension\/changelog.md$/i, options);
 	}
 }
 
@@ -526,8 +539,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	return [
 		new ManifestProcessor(manifest),
 		new TagsProcessor(manifest),
-		new MarkdownProcessor(manifest, options, /^extension\/readme.md$/i),
-		new MarkdownProcessor(manifest, options, /^extension\/changelog.md$/i),
+		new ReadmeProcessor(manifest, options),
+		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest)
 	];

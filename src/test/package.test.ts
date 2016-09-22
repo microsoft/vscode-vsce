@@ -1,5 +1,5 @@
 import {
-	readManifest, collect, toContentTypes, MarkdownProcessor,
+	readManifest, collect, toContentTypes, ReadmeProcessor,
 	read, processFiles, createDefaultProcessors,
 	toVsixManifest, IFile, validateManifest
 } from '../package';
@@ -1035,7 +1035,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
+		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1061,10 +1061,10 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new MarkdownProcessor(manifest, {
+		const processor = new ReadmeProcessor(manifest, {
 			baseContentUrl: 'https://github.com/username/repository/blob/master',
 			baseImagesUrl: 'https://github.com/username/repository/raw/master'
-		}, /^extension\/readme.md$/i);
+		});
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1091,7 +1091,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
+		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1118,7 +1118,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new MarkdownProcessor(manifest, {}, /^extension\/readme.md$/i);
+		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
@@ -1149,7 +1149,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new MarkdownProcessor(manifest, options, /^extension\/readme.md$/i);
+		const processor = new ReadmeProcessor(manifest, options);
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.md')
