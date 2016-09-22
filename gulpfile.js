@@ -47,7 +47,7 @@ gulp.task('compile', ['clean'], compile);
 gulp.task('just-compile', compile);
 
 function test(cb) {
-	const child = cp.spawn('mocha', [], { stdio: 'inherit' });
+	const child = cp.spawn('mocha', ['--reporter=dot'], { stdio: 'inherit' });
 	child.on('exit', () => cb());
 }
 

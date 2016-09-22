@@ -1,1 +1,1 @@
---reporter=dot --require source-map-support/register out/test
+--require source-map-support/register out/test
