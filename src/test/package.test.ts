@@ -986,6 +986,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			extensionDependencies: [
 				"foo.bar",
+				"foo.bar",
 				"monkey.hello"
 			]
 		};
