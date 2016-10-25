@@ -70,7 +70,7 @@ export interface IProcessor {
 }
 
 export class BaseProcessor implements IProcessor {
-	constructor(protected manifest: Manifest) {}
+	constructor(protected manifest: Manifest) { }
 	assets: IAsset[] = [];
 	vsix: any = Object.create(null);
 	onFile(file: IFile): Promise<IFile> { return Promise.resolve(file); }
@@ -83,17 +83,17 @@ function getUrl(url: string | { url?: string; }): string {
 	}
 
 	if (typeof url === 'string') {
-		return <string> url;
+		return <string>url;
 	}
 
-	return (<any> url).url;
+	return (<any>url).url;
 }
 
 function getRepositoryUrl(url: string | { url?: string; }): string {
 	const result = getUrl(url);
 
 	if (/^[^\/]+\/[^\/]+$/.test(result)) {
-		return `https://github.com/${ result }.git`;
+		return `https://github.com/${result}.git`;
 	}
 
 	return result;
@@ -101,8 +101,8 @@ function getRepositoryUrl(url: string | { url?: string; }): string {
 
 // Contributed by Mozilla develpoer authors
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-function escapeRegExp(string){
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+function escapeRegExp(string) {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
 class ManifestProcessor extends BaseProcessor {
@@ -192,7 +192,7 @@ export class TagsProcessor extends BaseProcessor {
 		let promise = Promise.resolve(trimmedKeywords);
 
 		if (keywords.length > 5) {
-			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${ trimmedKeywords.join(', ') }].`);
+			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: [${trimmedKeywords.join(', ')}].`);
 			promise = util.read('Do you want to continue? [y/N] ')
 				.then(answer => /^y$/i.test(answer) ? Promise.resolve(trimmedKeywords) : Promise.reject('Aborted'));
 		}
@@ -251,7 +251,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	constructor(manifest: Manifest, private regexp : RegExp, private assetType: string, options: IPackageOptions= {}) {
+	constructor(manifest: Manifest, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
 		const guess = this.guessBaseUrls();
@@ -284,10 +284,10 @@ export class MarkdownProcessor extends BaseProcessor {
 						const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
 
 						if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
-							return `${ isImage }[${ title }](${ link })`;
+							return `${isImage}[${title}](${link})`;
 						}
 
-						return `${ isImage }[${ title }](${ urljoin(prefix, link) })`;
+						return `${isImage}[${title}](${urljoin(prefix, link)})`;
 					};
 
 					contents = contents.replace(markdownPathRegex, urlReplace);
@@ -325,21 +325,21 @@ export class MarkdownProcessor extends BaseProcessor {
 		const repositoryName = match[2].replace(/\.git$/i, '');
 
 		return {
-			content: `https://github.com/${ account }/${ repositoryName }/blob/master`,
-			images: `https://github.com/${ account }/${ repositoryName }/raw/master`
+			content: `https://github.com/${account}/${repositoryName}/blob/master`,
+			images: `https://github.com/${account}/${repositoryName}/raw/master`
 		};
 	}
 }
 
 export class ReadmeProcessor extends MarkdownProcessor {
 
-	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+	constructor(manifest: Manifest, options: IPackageOptions = {}) {
 		super(manifest, /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
 	}
 }
 export class ChangelogProcessor extends MarkdownProcessor {
 
-	constructor(manifest: Manifest, options: IPackageOptions= {}) {
+	constructor(manifest: Manifest, options: IPackageOptions = {}) {
 		super(manifest, /^extension\/changelog.md$/i, 'Microsoft.VisualStudio.Services.Content.Changelog', options);
 	}
 }
@@ -392,7 +392,7 @@ class IconProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 
-		this.icon = manifest.icon ? `extension/${ manifest.icon }` : null;
+		this.icon = manifest.icon ? `extension/${manifest.icon}` : null;
 		this.vsix.icon = null;
 	}
 
@@ -408,7 +408,7 @@ class IconProcessor extends BaseProcessor {
 
 	onEnd(): Promise<void> {
 		if (this.icon && !this.didFindIcon) {
-			return Promise.reject(new Error(`The specified icon '${ this.icon }' wasn't found in the extension.`));
+			return Promise.reject(new Error(`The specified icon '${this.icon}' wasn't found in the extension.`));
 		}
 
 		return Promise.resolve(null);
@@ -418,7 +418,7 @@ class IconProcessor extends BaseProcessor {
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
-  validateVersion(manifest.version);
+	validateVersion(manifest.version);
 
 	if (!manifest.version) {
 		throw new Error('Manifest missing field: version');
@@ -440,7 +440,7 @@ export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
 	const manifest = readFile(manifestPath, 'utf8')
-		.catch(() => Promise.reject(`Extension manifest not found: ${ manifestPath }`))
+		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
 		.then<Manifest>(manifestStr => {
 			try {
 				return Promise.resolve(JSON.parse(manifestStr));
@@ -472,8 +472,8 @@ export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
 
 export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {
 		return readFile(vsixManifestTemplatePath, 'utf8')
-			.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-			.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
+		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
+		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
 }
 
 const defaultExtensions = {
@@ -520,6 +520,8 @@ function collectAllFiles(cwd: string): Promise<string[]> {
 
 function collectFiles(cwd: string): Promise<string[]> {
 	return collectAllFiles(cwd).then(files => {
+		files = files.filter(f => !/\r$/m.test(f));
+
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
@@ -537,7 +539,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	return Promise.all(processedFiles).then(files => {
 		return Promise.all(processors.map(p => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
-			const vsix = (<any> _.assign)({ assets }, ...processors.map(p => p.vsix));
+			const vsix = (<any>_.assign)({ assets }, ...processors.map(p => p.vsix));
 
 			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
 				return [
@@ -566,7 +568,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${ f }`, localPath: path.join(cwd, f) }));
+		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files, options);
 	});
@@ -590,7 +592,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 }
 
 function defaultPackagePath(cwd: string, manifest: Manifest): string {
-	return path.join(cwd, `${ manifest.name }-${ manifest.version }.vsix`);
+	return path.join(cwd, `${manifest.name}-${manifest.version}.vsix`);
 }
 
 function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
@@ -599,7 +601,7 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	}
 
 	const script = manifest.scripts['vscode:prepublish'];
-	console.warn(`Executing prepublish script '${ script }'...`);
+	console.warn(`Executing prepublish script '${script}'...`);
 
 	return exec(script, { cwd })
 		.then(({ stdout, stderr }) => {
@@ -622,7 +624,7 @@ export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 
 export function packageCommand(options: IPackageOptions = {}): Promise<any> {
 	return pack(options)
-		.then(({ packagePath }) => console.log(`Created: ${ packagePath }`));
+		.then(({ packagePath }) => console.log(`Created: ${packagePath}`));
 }
 
 export function ls(cwd = process.cwd()): Promise<any> {

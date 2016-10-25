@@ -881,7 +881,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			"contributes": {
-        "grammars": [
+				"grammars": [
 					{
 						"language": "javascript",
 						"scopeName": "source.js.jsx",
@@ -891,7 +891,7 @@ describe('toVsixManifest', () => {
 						"scopeName": "source.regexp.babel",
 						"path": "./syntaxes/Babel Regex.json"
 					}
-        ]
+				]
 			}
 		};
 
