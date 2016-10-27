@@ -12,7 +12,7 @@ import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
-import { getDependencies } from './npm';
+import { getDependencies, getBinPath } from './npm';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -22,7 +22,7 @@ interface IReadFile {
 const readFile = denodeify<string, string, string>(fs.readFile);
 const writeFile = denodeify<string, string, string, void>(fs.writeFile);
 const unlink = denodeify<string, void>(fs.unlink);
-const exec = denodeify<string, { cwd?: string; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
+const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
@@ -603,13 +603,19 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 	const script = manifest.scripts['vscode:prepublish'];
 	console.warn(`Executing prepublish script '${script}'...`);
 
-	return exec(script, { cwd })
-		.then(({ stdout, stderr }) => {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-			return Promise.resolve(manifest);
-		})
-		.catch(err => Promise.reject(err.message));
+	return getBinPath().then(npmBinPath => {
+		const PATH = `${npmBinPath}${path.delimiter}${process.env['PATH']}`;
+		const env = _.assign({}, process.env, { PATH });
+
+		return exec(script, { cwd, env })
+			.then(({ stdout, stderr }) => {
+				process.stdout.write(stdout);
+				process.stderr.write(stderr);
+				return Promise.resolve(manifest);
+			})
+			.catch(err => Promise.reject(err.message));
+	});
+
 }
 
 export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {

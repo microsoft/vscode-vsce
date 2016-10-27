@@ -13,6 +13,10 @@ interface IOptions {
 	killSignal?: string;
 }
 
+function parseStdout({ stdout }: { stdout: string }): string {
+	return stdout.split(/[\r\n]/).filter(line => !!line)[0];
+}
+
 function exec(command: string, options: IOptions = {}, cancellationToken?: CancellationToken): Promise<{ stdout: string; stderr: string; }> {
 	return new Promise((c, e) => {
 		let disposeCancellationListener: Function = null;
@@ -41,7 +45,7 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 		const version = stdout.trim();
 
 		if (/^3\.7\.[0123]$/.test(version)) {
-			return Promise.reject(`npm@${ version } doesn't work with vsce. Please update npm: npm install -g npm`);
+			return Promise.reject(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
 		}
 	});
 }
@@ -56,8 +60,10 @@ export function getDependencies(cwd: string): Promise<string[]> {
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
 	return checkNPM(cancellationToken)
-		.then(() => exec(`npm show ${ name } version`, {}, cancellationToken))
-		.then(({ stdout }) => stdout
-			.split(/[\r\n]/)
-			.filter(line => !!line)[0]);
+		.then(() => exec(`npm show ${name} version`, {}, cancellationToken))
+		.then(parseStdout);
+}
+
+export function getBinPath(): Promise<string> {
+	return exec('npm bin').then(parseStdout);
 }
