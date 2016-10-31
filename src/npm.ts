@@ -63,7 +63,3 @@ export function getLatestVersion(name: string, cancellationToken?: CancellationT
 		.then(() => exec(`npm show ${name} version`, {}, cancellationToken))
 		.then(parseStdout);
 }
-
-export function getBinPath(): Promise<string> {
-	return exec('npm bin').then(parseStdout);
-}

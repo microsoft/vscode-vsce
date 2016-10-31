@@ -12,7 +12,7 @@ import * as denodeify from 'denodeify';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion } from './validation';
-import { getDependencies, getBinPath } from './npm';
+import { getDependencies } from './npm';
 
 interface IReadFile {
 	(filePath: string): Promise<Buffer>;
@@ -600,22 +600,15 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		return Promise.resolve(manifest);
 	}
 
-	const script = manifest.scripts['vscode:prepublish'];
-	console.warn(`Executing prepublish script '${script}'...`);
+	console.warn(`Executing prepublish script 'npm run vscode:prepublish'...`);
 
-	return getBinPath().then(npmBinPath => {
-		const PATH = `${npmBinPath}${path.delimiter}${process.env['PATH']}`;
-		const env = _.assign({}, process.env, { PATH });
-
-		return exec(script, { cwd, env })
-			.then(({ stdout, stderr }) => {
-				process.stdout.write(stdout);
-				process.stderr.write(stderr);
-				return Promise.resolve(manifest);
-			})
-			.catch(err => Promise.reject(err.message));
-	});
-
+	return exec('npm run vscode:prepublish', { cwd })
+		.then(({ stdout, stderr }) => {
+			process.stdout.write(stdout);
+			process.stderr.write(stderr);
+			return Promise.resolve(manifest);
+		})
+		.catch(err => Promise.reject(err.message));
 }
 
 export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
