@@ -147,6 +147,17 @@ describe('validateManifest', () => {
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null }); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } }); });
 	});
+
+	it('should not allow proposed API', () => {
+		assert.throws(() => { validateManifest({ enableProposedApi: true, publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }); });
+		assert.throws(() => { validateManifest({ enableProposedApi: <any>1, publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }); });
+
+		let mani1: Manifest = { enableProposedApi: false, publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } };
+		assert.ok(validateManifest(mani1) === mani1);
+
+		let mani2: Manifest = { publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } };
+		assert.ok(validateManifest(mani2) === mani2);
+	});
 });
 
 describe('toVsixManifest', () => {
