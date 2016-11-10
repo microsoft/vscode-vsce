@@ -432,6 +432,10 @@ export function validateManifest(manifest: Manifest): Manifest {
 		throw new Error('Manifest missing field: engines.vscode');
 	}
 
+	if (manifest.enableProposedApi) {
+		throw new Error('Extensions using proposed API (enableProposedApi: true) cannot be published');
+	}
+
 	return manifest;
 }
 
@@ -471,7 +475,7 @@ export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
 }
 
 export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {
-		return readFile(vsixManifestTemplatePath, 'utf8')
+	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
 }

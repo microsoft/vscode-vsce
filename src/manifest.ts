@@ -22,6 +22,7 @@ export interface Manifest {
 	markdown?: 'github' | 'standard';
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
+	enableProposedApi?: boolean;
 
 	// optional (npm)
 	author?: string | Person;
