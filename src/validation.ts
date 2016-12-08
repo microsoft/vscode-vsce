@@ -8,7 +8,7 @@ export function validatePublisher(publisher: string): void {
 	}
 
 	if (!nameRegex.test(publisher)) {
-		throw new Error(`Invalid publisher '${ publisher }'`);
+		throw new Error(`Invalid publisher '${publisher}'`);
 	}
 }
 
@@ -18,7 +18,7 @@ export function validateExtensionName(name: string): void {
 	}
 
 	if (!nameRegex.test(name)) {
-		throw new Error(`Invalid extension name '${ name }'`);
+		throw new Error(`Invalid extension name '${name}'`);
 	}
 }
 
@@ -28,6 +28,16 @@ export function validateVersion(version: string): void {
 	}
 
 	if (!semver.valid(version)) {
-		throw new Error(`Invalid extension version '${ version }'`);
+		throw new Error(`Invalid extension version '${version}'`);
+	}
+}
+
+export function validateEngineCompatibility(version: string): void {
+	if (!version) {
+		throw new Error(`Missing vscode engine compatibility version`);
+	}
+
+	if (!/^\*$|^(\^|>=)?((\d+)|x)\.((\d+)|x)\.((\d+)|x)(\-.*)?$/.test(version)) {
+		throw new Error(`Invalid vscode engine compatibility version '${version}'`);
 	}
 }

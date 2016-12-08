@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { validatePublisher, validateExtensionName, validateVersion } from '../validation';
+import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility } from '../validation';
 
 describe('validatePublisher', () => {
 	it('should throw with empty', () => {
@@ -66,5 +66,36 @@ describe('validateVersion', () => {
 		assert.throws(() => validateVersion('.0.1'));
 		assert.throws(() => validateVersion('0.1.'));
 		assert.throws(() => validateVersion('0.0.0.1'));
+	});
+});
+
+describe('validateEngineCompatibility', () => {
+	it('should throw with empty', () => {
+		assert.throws(() => validateEngineCompatibility(null));
+		assert.throws(() => validateEngineCompatibility(void 0));
+		assert.throws(() => validateEngineCompatibility(''));
+	});
+
+	it('should validate', () => {
+		validateEngineCompatibility('*');
+
+		validateEngineCompatibility('1.0.0');
+		validateEngineCompatibility('1.0.x');
+		validateEngineCompatibility('1.x.x');
+
+		validateEngineCompatibility('^1.0.0');
+		validateEngineCompatibility('^1.0.x');
+		validateEngineCompatibility('^1.x.x');
+
+		validateEngineCompatibility('>=1.0.0');
+		validateEngineCompatibility('>=1.0.x');
+		validateEngineCompatibility('>=1.x.x');
+
+		assert.throws(() => validateVersion('0.0.0.1'));
+		assert.throws(() => validateVersion('^0.0.0.1'));
+		assert.throws(() => validateVersion('^1'));
+		assert.throws(() => validateVersion('^1.0'));
+		assert.throws(() => validateVersion('>=1'));
+		assert.throws(() => validateVersion('>=1.0'));
 	});
 });
