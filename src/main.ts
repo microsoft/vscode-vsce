@@ -63,7 +63,7 @@ module.exports = function (argv: string[]): void {
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Location of the package')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.action(({ out, baseContentUrl, baseImagesUrl }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
 
 	program
@@ -72,7 +72,7 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
 
 	program
