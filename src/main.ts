@@ -42,7 +42,7 @@ function main<T>(task: Promise<any>): void {
 		.catch(fatal)
 		.then(() => {
 			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-				console.log(`\nThe latest version of ${ pkg.name } is ${ latestVersion } and you have ${ pkg.version }.\nUpdate it now: npm install -g ${ pkg.name }`);
+				console.log(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
 			} else {
 				token.cancel();
 			}

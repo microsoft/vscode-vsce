@@ -1,7 +1,7 @@
 'use strict';
 
 const gulp = require('gulp');
-const ts = require('gulp-typescript');
+const gts = require('gulp-typescript');
 const sm = require('gulp-sourcemaps');
 const filter = require('gulp-filter');
 const tslint = require('gulp-tslint');
@@ -9,18 +9,18 @@ const rimraf = require('rimraf');
 const es = require('event-stream');
 const cp = require('child_process');
 
-const project = ts.createProject('tsconfig.json');
+const project = gts.createProject('tsconfig.json');
 
 function compile() {
 	const tsd = filter(['**', '!**/*.d.ts'], { restore: true });
 
 	const ts = project.src()
 		.pipe(tsd)
-		.pipe(tslint({ configuration: require('./tslint.json') }))
+		.pipe(tslint())
 		.pipe(tslint.report({ summarizeFailureOutput: true, emitError: false }))
 		.pipe(tsd.restore)
 		.pipe(sm.init())
-		.pipe(project({ declaration: true }));
+		.pipe(project());
 
 	const js = ts.js
 		.pipe(sm.write('.'));
