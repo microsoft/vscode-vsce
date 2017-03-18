@@ -442,7 +442,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd = process.cwd()): Promise<Manifest> {
+export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
@@ -457,19 +457,23 @@ export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 		})
 		.then(validateManifest);
 
-	const manifestNLS = readFile(manifestNLSPath, 'utf8')
-		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
-		.then<ITranslations>(raw => {
-			try {
-				return Promise.resolve(JSON.parse(raw));
-			} catch (e) {
-				return Promise.reject(`Error parsing manifest translations file: not a valid JSON file.`);
-			}
-		});
+	if (nls) {
+		const manifestNLS = readFile(manifestNLSPath, 'utf8')
+			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
+			.then<ITranslations>(raw => {
+				try {
+					return Promise.resolve(JSON.parse(raw));
+				} catch (e) {
+					return Promise.reject(`Error parsing manifest translations file: not a valid JSON file.`);
+				}
+			});
 
-	return Promise.all([manifest, manifestNLS]).then(([manifest, translations]) => {
-		return patchNLS(manifest, translations);
-	});
+		return Promise.all([manifest, manifestNLS]).then(([manifest, translations]) => {
+			return patchNLS(manifest, translations);
+		});
+	} else {
+		return manifest;
+	}
 }
 
 export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
