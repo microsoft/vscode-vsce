@@ -135,6 +135,19 @@ describe('readManifest', () => {
 				assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
 			});
 	});
+
+	it('should not patch NLS if required', () => {
+		const cwd = fixture('nls');
+		const raw = require('./fixtures/nls/package.json');
+		const translations = require('./fixtures/nls/package.nls.json');
+
+		return readManifest(cwd, false)
+			.then((manifest: any) => {
+				assert.equal(manifest.name, raw.name);
+				assert.notEqual(manifest.description, translations['extension.description']);
+				assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
+			});
+	});
 });
 
 describe('validateManifest', () => {

@@ -90,7 +90,7 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 		return Promise.resolve(null);
 	}
 
-	return readManifest(cwd)
+	return readManifest(cwd, false)
 		.then(manifest => {
 			switch (version) {
 				case 'major':
