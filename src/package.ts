@@ -457,7 +457,9 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 		})
 		.then(validateManifest);
 
-	if (!nls) return manifest;
+	if (!nls) {
+		return manifest;
+	}
 
 	const manifestNLS = readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
