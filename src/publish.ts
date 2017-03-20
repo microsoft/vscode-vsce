@@ -39,7 +39,6 @@ function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 					stream.once('error', e);
 					stream.once('end', () => {
 						try {
-							console.log(Buffer.concat(buffers).toString('utf8'));
 							c(JSON.parse(Buffer.concat(buffers).toString('utf8')));
 						} catch (err) {
 							e(err);
