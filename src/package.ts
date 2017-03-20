@@ -442,7 +442,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd = process.cwd()): Promise<Manifest> {
+export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
 	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
@@ -457,6 +457,10 @@ export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 		})
 		.then(validateManifest);
 
+	if (!nls) {
+		return manifest;
+	}
+
 	const manifestNLS = readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
 		.then<ITranslations>(raw => {
@@ -470,6 +474,7 @@ export function readManifest(cwd = process.cwd()): Promise<Manifest> {
 	return Promise.all([manifest, manifestNLS]).then(([manifest, translations]) => {
 		return patchNLS(manifest, translations);
 	});
+
 }
 
 export function writeManifest(cwd: string, manifest: Manifest): Promise<void> {
