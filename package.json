@@ -42,7 +42,7 @@
     "semver": "^5.1.0",
     "tmp": "0.0.29",
     "url-join": "^1.1.0",
-    "vso-node-api": "^6.1.0-preview",
+    "vso-node-api": "^5.0.5",
     "yauzl": "^2.3.1",
     "yazl": "^2.2.2"
   },
