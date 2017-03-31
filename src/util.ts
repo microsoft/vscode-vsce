@@ -4,7 +4,7 @@ import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 
-const __read = denodeify<_read.Options,string>(_read);
+const __read = denodeify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
 	return __read(assign({ prompt }, options));
 }
@@ -19,7 +19,7 @@ export function normalize(path: string): string {
 	return path.replace(/\\/g, '/');
 }
 
-function chain2<A,B>(a: A, b: B[], fn: (a: A, b: B)=>Promise<A>, index = 0): Promise<A> {
+function chain2<A, B>(a: A, b: B[], fn: (a: A, b: B) => Promise<A>, index = 0): Promise<A> {
 	if (index >= b.length) {
 		return Promise.resolve(a);
 	}
@@ -27,7 +27,7 @@ function chain2<A,B>(a: A, b: B[], fn: (a: A, b: B)=>Promise<A>, index = 0): Pro
 	return fn(a, b[index]).then(a => chain2(a, b, fn, index + 1));
 }
 
-export function chain<T,P>(initial: T, processors: P[], process: (a: T, b: P)=>Promise<T>): Promise<T> {
+export function chain<T, P>(initial: T, processors: P[], process: (a: T, b: P) => Promise<T>): Promise<T> {
 	return chain2(initial, processors, process);
 }
 

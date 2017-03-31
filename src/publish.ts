@@ -11,7 +11,6 @@ import * as yauzl from 'yauzl';
 import * as semver from 'semver';
 
 const tmpName = denodeify<string>(tmp.tmpName);
-const readFile = denodeify<string, string, string>(fs.readFile);
 
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 	return new Promise<Manifest>((c, e) => {
@@ -54,26 +53,26 @@ function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 function _publish(packagePath: string, pat: string, manifest: Manifest): Promise<void> {
 	const api = getGalleryAPI(pat);
 
-	return readFile(packagePath, 'base64').then(extensionManifest => {
-		const fullName = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
-		console.log(`Publishing ${fullName}...`);
+	const packageStream = fs.createReadStream(packagePath);
 
-		return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
-			.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
-			.then(extension => {
-				if (extension && extension.versions.some(v => v.version === manifest.version)) {
-					return Promise.reject(`${fullName} already exists. Version number cannot be the same.`);
-				}
+	const fullName = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
+	console.log(`Publishing ${fullName}...`);
 
-				var promise = extension
-					? api.updateExtension({ extensionManifest }, manifest.publisher, manifest.name)
-					: api.createExtension({ extensionManifest });
+	return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
+		.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
+		.then(extension => {
+			if (extension && extension.versions.some(v => v.version === manifest.version)) {
+				return Promise.reject(`${fullName} already exists. Version number cannot be the same.`);
+			}
 
-				return promise
-					.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-					.then(() => console.log(`Successfully published ${fullName}!`));
-			});
-	});
+			var promise = extension
+				? api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name)
+				: api.createExtension(undefined, packageStream);
+
+			return promise
+				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
+				.then(() => console.log(`Successfully published ${fullName}!`));
+		});
 }
 
 export interface IPublishOptions {
