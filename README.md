@@ -11,4 +11,4 @@
 
 This tool assists in publishing Visual Studio Code extensions.
 
-Read the [**Documentation**](https://github.com/Microsoft/vscode-docs/blob/master/docs/extensions/publish-extension.md) at VS Code's repository.
+Read the [**Documentation**](https://code.visualstudio.com/docs/extensions/publish-extension) at VS Code's repository.
