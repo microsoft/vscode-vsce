@@ -8,7 +8,7 @@ export function validatePublisher(publisher: string): void {
 	}
 
 	if (!nameRegex.test(publisher)) {
-		throw new Error(`Invalid publisher '${publisher}'`);
+		throw new Error(`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.`);
 	}
 }
 
