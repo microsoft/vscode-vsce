@@ -58,6 +58,24 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	});
 }
 
+async function toXMLManifest(manifest: Manifest, files: IFile[] = []): Promise<XMLManifest> {
+	const raw = await _toVsixManifest(manifest, files);
+	return parseXmlManifest(raw);
+}
+
+function assertProperty(manifest: XMLManifest, name: string, value: string): void {
+	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
+	assert.equal(property.length, 1, `Property '${name}' should exist`);
+
+	const enableMarketplaceQnA = property[0].$.Value;
+	assert.equal(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
+}
+
+function assertMissingProperty(manifest: XMLManifest, name: string): void {
+	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
+	assert.equal(property.length, 0, `Property '${name}' should not exist`);
+}
+
 describe('collect', () => {
 
 	it('should catch all files', () => {
@@ -1027,6 +1045,44 @@ describe('toVsixManifest', () => {
 				assert(dependencies.some(d => d === 'foo.bar'));
 				assert(dependencies.some(d => d === 'monkey.hello'));
 			});
+	});
+
+	it('should add a qna property by default', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null)
+		});
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'https://uservoice.visualstudio.com/');
+	});
+
+	it('should handle qna=false', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			qna: false
+		});
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
+
+	it('should handle qna=string', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			qna: 'http://myqna'
+		});
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
 	});
 });
 

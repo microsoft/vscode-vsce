@@ -118,6 +118,16 @@ class ManifestProcessor extends BaseProcessor {
 
 		const repository = getRepositoryUrl(manifest.repository);
 
+		let enableMarketplaceQnA = true;
+		let customerQnALink = 'https://uservoice.visualstudio.com/';
+
+		if (typeof manifest.qna === 'string') {
+			customerQnALink = manifest.qna;
+		} else if (manifest.qna === false) {
+			enableMarketplaceQnA = false;
+			customerQnALink = undefined;
+		}
+
 		_.assign(this.vsix, {
 			id: manifest.name,
 			displayName: manifest.displayName || manifest.name,
@@ -135,6 +145,8 @@ class ManifestProcessor extends BaseProcessor {
 			galleryBanner: manifest.galleryBanner || {},
 			badges: manifest.badges,
 			githubMarkdown: manifest.markdown !== 'standard',
+			enableMarketplaceQnA,
+			customerQnALink,
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(',')
 		});
 

@@ -23,6 +23,7 @@ export interface Manifest {
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
 	enableProposedApi?: boolean;
+	qna?: string | false;
 
 	// optional (npm)
 	author?: string | Person;
