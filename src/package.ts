@@ -447,10 +447,6 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	validateEngineCompatibility(manifest.engines['vscode']);
 
-	if (manifest.enableProposedApi) {
-		throw new Error('Extensions using proposed API (enableProposedApi: true) cannot be published');
-	}
-
 	return manifest;
 }
 
