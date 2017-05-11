@@ -1036,42 +1036,84 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should add a qna property by default', async () => {
-		const xmlManifest = await toXMLManifest({
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null)
+	describe('qna', () => {
+		it('should use marketplace qna by default', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null)
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
 		});
 
-		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
-		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'https://uservoice.visualstudio.com/');
-	});
+		it('should not use marketplace in a github repo, without specifying it', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				repository: 'https://github.com/username/repository'
+			});
 
-	it('should handle qna=false', async () => {
-		const xmlManifest = await toXMLManifest({
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-			qna: false
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
 		});
 
-		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
-		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
-	});
+		it('should use marketplace in a github repo, when specifying it', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				repository: 'https://github.com/username/repository',
+				qna: 'marketplace'
+			});
 
-	it('should handle qna=string', async () => {
-		const xmlManifest = await toXMLManifest({
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-			qna: 'http://myqna'
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
 		});
 
-		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
-		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
+		it('should handle qna=marketplace', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: 'marketplace'
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should handle qna=false', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: false
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should handle custom qna', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: 'http://myqna'
+			});
+
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
+		});
 	});
 });
 

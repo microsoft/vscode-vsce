@@ -117,15 +117,17 @@ class ManifestProcessor extends BaseProcessor {
 		}
 
 		const repository = getRepositoryUrl(manifest.repository);
+		const isGitHub = /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
 
-		let enableMarketplaceQnA = true;
-		let customerQnALink = 'https://uservoice.visualstudio.com/';
+		let enableMarketplaceQnA: boolean | undefined;
+		let customerQnALink: string | undefined;
 
-		if (typeof manifest.qna === 'string') {
+		if (manifest.qna === 'marketplace' || (typeof manifest.qna === 'undefined' && !isGitHub)) {
+			enableMarketplaceQnA = true;
+		} else if (typeof manifest.qna === 'string') {
 			customerQnALink = manifest.qna;
 		} else if (manifest.qna === false) {
 			enableMarketplaceQnA = false;
-			customerQnALink = undefined;
 		}
 
 		_.assign(this.vsix, {
@@ -150,7 +152,7 @@ class ManifestProcessor extends BaseProcessor {
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(',')
 		});
 
-		if (/^https:\/\/github\.com\/|^git@github\.com:/.test(repository)) {
+		if (isGitHub) {
 			this.vsix.links.github = repository;
 		}
 	}
