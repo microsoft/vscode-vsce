@@ -122,7 +122,7 @@ class ManifestProcessor extends BaseProcessor {
 		let enableMarketplaceQnA: boolean | undefined;
 		let customerQnALink: string | undefined;
 
-		if (manifest.qna === 'marketplace' || (typeof manifest.qna === 'undefined' && !isGitHub)) {
+		if (manifest.qna === 'marketplace') {
 			enableMarketplaceQnA = true;
 		} else if (typeof manifest.qna === 'string') {
 			customerQnALink = manifest.qna;

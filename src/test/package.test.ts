@@ -1045,7 +1045,7 @@ describe('toVsixManifest', () => {
 				engines: Object.create(null)
 			});
 
-			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
 			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
 		});
 
