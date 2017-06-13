@@ -547,7 +547,7 @@ function collectFiles(cwd: string): Promise<string[]> {
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
-			.then(ignore => defaultIgnore.concat(ignore))
+			.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
 			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
 			.then(r => ({ ignore: r[0], negate: r[1] }))
