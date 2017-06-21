@@ -130,7 +130,8 @@ class ManifestProcessor extends BaseProcessor {
 			enableMarketplaceQnA = false;
 		}
 
-		_.assign(this.vsix, {
+		this.vsix = {
+			...this.vsix,
 			id: manifest.name,
 			displayName: manifest.displayName || manifest.name,
 			version: manifest.version,
@@ -150,7 +151,7 @@ class ManifestProcessor extends BaseProcessor {
 			enableMarketplaceQnA,
 			customerQnALink,
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(',')
-		});
+		};
 
 		if (isGitHub) {
 			this.vsix.links.github = repository;
@@ -506,9 +507,9 @@ const defaultExtensions = {
 export function toContentTypes(files: IFile[]): Promise<string> {
 	const extensions = Object.keys(_.keyBy(files, f => path.extname(f.path).toLowerCase()))
 		.filter(e => !!e)
-		.reduce((r, e) => _.assign(r, { [e]: mime.lookup(e) }), {});
+		.reduce((r, e) => ({ ...r, [e]: mime.lookup(e) }), {});
 
-	const allExtensions = _.assign({}, extensions, defaultExtensions);
+	const allExtensions = { ...extensions, ...defaultExtensions };
 	const contentTypes = Object.keys(allExtensions).map(extension => ({
 		extension,
 		contentType: allExtensions[extension]
@@ -561,7 +562,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	return Promise.all(processedFiles).then(files => {
 		return Promise.all(processors.map(p => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
-			const vsix = (<any>_.assign)({ assets }, ...processors.map(p => p.vsix));
+			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
 			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
 				return [

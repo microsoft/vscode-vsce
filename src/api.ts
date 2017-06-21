@@ -1,6 +1,5 @@
 import { publish as _publish } from './publish';
 import { packageCommand } from './package';
-import { assign } from 'lodash';
 
 export interface ICreateVSIXOptions {
 	/**
@@ -75,7 +74,6 @@ export interface IPublishVSIXOptions {
 	baseImagesUrl?: string;
 }
 
-
 /**
  * Creates a VSIX from the extension in the current working directory.
  */
@@ -94,5 +92,5 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Publishes a pre-build VSIX.
  */
 export function publishVSIX(packagePath: string, options: IPublishVSIXOptions = {}): Promise<any> {
-	return _publish(assign({ packagePath }, options));
+	return _publish({ packagePath, ...options });
 }

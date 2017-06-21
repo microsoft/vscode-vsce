@@ -1,4 +1,3 @@
-import { assign } from 'lodash';
 import * as _read from 'read';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi } from 'vso-node-api/GalleryApi';
@@ -6,7 +5,7 @@ import * as denodeify from 'denodeify';
 
 const __read = denodeify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
-	return __read(assign({ prompt }, options));
+	return __read({ prompt, ...options });
 }
 
 export function getGalleryAPI(pat: string): IGalleryApi {

@@ -52,7 +52,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const processors = createDefaultProcessors(manifest);
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = (_.assign as any)({ assets }, ...processors.map(p => p.vsix));
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
 		return toVsixManifest(assets, vsix);
 	});

@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import { CancellationToken } from './util';
-import { assign } from 'lodash';
 
 interface IOptions {
 	cwd?: string;
@@ -21,7 +20,7 @@ function exec(command: string, options: IOptions = {}, cancellationToken?: Cance
 	return new Promise((c, e) => {
 		let disposeCancellationListener: Function = null;
 
-		const child = cp.exec(command, assign(options, { encoding: 'utf8' }), (err, stdout: string, stderr: string) => {
+		const child = cp.exec(command, { ...options, encoding: 'utf8' }, (err, stdout: string, stderr: string) => {
 			if (disposeCancellationListener) {
 				disposeCancellationListener();
 				disposeCancellationListener = null;
