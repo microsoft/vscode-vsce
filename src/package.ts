@@ -478,7 +478,7 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 			try {
 				return Promise.resolve(JSON.parse(raw));
 			} catch (e) {
-				return Promise.reject(`Error parsing manifest translations file: not a valid JSON file.`);
+				return Promise.reject(`Error parsing JSON manifest translations file: ${manifestNLSPath}`);
 			}
 		});
 
