@@ -1,5 +1,5 @@
 import { publish as _publish } from './publish';
-import { packageCommand } from './package';
+import { packageCommand, listFiles as _listFiles } from './package';
 
 export interface ICreateVSIXOptions {
 	/**
@@ -54,6 +54,14 @@ export interface IPublishOptions {
 	baseImagesUrl?: string;
 }
 
+export interface IListFilesOptions {
+
+	/**
+	 * The working directory of the extension. Defaults to `process.cwd()`.
+	 */
+	cwd?: string;
+}
+
 export interface IPublishVSIXOptions {
 
 	/**
@@ -77,7 +85,7 @@ export interface IPublishVSIXOptions {
 /**
  * Creates a VSIX from the extension in the current working directory.
  */
-export function createVSIX(options?: ICreateVSIXOptions): Promise<any> {
+export function createVSIX(options: ICreateVSIXOptions = {}): Promise<any> {
 	return packageCommand(options);
 }
 
@@ -86,6 +94,13 @@ export function createVSIX(options?: ICreateVSIXOptions): Promise<any> {
  */
 export function publish(options: IPublishOptions = {}): Promise<any> {
 	return _publish(options);
+}
+
+/**
+ * Lists the files included in the extension's package.
+ */
+export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+	return _listFiles(options.cwd);
 }
 
 /**

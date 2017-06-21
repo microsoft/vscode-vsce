@@ -649,7 +649,18 @@ export function packageCommand(options: IPackageOptions = {}): Promise<any> {
 		.then(({ packagePath }) => console.log(`Created: ${packagePath}`));
 }
 
-export function ls(cwd = process.cwd()): Promise<any> {
+/**
+ * Lists the files included in the extension's package. Does not run prepublish.
+ */
+export function listFiles(cwd = process.cwd()): Promise<string[]> {
+	return readManifest(cwd)
+		.then(manifest => collectFiles(cwd));
+}
+
+/**
+ * Lists the files included in the extension's package. Runs prepublish.
+ */
+export function ls(cwd = process.cwd()): Promise<void> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
 		.then(manifest => collectFiles(cwd))
