@@ -90,6 +90,17 @@ function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	assert.equal(property.length, 0, `Property '${name}' should not exist`);
 }
 
+function createManifest(extra: Partial<Manifest>): Manifest {
+	return {
+		name: 'test',
+		publisher: 'mocha',
+		version: '0.0.1',
+		description: 'test extension',
+		engines: { vscode: '*' },
+		...extra
+	};
+}
+
 describe('collect', () => {
 
 	it('should catch all files', () => {
@@ -191,6 +202,11 @@ describe('validateManifest', () => {
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } }); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null }); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } }); });
+	});
+
+	it('should prevent SVG icons', () => {
+		assert(validateManifest(createManifest({ icon: 'icon.png' })));
+		assert.throws(() => { validateManifest(createManifest({ icon: 'icon.svg' })); });
 	});
 });
 

@@ -502,6 +502,10 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	validateEngineCompatibility(manifest.engines['vscode']);
 
+	if (/\.svg$/i.test(manifest.icon || '')) {
+		throw new Error(`SVGs can't be used as icons: ${manifest.icon}`);
+	}
+
 	return manifest;
 }
 
