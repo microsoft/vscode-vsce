@@ -9,6 +9,9 @@ import * as util from './util';
 import * as _glob from 'glob';
 import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
+import * as markdownit from 'markdown-it';
+import * as cheerio from 'cheerio';
+import * as url from 'url';
 import * as mime from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility } from './validation';
@@ -266,7 +269,28 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	constructor(manifest: Manifest, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
+	private static TrustedSVGSources = [
+		'vsmarketplacebadge.apphb.com',
+		'travis-ci.org',
+		'david-dm.org',
+		'badges.gitter.im',
+		'www.bithound.io',
+		'img.shields.io',
+		'gemnasium.com',
+		'isitmaintained.com',
+		'coveralls.io',
+		'api.travis-ci.org',
+		'codeclimate.com',
+		'snyk.io',
+		'badges.greenkeeper.io',
+		'travis-ci.com',
+		'badge.fury.io',
+		'badges.frapsoft.com',
+		'cdn.travis-ci.org',
+		'marketplace.visualstudio.com'
+	];
+
+	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
 		const guess = this.guessBaseUrls();
@@ -275,7 +299,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 	}
 
-	onFile(file: IFile): Promise<IFile> {
+	async onFile(file: IFile): Promise<IFile> {
 		const path = util.normalize(file.path);
 
 		if (!this.regexp.test(path)) {
@@ -284,35 +308,59 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		this.assets.push({ type: this.assetType, path });
 
-		return read(file)
-			.then(contents => {
-				if (/This is the README for your extension /.test(contents)) {
-					return Promise.reject(new Error(`Make sure to edit the README.md file before you publish your extension.`));
-				}
+		let contents = await read(file);
 
-				if (!this.baseContentUrl && !this.baseImagesUrl) {
-					console.warn('Couldn\'t detect the repository where this extension is published. Images might be broken in its README.');
-				} else {
-					const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
-					const urlReplace = (all, isImage, title, link) => {
-						title = title.replace(markdownPathRegex, urlReplace);
-						const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+		if (/This is the README for your extension /.test(contents)) {
+			throw new Error(`Make sure to edit the README.md file before you publish your extension.`);
+		}
 
-						if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
-							return `${isImage}[${title}](${link})`;
-						}
+		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
+		const urlReplace = (all, isImage, title, link) => {
+			if (!this.baseContentUrl && !this.baseImagesUrl) {
+				const asset = isImage ? 'image' : 'link';
+				throw new Error(`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+			}
 
-						return `${isImage}[${title}](${urljoin(prefix, link)})`;
-					};
+			title = title.replace(markdownPathRegex, urlReplace);
+			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
 
-					contents = contents.replace(markdownPathRegex, urlReplace);
-				}
+			if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
+				return `${isImage}[${title}](${link})`;
+			}
 
-				return {
-					path: file.path,
-					contents: new Buffer(contents)
-				};
-			});
+			return `${isImage}[${title}](${urljoin(prefix, link)})`;
+		};
+
+		contents = contents.replace(markdownPathRegex, urlReplace);
+
+		const html = markdownit().render(contents);
+		const $ = cheerio.load(html);
+
+		$('img').each((_, img) => {
+			const src = img.attribs.src;
+			const srcUrl = url.parse(src);
+
+			if (srcUrl.protocol === 'data:' && srcUrl.host === 'image' && /\/svg/i.test(srcUrl.path)) {
+				throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
+			}
+
+			if (srcUrl.protocol !== 'https:') {
+				throw new Error(`Images in ${this.name} need to come from an HTTPS source: ${src}`);
+			}
+
+			if (/\.svg$/i.test(srcUrl.pathname) && MarkdownProcessor.TrustedSVGSources.indexOf(srcUrl.host) === -1) {
+				throw new Error(`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`);
+			}
+		});
+
+		$('svg').each((_, svg) => {
+			throw new Error(`SVG tags are not allowed in ${this.name}.`);
+		});
+
+		return {
+			path: file.path,
+			contents: new Buffer(contents)
+		};
 	}
 
 	// GitHub heuristics
@@ -349,13 +397,13 @@ export class MarkdownProcessor extends BaseProcessor {
 export class ReadmeProcessor extends MarkdownProcessor {
 
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
-		super(manifest, /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
+		super(manifest, 'README.md', /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
 	}
 }
 export class ChangelogProcessor extends MarkdownProcessor {
 
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
-		super(manifest, /^extension\/changelog.md$/i, 'Microsoft.VisualStudio.Services.Content.Changelog', options);
+		super(manifest, 'CHANGELOG.md', /^extension\/changelog.md$/i, 'Microsoft.VisualStudio.Services.Content.Changelog', options);
 	}
 }
 

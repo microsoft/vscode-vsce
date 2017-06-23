@@ -1153,7 +1153,7 @@ describe('toContentTypes', () => {
 
 describe('MarkdownProcessor', () => {
 
-	it('should be no-op when no baseContentUrl is provided', () => {
+	it('should throw when no baseContentUrl is provided', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1169,14 +1169,15 @@ describe('MarkdownProcessor', () => {
 			localPath: path.join(root, 'readme.md')
 		};
 
-		return processor.onFile(readme)
-			.then(file => read(file))
-			.then(actual => {
-				return readFile(path.join(root, 'readme.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
-			});
+		let didThrow = false;
+
+		try {
+			await processor.onFile(readme);
+		} catch (err) {
+			didThrow = true;
+		}
+
+		assert.ok(didThrow);
 	});
 
 	it('should take baseContentUrl', () => {
