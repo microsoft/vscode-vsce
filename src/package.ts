@@ -320,15 +320,20 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
 		const urlReplace = (all, isImage, title, link) => {
+			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+
 			if (!this.baseContentUrl && !this.baseImagesUrl) {
 				const asset = isImage ? 'image' : 'link';
-				throw new Error(`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+
+				if (isLinkRelative) {
+					throw new Error(`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+				}
 			}
 
 			title = title.replace(markdownPathRegex, urlReplace);
 			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
 
-			if (!prefix || /^\w+:\/\//.test(link) || link[0] === '#') {
+			if (!prefix || !isLinkRelative) {
 				return `${isImage}[${title}](${link})`;
 			}
 
