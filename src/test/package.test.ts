@@ -208,6 +208,24 @@ describe('validateManifest', () => {
 		assert(validateManifest(createManifest({ icon: 'icon.png' })));
 		assert.throws(() => { validateManifest(createManifest({ icon: 'icon.svg' })); });
 	});
+
+	it('should prevent badges from non HTTPS sources', () => {
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+	});
+
+	it('should allow non SVG badges', () => {
+		assert(validateManifest(createManifest({ badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }] })));
+	});
+
+	it('should allow SVG badges from trusted sources', () => {
+		assert(validateManifest(createManifest({ badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] })));
+	});
+
+	it('should prevent SVG badges from non trusted sources', () => {
+		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
+	});
 });
 
 describe('toVsixManifest', () => {

@@ -4,7 +4,6 @@
 	"version": "1.6.2",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
-	"icon": "images/node-debug-icon.svg",
 	"categories": [
 		"Debuggers"
 	],
@@ -96,7 +95,9 @@
 				"initialConfigurations": "extension.provideInitialConfigurations",
 				"configurationAttributes": {
 					"launch": {
-						"required": [ "cwd" ],
+						"required": [
+							"cwd"
+						],
 						"properties": {
 							"program": {
 								"type": "string",
@@ -115,14 +116,20 @@
 								"enum": []
 							},
 							"console": {
-								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
+								"enum": [
+									"internalConsole",
+									"integratedTerminal",
+									"externalTerminal"
+								],
 								"description": "%node.launch.console.description%",
 								"default": "internalConsole"
 							},
 							"args": {
 								"type": "array",
 								"description": "%node.launch.args.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"cwd": {
@@ -131,19 +138,26 @@
 								"default": "${workspaceRoot}"
 							},
 							"runtimeExecutable": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.launch.runtimeExecutable.description%",
 								"default": null
 							},
 							"runtimeArgs": {
 								"type": "array",
 								"description": "%node.launch.runtimeArgs.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"env": {
 								"type": "object",
-								"additionalProperties": { "type": "string" },
+								"additionalProperties": {
+									"type": "string"
+								},
 								"description": "%node.launch.env.description%",
 								"default": {}
 							},
@@ -153,14 +167,19 @@
 								"default": true
 							},
 							"outDir": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.outDir.description%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%node.outFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"port": {
@@ -218,14 +237,19 @@
 								"default": true
 							},
 							"outDir": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.outDir.description%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%node.outFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"stopOnEntry": {
@@ -234,12 +258,18 @@
 								"default": true
 							},
 							"localRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.attach.localRoot.description%",
 								"default": null
 							},
 							"remoteRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.attach.remoteRoot.description%",
 								"default": null
 							},
@@ -257,31 +287,47 @@
 				"label": "%extensionHost.label%",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
-				"initialConfigurations": [{
-					"name": "%extensionHost.launch.config.name%",
-					"type": "extensionHost",
-					"request": "launch",
-					"runtimeExecutable": "${execPath}",
-					"args": [ "--extensionDevelopmentPath=${workspaceRoot}" ],
-					"stopOnEntry": false,
-					"sourceMaps": true,
-					"outDirs": [ "${workspaceRoot}/out/**/*.js" ],
-					"preLaunchTask": "npm"
-				}],
+				"initialConfigurations": [
+					{
+						"name": "%extensionHost.launch.config.name%",
+						"type": "extensionHost",
+						"request": "launch",
+						"runtimeExecutable": "${execPath}",
+						"args": [
+							"--extensionDevelopmentPath=${workspaceRoot}"
+						],
+						"stopOnEntry": false,
+						"sourceMaps": true,
+						"outDirs": [
+							"${workspaceRoot}/out/**/*.js"
+						],
+						"preLaunchTask": "npm"
+					}
+				],
 				"configurationAttributes": {
 					"launch": {
-						"required": ["runtimeExecutable", "args"],
+						"required": [
+							"runtimeExecutable",
+							"args"
+						],
 						"properties": {
 							"runtimeExecutable": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%extensionHost.launch.runtimeExecutable.description%",
 								"default": "${execPath}"
 							},
 							"args": {
 								"type": "array",
 								"description": "%extensionHost.launch.args.description%",
-								"items": { "type": "string" },
-								"default": [ "--extensionDevelopmentPath=${workspaceRoot}" ]
+								"items": {
+									"type": "string"
+								},
+								"default": [
+									"--extensionDevelopmentPath=${workspaceRoot}"
+								]
 							},
 							"stopOnEntry": {
 								"type": "boolean",
@@ -294,14 +340,19 @@
 								"default": true
 							},
 							"outDir": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%extensionHost.launch.outDir.description%",
 								"default": "out"
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%extensionHost.launch.outFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"smartStep": {

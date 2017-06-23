@@ -108,6 +108,31 @@ function escapeRegExp(string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
+const TrustedSVGSources = [
+	'vsmarketplacebadge.apphb.com',
+	'travis-ci.org',
+	'david-dm.org',
+	'badges.gitter.im',
+	'www.bithound.io',
+	'img.shields.io',
+	'gemnasium.com',
+	'isitmaintained.com',
+	'coveralls.io',
+	'api.travis-ci.org',
+	'codeclimate.com',
+	'snyk.io',
+	'badges.greenkeeper.io',
+	'travis-ci.com',
+	'badge.fury.io',
+	'badges.frapsoft.com',
+	'cdn.travis-ci.org',
+	'marketplace.visualstudio.com'
+];
+
+function isHostTrusted(host: string): boolean {
+	return TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
+}
+
 class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
@@ -269,31 +294,6 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 
-	private static TrustedSVGSources = [
-		'vsmarketplacebadge.apphb.com',
-		'travis-ci.org',
-		'david-dm.org',
-		'badges.gitter.im',
-		'www.bithound.io',
-		'img.shields.io',
-		'gemnasium.com',
-		'isitmaintained.com',
-		'coveralls.io',
-		'api.travis-ci.org',
-		'codeclimate.com',
-		'snyk.io',
-		'badges.greenkeeper.io',
-		'travis-ci.com',
-		'badge.fury.io',
-		'badges.frapsoft.com',
-		'cdn.travis-ci.org',
-		'marketplace.visualstudio.com'
-	];
-
-	private static isTrusted(host: string): boolean {
-		return MarkdownProcessor.TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
-	}
-
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
@@ -349,10 +349,10 @@ export class MarkdownProcessor extends BaseProcessor {
 			}
 
 			if (!/^https:$/i.test(srcUrl.protocol)) {
-				throw new Error(`Images in ${this.name} need to come from an HTTPS source: ${src}`);
+				throw new Error(`Images in ${this.name} must come from an HTTPS source: ${src}`);
 			}
 
-			if (/\.svg$/i.test(srcUrl.pathname) && !MarkdownProcessor.isTrusted(srcUrl.host)) {
+			if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl.host)) {
 				throw new Error(`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`);
 			}
 		});
@@ -505,6 +505,18 @@ export function validateManifest(manifest: Manifest): Manifest {
 	if (/\.svg$/i.test(manifest.icon || '')) {
 		throw new Error(`SVGs can't be used as icons: ${manifest.icon}`);
 	}
+
+	(manifest.badges || []).forEach(badge => {
+		const srcUrl = url.parse(badge.url);
+
+		if (!/^https:$/i.test(srcUrl.protocol)) {
+			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);
+		}
+
+		if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl.host)) {
+			throw new Error(`Badge SVGs are restricted. Please use other file image formats, such as PNG: ${badge.url}`);
+		}
+	});
 
 	return manifest;
 }
