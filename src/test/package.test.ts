@@ -14,6 +14,20 @@ import * as _ from 'lodash';
 // don't warn in tests
 console.warn = () => null;
 
+async function throws(fn: () => Promise<any>): Promise<void> {
+	let didThrow = false;
+
+	try {
+		await fn();
+	} catch (err) {
+		didThrow = true;
+	}
+
+	if (!didThrow) {
+		throw new Error('Assertion failed');
+	}
+}
+
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
 function xmlParser<T>() { return denodeify<string, T>(parseString); }
@@ -1292,5 +1306,79 @@ describe('MarkdownProcessor', () => {
 						assert.equal(actual, expected);
 					});
 			});
+	});
+
+	it('should prevent non-HTTPS images', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](http://foo.png)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent non-HTTPS img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="http://foo.png" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent SVGs from not trusted sources', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](https://foo/hello.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should allow SVGs from trusted sources', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](https://badges.gitter.im/hello.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should prevent SVGs from not trusted sources in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="https://foo/hello.svg" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should allow SVGs from trusted sources in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="https://badges.gitter.im/hello.svg" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should prevent SVG tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M224 387.814V512L32 320l192-192v126.912C447.375 260.152 437.794 103.016 380.93 0 521.287 151.707 491.48 394.785 224 387.814z"/></svg>`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent SVG data urls in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBkPSJNMjI0IDM4Ny44MTRWNTEyTDMyIDMyMGwxOTItMTkydjEyNi45MTJDNDQ3LjM3NSAyNjAuMTUyIDQzNy43OTQgMTAzLjAxNiAzODAuOTMgMCA1MjEuMjg3IDE1MS43MDcgNDkxLjQ4IDM5NC43ODUgMjI0IDM4Ny44MTR6Ii8+PC9zdmc+" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
 	});
 });

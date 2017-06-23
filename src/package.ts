@@ -36,13 +36,13 @@ const MinimatchOptions = { dot: true };
 
 export interface IFile {
 	path: string;
-	contents?: Buffer;
+	contents?: Buffer | string;
 	localPath?: string;
 }
 
 export function read(file: IFile): Promise<string> {
 	if (file.contents) {
-		return Promise.resolve(file.contents).then(b => b.toString('utf8'));
+		return Promise.resolve(file.contents).then(b => typeof b === 'string' ? b : b.toString('utf8'));
 	} else {
 		return readFile(file.localPath, 'utf8');
 	}
@@ -290,6 +290,10 @@ export class MarkdownProcessor extends BaseProcessor {
 		'marketplace.visualstudio.com'
 	];
 
+	private static isTrusted(host: string): boolean {
+		return MarkdownProcessor.TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
+	}
+
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
@@ -333,22 +337,22 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		contents = contents.replace(markdownPathRegex, urlReplace);
 
-		const html = markdownit().render(contents);
+		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
 
 		$('img').each((_, img) => {
 			const src = img.attribs.src;
 			const srcUrl = url.parse(src);
 
-			if (srcUrl.protocol === 'data:' && srcUrl.host === 'image' && /\/svg/i.test(srcUrl.path)) {
+			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.path)) {
 				throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
 			}
 
-			if (srcUrl.protocol !== 'https:') {
+			if (!/^https:$/i.test(srcUrl.protocol)) {
 				throw new Error(`Images in ${this.name} need to come from an HTTPS source: ${src}`);
 			}
 
-			if (/\.svg$/i.test(srcUrl.pathname) && MarkdownProcessor.TrustedSVGSources.indexOf(srcUrl.host) === -1) {
+			if (/\.svg$/i.test(srcUrl.pathname) && !MarkdownProcessor.isTrusted(srcUrl.host)) {
 				throw new Error(`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`);
 			}
 		});
@@ -650,7 +654,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
 		.then(() => new Promise<string>((c, e) => {
 			const zip = new yazl.ZipFile();
-			files.forEach(f => f.contents ? zip.addBuffer(f.contents, f.path) : zip.addFile(f.localPath, f.path));
+			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? new Buffer(f.contents, 'utf8') : f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();
 
 			const zipStream = fs.createWriteStream(packagePath);
