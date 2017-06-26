@@ -126,7 +126,8 @@ const TrustedSVGSources = [
 	'badge.fury.io',
 	'badges.frapsoft.com',
 	'cdn.travis-ci.org',
-	'marketplace.visualstudio.com'
+	'marketplace.visualstudio.com',
+	'ci.appveyor.com'
 ];
 
 function isHostTrusted(host: string): boolean {
