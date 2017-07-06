@@ -128,7 +128,8 @@ const TrustedSVGSources = [
 	'cdn.travis-ci.org',
 	'marketplace.visualstudio.com',
 	'ci.appveyor.com',
-	'www.versioneye.com'
+	'www.versioneye.com',
+	'codecov.io'
 ];
 
 function isHostTrusted(host: string): boolean {
@@ -348,7 +349,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		const $ = cheerio.load(html);
 
 		$('img').each((_, img) => {
-			const src = img.attribs.src;
+			const src = decodeURI(img.attribs.src);
 			const srcUrl = url.parse(src);
 
 			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.path)) {
@@ -514,7 +515,8 @@ export function validateManifest(manifest: Manifest): Manifest {
 	}
 
 	(manifest.badges || []).forEach(badge => {
-		const srcUrl = url.parse(badge.url);
+		const decodedUrl = decodeURI(badge.url);
+		const srcUrl = url.parse(decodedUrl);
 
 		if (!/^https:$/i.test(srcUrl.protocol)) {
 			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);

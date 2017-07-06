@@ -225,6 +225,7 @@ describe('validateManifest', () => {
 
 	it('should prevent SVG badges from non trusted sources', () => {
 		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
+		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/410.sv%67', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
 	});
 });
 
