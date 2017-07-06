@@ -23,8 +23,8 @@ interface IReadFile {
 }
 
 const readFile = denodeify<string, string, string>(fs.readFile);
-const writeFile = denodeify<string, string, string, void>(fs.writeFile);
-const unlink = denodeify<string, void>(fs.unlink);
+const writeFile = denodeify<string, string, string, void>(fs.writeFile as any);
+const unlink = denodeify<string, void>(fs.unlink as any);
 const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
 
