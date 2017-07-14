@@ -199,7 +199,7 @@ export class TagsProcessor extends BaseProcessor {
 		'lint': ['linters'],
 		'linting': ['linters'],
 		'react': ['javascript'],
-		'js': ['javsacript'],
+		'js': ['javascript'],
 		'node': ['javascript', 'node'],
 		'c++': ['c++'],
 		'Cplusplus': ['c++'],
