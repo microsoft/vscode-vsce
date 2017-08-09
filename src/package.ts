@@ -128,6 +128,7 @@ const TrustedSVGSources = [
 	'cdn.travis-ci.org',
 	'marketplace.visualstudio.com',
 	'ci.appveyor.com',
+	'www.versioneye.com',
 	'codecov.io'
 ];
 
