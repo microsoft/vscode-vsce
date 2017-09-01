@@ -1191,10 +1191,10 @@ describe('toContentTypes', () => {
 		return toContentTypes(files)
 			.then(xml => parseContentTypes(xml))
 			.then(result => {
-				assert.ok(result.Types.Default);
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'));
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'));
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && d.$.ContentType === 'text/x-markdown'));
+				assert.ok(result.Types.Default, 'there are content types');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'), 'there are txt');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'), 'there are png');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)), 'there are md');
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
 	});

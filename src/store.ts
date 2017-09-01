@@ -6,7 +6,7 @@ import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
-const writeFile = denodeify<string, string, void>(fs.writeFile);
+const writeFile = denodeify<string, string, void>(fs.writeFile as any);
 const storePath = path.join(home(), '.vsce');
 
 export interface IPublisher {
