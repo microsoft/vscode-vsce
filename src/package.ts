@@ -108,6 +108,13 @@ function escapeRegExp(string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
+function toExtensionTags(extensions: string[]): string[] {
+	return extensions
+		.map(s => s.replace(/\W/g, ''))
+		.filter(s => !!s)
+		.map(s => `__ext_${s}`);
+}
+
 const TrustedSVGSources = [
 	'vsmarketplacebadge.apphb.com',
 	'travis-ci.org',
@@ -256,7 +263,7 @@ export class TagsProcessor extends BaseProcessor {
 			const json = doesContribute('jsonValidation') ? ['json'] : [];
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
-				.reduce((r, l) => r.concat([l.id]).concat(l.aliases || []).concat((l.extensions || []).map(e => `__ext_${e}`)), []);
+				.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);
 
 			const languageActivations = activationEvents
 				.map(e => /^onLanguage:(.*)$/.exec(e))

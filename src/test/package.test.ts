@@ -928,6 +928,28 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should detect and sanitize language extensions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					extensions: ['.go']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === '__ext_go'));
+			});
+	});
+
 	it('should understand badges', () => {
 		const manifest = {
 			name: 'test',
