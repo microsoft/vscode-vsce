@@ -363,8 +363,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				return all;
 			}
 
-			let returnvalue = all.replace(link, urljoin(prefix, link));
-			return returnvalue;
+			return all.replace(link, urljoin(prefix, link));
 		};
 
 		contents = contents.replace(markdownPathRegex, urlReplace);
