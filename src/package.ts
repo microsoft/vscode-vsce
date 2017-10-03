@@ -329,6 +329,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		}
 
 		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
+		const markdownImgUrlRegex = /<img.+?src=["']([/.\w\s-]+)['"].*?>/g;
 		const urlReplace = (all, isImage, title, link) => {
 			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
@@ -350,7 +351,24 @@ export class MarkdownProcessor extends BaseProcessor {
 			return `${isImage}[${title}](${urljoin(prefix, link)})`;
 		};
 
+		const imgUrlReplace = (all, link) =>{
+			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+
+			if (!this.baseImagesUrl && isLinkRelative) {
+					throw new Error(`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+			}
+			const prefix  =  this.baseImagesUrl;
+
+			if (!prefix || !isLinkRelative) {
+				return all;
+			}
+
+			let returnvalue = all.replace(link, urljoin(prefix, link));
+			return returnvalue;
+		};
+
 		contents = contents.replace(markdownPathRegex, urlReplace);
+		contents = contents.replace(markdownImgUrlRegex, imgUrlReplace);
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
