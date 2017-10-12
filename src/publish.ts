@@ -72,6 +72,15 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 			return promise
 				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
 				.then(() => console.log(`Successfully published ${fullName}!`));
+		})
+		.catch(err => {
+			const message = err && err.message || '';
+
+			if (/Invalid Resource/.test(message)) {
+				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: http://tinyurl.com/y8djp2nl`;
+			}
+
+			return Promise.reject(err);
 		});
 }
 
