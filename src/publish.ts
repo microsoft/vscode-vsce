@@ -77,7 +77,7 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 			const message = err && err.message || '';
 
 			if (/Invalid Resource/.test(message)) {
-				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: http://tinyurl.com/y8djp2nl`;
+				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
 			}
 
 			return Promise.reject(err);
