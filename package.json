@@ -24,6 +24,7 @@
     "vsce": "out/vsce"
   },
   "scripts": {
+    "dev": "gulp watch-test",
     "test": "gulp compile && mocha",
     "prepublish": "gulp compile && mocha"
   },
