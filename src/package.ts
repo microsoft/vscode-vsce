@@ -136,7 +136,11 @@ const TrustedSVGSources = [
 	'marketplace.visualstudio.com',
 	'ci.appveyor.com',
 	'www.versioneye.com',
-	'codecov.io'
+	'codecov.io',
+	'godoc.org',
+	'goreportcard.com',
+	'badge.waffle.io',
+	'api.bintray.com'
 ];
 
 function isHostTrusted(host: string): boolean {
