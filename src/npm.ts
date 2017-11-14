@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as semver from 'semver';
 import * as _ from 'lodash';
@@ -113,10 +114,13 @@ async function getYarnProductionDependencies(cwd: string): Promise<YarnDependenc
 }
 
 async function getYarnDependencies(cwd: string): Promise<string[]> {
-	const deps = await getYarnProductionDependencies(cwd);
 	const result: string[] = [cwd];
-	const flatten = (dep: YarnDependency) => { result.push(dep.path); dep.children.forEach(flatten); };
-	deps.forEach(flatten);
+
+	if (await new Promise(c => fs.exists(path.join(cwd, 'yarn.lock'), c))) {
+		const deps = await getYarnProductionDependencies(cwd);
+		const flatten = (dep: YarnDependency) => { result.push(dep.path); dep.children.forEach(flatten); };
+		deps.forEach(flatten);
+	}
 
 	return _.uniq(result);
 }
