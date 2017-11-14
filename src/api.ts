@@ -54,12 +54,25 @@ export interface IPublishOptions {
 	baseImagesUrl?: string;
 }
 
+/**
+ * The supported list of package managers.
+ */
+export enum PackageManager {
+	Npm,
+	Yarn
+}
+
 export interface IListFilesOptions {
 
 	/**
 	 * The working directory of the extension. Defaults to `process.cwd()`.
 	 */
 	cwd?: string;
+
+	/**
+	 * The package manager to use. Defaults to `PackageManager.Npm`.
+	 */
+	packageManager?: PackageManager;
 }
 
 export interface IPublishVSIXOptions {
@@ -100,7 +113,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options.cwd);
+	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn);
 }
 
 /**

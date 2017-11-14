@@ -612,8 +612,8 @@ const defaultIgnore = [
 	'**/*.vsixmanifest'
 ];
 
-function collectAllFiles(cwd: string): Promise<string[]> {
-	return getDependencies(cwd).then(deps => {
+function collectAllFiles(cwd: string, useYarn = false): Promise<string[]> {
+	return getDependencies(cwd, useYarn).then(deps => {
 		const promises = deps.map(dep => {
 			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
 				.then(files => files
@@ -625,8 +625,8 @@ function collectAllFiles(cwd: string): Promise<string[]> {
 	});
 }
 
-function collectFiles(cwd: string): Promise<string[]> {
-	return collectAllFiles(cwd).then(files => {
+function collectFiles(cwd: string, useYarn = false): Promise<string[]> {
+	return collectAllFiles(cwd, useYarn).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
@@ -736,9 +736,9 @@ export function packageCommand(options: IPackageOptions = {}): Promise<any> {
 /**
  * Lists the files included in the extension's package. Does not run prepublish.
  */
-export function listFiles(cwd = process.cwd()): Promise<string[]> {
+export function listFiles(cwd = process.cwd(), useYarn = false): Promise<string[]> {
 	return readManifest(cwd)
-		.then(manifest => collectFiles(cwd));
+		.then(manifest => collectFiles(cwd, useYarn));
 }
 
 /**
