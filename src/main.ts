@@ -56,7 +56,8 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
-		.action(() => main(ls()));
+		.option('--yarn', 'Use yarn instead of npm')
+		.action(({ yarn }) => main(ls(undefined, yarn)));
 
 	program
 		.command('package')

@@ -744,9 +744,9 @@ export function listFiles(cwd = process.cwd(), useYarn = false): Promise<string[
 /**
  * Lists the files included in the extension's package. Runs prepublish.
  */
-export function ls(cwd = process.cwd()): Promise<void> {
+export function ls(cwd = process.cwd(), useYarn = false): Promise<void> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collectFiles(cwd))
+		.then(manifest => collectFiles(cwd, useYarn))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }

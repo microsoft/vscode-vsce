@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import * as semver from 'semver';
+import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
 import { CancellationToken } from './util';
 
@@ -77,13 +77,17 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode): YarnDependency | 
 		return null;
 	}
 
-	const version = tree.name.replace(/^[^@]+@/, '');
+	let name: string, version: string;
 
-	if (!semver.valid(version)) {
+	try {
+		const parseResult = parseSemver(tree.name);
+		name = parseResult.name;
+		version = parseResult.version;
+	} catch (err) {
+		console.error('Failed to parse dependency:', tree.name);
 		return null;
 	}
 
-	const name = tree.name.replace(/@[^@]+$/, '');
 	const dependencyPath = path.join(prefix, name);
 	const children: YarnDependency[] = [];
 
