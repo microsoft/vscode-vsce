@@ -4,6 +4,7 @@ import { home } from 'osenv';
 import { read, getGalleryAPI } from './util';
 import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
+import { PublishedExtension, ExtensionQueryFlags } from 'vso-node-api/interfaces/GalleryInterfaces';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const writeFile = denodeify<string, string, void>(fs.writeFile as any);
@@ -160,4 +161,17 @@ export function listPublishers(): Promise<void> {
 	return load()
 		.then(store => store.publishers)
 		.then(publishers => publishers.forEach(p => console.log(p.name)));
+}
+
+export function getExtension(
+	extensionPublisher: string,
+	extensionName: string,
+	version?: string,
+	flags?: ExtensionQueryFlags,
+	accountToken?: string
+): Promise<PublishedExtension> {
+	return load()
+	.then(({publishers}) => publishers[0]) // xxx: use any token available it's a read op
+	.then(({pat}) => getGalleryAPI(pat))
+	.then(api => api.getExtension(extensionPublisher, extensionName, version, flags, accountToken));
 }
