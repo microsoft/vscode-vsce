@@ -1,6 +1,7 @@
 import * as program from 'commander';
 import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
+import { show } from './show';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, isCancelledError } from './util';
@@ -111,6 +112,12 @@ module.exports = function (argv: string[]): void {
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
 		.action(name => main(logoutPublisher(name)));
+
+	program
+		.command('show <extensionIdentifier>')
+		.option('--json', 'Output data in json format', false)
+		.description('Show extension metadata')
+		.action((extensionIdentifier, { json }) => main(show(extensionIdentifier, json)));
 
 	program
 		.command('*')
