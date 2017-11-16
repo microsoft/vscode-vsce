@@ -116,7 +116,7 @@ function showOverview({
 		'',
 		'More info:',
 		...tableView([
-			[ 'Uniq identifier:', `${extensionName}.${publisherName}` ],
+			[ 'Uniq identifier:', `${publisherName}.${extensionName}` ],
 			[ 'Version:', version ],
 			[ 'Last updated:', lastUpdated.toLocaleString(fixedLocale, formatDateTime) ],
 			[ 'Publisher:', publisherDisplayName ],
