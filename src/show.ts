@@ -10,8 +10,9 @@ export interface ExtensionStatiticsMap {
 export type ViewTableRow = string[];
 export type ViewTable = ViewTableRow[];
 
-export function show(extensionUniqIdentifier: string, json: boolean = false): Promise<any> {
-	const [extensionPublisher, extensionName] = extensionUniqIdentifier.split(/\.(.+)?/, 2);
+export function show(extensionid: string, json: boolean = false): Promise<any> {
+	const [extensionPublisher, ...extensionNameParts] = extensionid.split('.');
+	const extensionName = extensionNameParts.join('.');
 	const flags =
 		ExtensionQueryFlags.IncludeCategoryAndTags |
 		ExtensionQueryFlags.IncludeMetadata |

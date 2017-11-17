@@ -114,10 +114,10 @@ module.exports = function (argv: string[]): void {
 		.action(name => main(logoutPublisher(name)));
 
 	program
-		.command('show <extensionIdentifier>')
+		.command('show <extensionid>')
 		.option('--json', 'Output data in json format', false)
 		.description('Show extension metadata')
-		.action((extensionIdentifier, { json }) => main(show(extensionIdentifier, json)));
+		.action((extensionid, { json }) => main(show(extensionid, json)));
 
 	program
 		.command('*')
