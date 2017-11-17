@@ -1,4 +1,4 @@
-import { getExtension } from './store';
+import { getPublicGalleryAPI } from './util';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
 
 export interface ExtensionStatiticsMap {
@@ -10,21 +10,21 @@ export interface ExtensionStatiticsMap {
 export type ViewTableRow = string[];
 export type ViewTable = ViewTableRow[];
 
-export function show(extensionid: string, json: boolean = false): Promise<any> {
-	const [extensionPublisher, ...extensionNameParts] = extensionid.split('.');
-	const extensionName = extensionNameParts.join('.');
-	const flags =
-		ExtensionQueryFlags.IncludeCategoryAndTags |
-		ExtensionQueryFlags.IncludeMetadata |
-		ExtensionQueryFlags.IncludeStatistics |
-		ExtensionQueryFlags.IncludeVersions;
-	return getExtension(extensionPublisher, extensionName, undefined, flags)
+export function show(extensionId: string, json: boolean = false): Promise<any> {
+	const flags = [
+		ExtensionQueryFlags.IncludeCategoryAndTags,
+		ExtensionQueryFlags.IncludeMetadata,
+		ExtensionQueryFlags.IncludeStatistics,
+		ExtensionQueryFlags.IncludeVersions,
+	];
+	return getPublicGalleryAPI()
+		.getExtension(extensionId, flags)
 		.then(extension => {
 			if (json) {
 				console.log(JSON.stringify(extension, undefined, '\t'));
 			} else {
 				if (extension === undefined) {
-					console.log(`Error: Extension "${extensionName}" by ${extensionPublisher} not found.`);
+					console.log(`Error: Extension "${extensionId}" not found.`);
 				} else {
 					showOverview(extension);
 				}
