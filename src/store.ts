@@ -171,12 +171,25 @@ export function getExtension(
 	accountToken?: string
 ): Promise<PublishedExtension> {
 	return load()
-	.then(({publishers}) => { // xxx: use any token available it's a read op
-		if (!publishers || !publishers.length) {
-			throw new Error(`Login is required.`);
-		}
-		return publishers;
-	})
-	.then(([{pat}]) => getGalleryAPI(pat))
-	.then(api => api.getExtension(extensionPublisher, extensionName, version, flags, accountToken));
+		.then(async ({publishers}) => { // xxx: use any token available it's a read op
+			if (!publishers || !publishers.length) {
+				throw new Error(`Login is required.`);
+			}
+			// Use one of the access tokens in store (one that works)
+			for (let i = 0; i < publishers.length; i++) {
+				const {pat} = publishers[i];
+				try {
+					return await getGalleryAPI(pat).getExtension(extensionPublisher, extensionName, version, flags, accountToken);
+				} catch (err) {
+					// xxx: If access token is invalid we get "Invalid Resource"
+					if (/Invalid Resource/.test(err.message)) {
+						if (i === publishers.length - 1) {
+							throw new Error(`${err.message} (check if access token has expired).`);
+						}
+					} else {
+						throw err;
+					}
+				}
+			}
+		});
 }
