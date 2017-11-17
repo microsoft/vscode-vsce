@@ -23,7 +23,11 @@ export function show(extensionid: string, json: boolean = false): Promise<any> {
 			if (json) {
 				console.log(JSON.stringify(extension, undefined, '\t'));
 			} else {
-				showOverview(extension);
+				if (extension === undefined) {
+					console.log(`Error: Extension "${extensionName}" by ${extensionPublisher} not found.`);
+				} else {
+					showOverview(extension);
+				}
 			}
 		});
 }

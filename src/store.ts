@@ -171,7 +171,12 @@ export function getExtension(
 	accountToken?: string
 ): Promise<PublishedExtension> {
 	return load()
-	.then(({publishers}) => publishers[0]) // xxx: use any token available it's a read op
-	.then(({pat}) => getGalleryAPI(pat))
+	.then(({publishers}) => { // xxx: use any token available it's a read op
+		if (!publishers || !publishers.length) {
+			throw new Error(`Login is required.`);
+		}
+		return publishers;
+	})
+	.then(([{pat}]) => getGalleryAPI(pat))
 	.then(api => api.getExtension(extensionPublisher, extensionName, version, flags, accountToken));
 }
