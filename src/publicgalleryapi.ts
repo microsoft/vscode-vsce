@@ -1,6 +1,8 @@
 import { HttpClient, HttpClientResponse } from 'vso-node-api/HttpClient';
-import { PublishedExtension, ExtensionQueryFlags, FilterCriteria, SortOrderType, SortByType, ExtensionQueryFilterType } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { PublishedExtension, ExtensionQueryFlags, FilterCriteria, SortOrderType,
+	SortByType, ExtensionQueryFilterType, TypeInfo} from 'vso-node-api/interfaces/GalleryInterfaces';
 import { IHeaders } from 'vso-node-api/interfaces/common/VsoBaseInterfaces';
+import { ContractSerializer } from 'vso-node-api/Serialization';
 
 export interface ExtensionQuery {
 	pageNumber?: number;
@@ -10,10 +12,6 @@ export interface ExtensionQuery {
 	flags?: ExtensionQueryFlags[];
 	criteria?: FilterCriteria[];
 	assetTypes?: string[];
-}
-
-function filterByExtensionId(extensionId) {
-	return ({publisher: {publisherName}, extensionName}) => extensionId === `${publisherName}.${extensionName}`;
 }
 
 export class PublicGalleryAPI {
@@ -47,7 +45,9 @@ export class PublicGalleryAPI {
 			.then(res => res.readBody())
 			.then(data => JSON.parse(data))
 			.then(({results: [result = {}] = []}) => result)
-			.then(({extensions = []}) => <PublishedExtension[]>extensions);
+			.then(({extensions = []}) =>
+				ContractSerializer.deserialize(extensions, TypeInfo.PublishedExtension, false, false)
+			);
 	}
 
 	getExtension(extensionId: string, flags: ExtensionQueryFlags[] = []): Promise<PublishedExtension> {
@@ -55,7 +55,9 @@ export class PublicGalleryAPI {
 			criteria: [{ filterType: ExtensionQueryFilterType.Name, value: extensionId }],
 			flags,
 		})
-		.then(result => result.filter(filterByExtensionId(extensionId)))
+		.then(result => result.filter(({publisher: {publisherName}, extensionName}) =>
+			extensionId === `${publisherName}.${extensionName}`)
+		)
 		.then(([extension]) => extension);
 	}
 }
