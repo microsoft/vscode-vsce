@@ -72,7 +72,6 @@ const indentRow = (row: string) => `  ${row}`;
 
 function showOverview({
 	displayName,
-	extensionId,
 	extensionName,
 	shortDescription,
 	versions,
@@ -126,7 +125,6 @@ function showOverview({
 			[ 'Last updated:', lastUpdated.toLocaleString(fixedLocale, formatDateTime) ],
 			[ 'Publisher:', publisherDisplayName ],
 			[ 'Published at:', publishedDate.toLocaleString(fixedLocale, formatDate) ],
-			[ 'Extension-ID:', extensionId ],
 		])
 			.map(indentRow),
 		'',
