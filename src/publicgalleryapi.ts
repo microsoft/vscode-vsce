@@ -22,7 +22,7 @@ export class PublicGalleryAPI {
 	}
 
 	post(url: string, data: string, additionalHeaders?: IHeaders): Promise<HttpClientResponse> {
-		return this.client.post(`${this.baseUrl}/_apis/public/${url}`, data, additionalHeaders);
+		return this.client.post(`${this.baseUrl}/_apis/public${url}`, data, additionalHeaders);
 	}
 
 	extensionQuery({
