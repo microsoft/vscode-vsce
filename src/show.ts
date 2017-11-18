@@ -1,14 +1,14 @@
 import { getPublicGalleryAPI } from './util';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap } from './viewutils';
+
+const limitVersions = 6;
 
 export interface ExtensionStatiticsMap {
 	install: number;
 	averagerating: number;
 	ratingcount:number;
 }
-
-export type ViewTableRow = string[];
-export type ViewTable = ViewTableRow[];
 
 export function show(extensionId: string, json: boolean = false): Promise<any> {
 	const flags = [
@@ -32,48 +32,6 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 		});
 }
 
-const fixedLocale = 'en-us';
-const formatDate = { month: 'long', day: 'numeric', year: 'numeric' };
-const formatTime = { hour: 'numeric', minute: 'numeric', second: 'numeric' };
-const formatDateTime = { ...formatDate, ...formatTime };
-
-function repeatString(text: string, count: number): string {
-	let result: string = '';
-	for (let i = 0; i < count; i++) {
-		result += text;
-	}
-	return result;
-}
-
-function ratingStars(rating: number): string {
-	const c = Math.min(Math.round(rating), 5);
-	return `${repeatString('\u{2605} ', c)}${repeatString('\u{2606} ', 5 - c)}`;
-}
-
-function tableView(table: ViewTable, spacing: number = 2): string[] {
-	const maxLen = {};
-	table.forEach(row => row.forEach((cell, i) => maxLen[i] = Math.max(maxLen[i] || 0, cell.length)));
-	return table.map(row => row.map((cell, i) => `${cell}${repeatString(' ', maxLen[i] - cell.length + spacing)}`).join(''));
-}
-
-function wordWrap(text: string, width: number = 80): string {
-	const [indent = ''] = text.match(/^\s+/) || [];
-	const maxWidth = width - indent.length;
-	return text
-		.replace(/^\s+/, '')
-		.split('')
-		.reduce(([out, buffer, pos], ch, i) => {
-			const nl = pos === maxWidth ? `\n${indent}` : '';
-			const newPos: number = nl ? 0 : +pos + 1;
-			return / |-|,|\./.test(ch) ?
-				[`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer+ch, newPos];
-		}, [indent, '', 0])
-		.slice(0, 2)
-		.join('');
-};
-
-const indentRow = (row: string) => `  ${row}`;
-
 function showOverview({
 	displayName,
 	extensionName,
@@ -94,8 +52,8 @@ function showOverview({
 
 	// Create formatted table list of versions
 	const versionList = <ViewTable>versions
-		.slice(0, 6)
-		.map(({version, lastUpdated}) => [version, lastUpdated.toLocaleString(fixedLocale, formatDate)]);
+		.slice(0, limitVersions)
+		.map(({version, lastUpdated}) => [version, formatDate(lastUpdated)]);
 
 	const {
 		install: installs = 0,
@@ -126,9 +84,9 @@ function showOverview({
 		...tableView([
 			[ 'Uniq identifier:', `${publisherName}.${extensionName}` ],
 			[ 'Version:', version ],
-			[ 'Last updated:', lastUpdated.toLocaleString(fixedLocale, formatDateTime) ],
+			[ 'Last updated:', formatDateTime(lastUpdated) ],
 			[ 'Publisher:', publisherDisplayName ],
-			[ 'Published at:', publishedDate.toLocaleString(fixedLocale, formatDate) ],
+			[ 'Published at:', formatDate(publishedDate) ],
 		])
 			.map(indentRow),
 		'',
