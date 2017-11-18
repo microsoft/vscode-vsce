@@ -57,13 +57,17 @@ function tableView(table: ViewTable, spacing: number = 2): string[] {
 }
 
 function wordWrap(text: string, width: number = 80): string {
+	const [indent = ''] = text.match(/^\s+/) || [];
+	const maxWidth = width - indent.length;
 	return text
+		.replace(/^\s+/, '')
 		.split('')
 		.reduce(([out, buffer, pos], ch, i) => {
-			const nl = pos === width ? '\n' : '';
+			const nl = pos === maxWidth ? `\n${indent}` : '';
 			const newPos: number = nl ? 0 : +pos + 1;
-			return ch === ' ' ? [`${out}${buffer} ${nl}`, '', newPos] : [`${out}${nl}`, buffer+ch, newPos];
-		}, ['', '', 0])
+			return / |-|,|\./.test(ch) ?
+				[`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer+ch, newPos];
+		}, [indent, '', 0])
 		.slice(0, 2)
 		.join('');
 };
