@@ -2,6 +2,7 @@ import * as program from 'commander';
 import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
 import { show } from './show';
+import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, isCancelledError } from './util';
@@ -118,6 +119,12 @@ module.exports = function (argv: string[]): void {
 		.option('--json', 'Output data in json format', false)
 		.description('Show extension metadata')
 		.action((extensionid, { json }) => main(show(extensionid, json)));
+
+		program
+		.command('search <text>')
+		.option('--json', 'Output result in json format', false)
+		.description('search extension gallery')
+		.action((text, { json }) => main(search(text, json)));
 
 	program
 		.command('*')
