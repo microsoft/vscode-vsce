@@ -1,0 +1,99 @@
+import { getPublicGalleryAPI } from './util';
+import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap } from './viewutils';
+
+const limitVersions = 6;
+
+export interface ExtensionStatiticsMap {
+	install: number;
+	averagerating: number;
+	ratingcount:number;
+}
+
+export function show(extensionId: string, json: boolean = false): Promise<any> {
+	const flags = [
+		ExtensionQueryFlags.IncludeCategoryAndTags,
+		ExtensionQueryFlags.IncludeMetadata,
+		ExtensionQueryFlags.IncludeStatistics,
+		ExtensionQueryFlags.IncludeVersions,
+	];
+	return getPublicGalleryAPI()
+		.getExtension(extensionId, flags)
+		.then(extension => {
+			if (json) {
+				console.log(JSON.stringify(extension, undefined, '\t'));
+			} else {
+				if (extension === undefined) {
+					console.log(`Error: Extension "${extensionId}" not found.`);
+				} else {
+					showOverview(extension);
+				}
+			}
+		});
+}
+
+function showOverview({
+	displayName,
+	extensionName,
+	shortDescription,
+	versions,
+	publisher: {
+		displayName:publisherDisplayName,
+		publisherName
+	},
+	categories,
+	tags,
+	statistics,
+	publishedDate,
+	lastUpdated,
+}: PublishedExtension) {
+
+	const [{ version = 'unknown' } = {}] = versions;
+
+	// Create formatted table list of versions
+	const versionList = <ViewTable>versions
+		.slice(0, limitVersions)
+		.map(({version, lastUpdated}) => [version, formatDate(lastUpdated)]);
+
+	const {
+		install: installs = 0,
+		averagerating = 0,
+		ratingcount = 0,
+	} = statistics
+		.reduce((map, {statisticName, value}) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
+
+	// Render
+	console.log([
+		`${displayName}`,
+		`${publisherDisplayName} | ${'\u2913'}` +
+		`${Number(installs).toLocaleString()} installs |` +
+		` ${ratingStars(averagerating)} (${ratingcount})`,
+		'',
+		`${shortDescription}`,
+		'',
+		'Recent versions:',
+		...(versionList.length ? tableView(versionList).map(indentRow) : ['no versions found']),
+		'',
+		'Categories:',
+		`  ${categories.join(', ')}`,
+		'',
+		'Tags:',
+		`  ${tags.join(', ')}`,
+		'',
+		'More info:',
+		...tableView([
+			[ 'Uniq identifier:', `${publisherName}.${extensionName}` ],
+			[ 'Version:', version ],
+			[ 'Last updated:', formatDateTime(lastUpdated) ],
+			[ 'Publisher:', publisherDisplayName ],
+			[ 'Published at:', formatDate(publishedDate) ],
+		])
+			.map(indentRow),
+		'',
+		'Statistics:',
+		...tableView(<ViewTable>statistics.map(({statisticName, value}) => [statisticName, Number(value).toFixed(2)]))
+			.map(indentRow),
+	]
+		.map(line => wordWrap(line))
+		.join('\n'));
+}
