@@ -7,6 +7,8 @@ const format = {
 	time: { hour: 'numeric', minute: 'numeric', second: 'numeric' },
 };
 
+const columns = process.stdout.columns ? process.stdout.columns : 80;
+
 export function formatDate(date) { return date.toLocaleString(fixedLocale, format.date); }
 export function formatTime(date) { return date.toLocaleString(fixedLocale, format.time); }
 export function formatDateTime(date) { return date.toLocaleString(fixedLocale, { ...format.date, ...format.time }); }
@@ -30,7 +32,7 @@ export function tableView(table: ViewTable, spacing: number = 2): string[] {
 	return table.map(row => row.map((cell, i) => `${cell}${repeatString(' ', maxLen[i] - cell.length + spacing)}`).join(''));
 }
 
-export function wordWrap(text: string, width: number = 80): string {
+export function wordWrap(text: string, width: number = columns): string {
 	const [indent = ''] = text.match(/^\s+/) || [];
 	const maxWidth = width - indent.length;
 	return text
@@ -47,3 +49,10 @@ export function wordWrap(text: string, width: number = 80): string {
 };
 
 export function indentRow(row: string) { return `  ${row}`; };
+
+export function wordTrim(text: string, width: number = columns, indicator = '...') {
+	if (text.length > width) {
+		return text.substr(0, width - indicator.length) + indicator;
+	}
+	return text;
+}
