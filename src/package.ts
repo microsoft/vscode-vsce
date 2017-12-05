@@ -128,6 +128,7 @@ const TrustedSVGSources = [
 	'codecov.io',
 	'coveralls.io',
 	'david-dm.org',
+	'deepscan.io',
 	'gemnasium.com',
 	'img.shields.io',
 	'isitmaintained.com',
