@@ -49,7 +49,11 @@ function showOverview({
 }: PublishedExtension) {
 
 	const [{ version = 'unknown' } = {}] = versions;
-
+	// tags may not be in manifest
+	if (!tags) {
+		tags = [];
+	}
+	
 	// Create formatted table list of versions
 	const versionList = <ViewTable>versions
 		.slice(0, limitVersions)
