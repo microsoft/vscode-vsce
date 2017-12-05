@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const gulp = require('gulp');
 const gts = require('gulp-typescript');
 const sm = require('gulp-sourcemaps');
@@ -23,7 +24,12 @@ function compile() {
 		.pipe(project());
 
 	const js = ts.js
-		.pipe(sm.write('.'));
+		.pipe(sm.write('.', {
+			includeContent: false, sourceRoot: file => {
+				const dirname = path.dirname(file.relative);
+				return dirname === '.' ? '../src' : ('../src/' + dirname);
+			}
+		}));
 
 	const api = ts.dts
 		.pipe(filter('**/api.d.ts'));
@@ -48,7 +54,7 @@ gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
 function watch(task) {
-	return () => gulp.watch(['src/**', 'typings/**'], [task]);
+	return cb => gulp.watch(['src/**', 'typings/**'], [task]);
 }
 
 gulp.task('watch', ['compile'], watch('just-compile'));
