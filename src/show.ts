@@ -7,7 +7,7 @@ const limitVersions = 6;
 export interface ExtensionStatiticsMap {
 	install: number;
 	averagerating: number;
-	ratingcount:number;
+	ratingcount: number;
 }
 
 export function show(extensionId: string, json: boolean = false): Promise<any> {
@@ -38,7 +38,7 @@ function showOverview({
 	shortDescription,
 	versions,
 	publisher: {
-		displayName:publisherDisplayName,
+		displayName: publisherDisplayName,
 		publisherName
 	},
 	categories,
@@ -53,18 +53,18 @@ function showOverview({
 	if (!tags) {
 		tags = [];
 	}
-	
+
 	// Create formatted table list of versions
 	const versionList = <ViewTable>versions
 		.slice(0, limitVersions)
-		.map(({version, lastUpdated}) => [version, formatDate(lastUpdated)]);
+		.map(({ version, lastUpdated }) => [version, formatDate(lastUpdated)]);
 
 	const {
 		install: installs = 0,
 		averagerating = 0,
 		ratingcount = 0,
 	} = statistics
-		.reduce((map, {statisticName, value}) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
+			.reduce((map, { statisticName, value }) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
 
 	// Render
 	console.log([
@@ -86,16 +86,16 @@ function showOverview({
 		'',
 		'More info:',
 		...tableView([
-			[ 'Uniq identifier:', `${publisherName}.${extensionName}` ],
-			[ 'Version:', version ],
-			[ 'Last updated:', formatDateTime(lastUpdated) ],
-			[ 'Publisher:', publisherDisplayName ],
-			[ 'Published at:', formatDate(publishedDate) ],
+			['Unique identifier:', `${publisherName}.${extensionName}`],
+			['Version:', version],
+			['Last updated:', formatDateTime(lastUpdated)],
+			['Publisher:', publisherDisplayName],
+			['Published at:', formatDate(publishedDate)],
 		])
 			.map(indentRow),
 		'',
 		'Statistics:',
-		...tableView(<ViewTable>statistics.map(({statisticName, value}) => [statisticName, Number(value).toFixed(2)]))
+		...tableView(<ViewTable>statistics.map(({ statisticName, value }) => [statisticName, Number(value).toFixed(2)]))
 			.map(indentRow),
 	]
 		.map(line => wordWrap(line))
