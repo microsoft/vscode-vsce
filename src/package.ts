@@ -116,27 +116,28 @@ function toExtensionTags(extensions: string[]): string[] {
 }
 
 const TrustedSVGSources = [
-	'vsmarketplacebadge.apphb.com',
-	'travis-ci.org',
-	'david-dm.org',
-	'badges.gitter.im',
-	'www.bithound.io',
-	'img.shields.io',
-	'gemnasium.com',
-	'isitmaintained.com',
-	'coveralls.io',
 	'api.travis-ci.org',
-	'codeclimate.com',
-	'snyk.io',
-	'badges.greenkeeper.io',
-	'travis-ci.com',
 	'badge.fury.io',
 	'badges.frapsoft.com',
+	'badges.gitter.im',
+	'badges.greenkeeper.io',
 	'cdn.travis-ci.org',
-	'marketplace.visualstudio.com',
 	'ci.appveyor.com',
-	'www.versioneye.com',
-	'codecov.io'
+	'codacy.com',
+	'codeclimate.com',
+	'codecov.io',
+	'coveralls.io',
+	'david-dm.org',
+	'gemnasium.com',
+	'img.shields.io',
+	'isitmaintained.com',
+	'marketplace.visualstudio.com',
+	'snyk.io',
+	'travis-ci.com',
+	'travis-ci.org',
+	'vsmarketplacebadge.apphb.com',
+	'www.bithound.io',
+	'www.versioneye.com'
 ];
 
 function isHostTrusted(host: string): boolean {
