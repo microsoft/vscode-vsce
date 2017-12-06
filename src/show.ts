@@ -1,6 +1,6 @@
 import { getPublicGalleryAPI } from './util';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap } from './viewutils';
+import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap, icons } from './viewutils';
 
 const limitVersions = 6;
 
@@ -69,7 +69,7 @@ function showOverview({
 	// Render
 	console.log([
 		`${displayName}`,
-		`${publisherDisplayName} | ${'\u2913'}` +
+		`${publisherDisplayName} | ${icons.download} ` +
 		`${Number(installs).toLocaleString()} installs |` +
 		` ${ratingStars(averagerating)} (${ratingcount})`,
 		'',
