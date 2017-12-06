@@ -3,6 +3,7 @@ import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces
 import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap } from './viewutils';
 
 const limitVersions = 6;
+const isExtensionTag = /^__ext_(.*)$/;
 
 export interface ExtensionStatiticsMap {
 	install: number;
@@ -33,26 +34,22 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 }
 
 function showOverview({
-	displayName,
-	extensionName,
-	shortDescription,
-	versions,
+	displayName = 'unknown',
+	extensionName = 'unknown',
+	shortDescription = '',
+	versions = [],
 	publisher: {
 		displayName: publisherDisplayName,
 		publisherName
 	},
-	categories,
-	tags,
-	statistics,
+	categories = [],
+	tags = [],
+	statistics = [],
 	publishedDate,
 	lastUpdated,
 }: PublishedExtension) {
 
 	const [{ version = 'unknown' } = {}] = versions;
-	// tags may not be in manifest
-	if (!tags) {
-		tags = [];
-	}
 
 	// Create formatted table list of versions
 	const versionList = <ViewTable>versions
@@ -82,7 +79,7 @@ function showOverview({
 		`  ${categories.join(', ')}`,
 		'',
 		'Tags:',
-		`  ${tags.join(', ')}`,
+		`  ${tags.filter(tag => !isExtensionTag.test(tag)).join(', ')}`,
 		'',
 		'More info:',
 		...tableView([
