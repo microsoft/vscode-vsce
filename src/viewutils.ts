@@ -1,3 +1,5 @@
+const os = require('os');
+
 export type ViewTableRow = string[];
 export type ViewTable = ViewTableRow[];
 
@@ -8,6 +10,21 @@ const format = {
 };
 
 const columns = process.stdout.columns ? process.stdout.columns : 80;
+
+// xxx: Windows cmd + powershell standard fonts currently don't support the full
+// unicode charset. For now we use fallback icons when on windows.
+const useFallbackIcons = os.platform() === 'win32';
+
+export const icons = useFallbackIcons?
+{
+	download: '\u{2193}',
+	star: '\u{2665}',
+	emptyStar: '\u{2022}',
+} : {
+	download: '\u{2913}',
+	star: '\u{2605}',
+	emptyStar: '\u{2606}',
+};
 
 export function formatDate(date) { return date.toLocaleString(fixedLocale, format.date); }
 export function formatTime(date) { return date.toLocaleString(fixedLocale, format.time); }
@@ -23,7 +40,7 @@ export function repeatString(text: string, count: number): string {
 
 export function ratingStars(rating: number, total = 5): string {
 	const c = Math.min(Math.round(rating), total);
-	return `${repeatString('\u{2605} ', c)}${repeatString('\u{2606} ', total - c)}`;
+	return `${repeatString(icons.star + ' ', c)}${repeatString(icons.emptyStar + ' ', total - c)}`;
 }
 
 export function tableView(table: ViewTable, spacing: number = 2): string[] {
