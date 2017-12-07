@@ -56,7 +56,7 @@ export class PublicGalleryAPI {
 			flags,
 		})
 		.then(result => result.filter(({publisher: {publisherName}, extensionName}) =>
-			extensionId === `${publisherName}.${extensionName}`)
+			extensionId.toLowerCase() === `${publisherName}.${extensionName}`.toLowerCase())
 		)
 		.then(([extension]) => extension);
 	}
