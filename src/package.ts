@@ -690,7 +690,11 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
 		.then(() => new Promise<string>((c, e) => {
 			const zip = new yazl.ZipFile();
-			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? new Buffer(f.contents, 'utf8') : f.contents, f.path) : zip.addFile(f.localPath, f.path));
+			let options = {
+				mtime: new Date(),
+				mode: parseInt("0100777", 8), // -rwxrwxrwx
+			  };
+			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? new Buffer(f.contents, 'utf8') : f.contents, f.path, options) : zip.addFile(f.localPath, f.path, options));
 			zip.end();
 
 			const zipStream = fs.createWriteStream(packagePath);
