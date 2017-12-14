@@ -3,8 +3,8 @@ declare module 'yazl' {
 	
 	class ZipFile {
 		outputStream: stream.Stream;
-		addBuffer(buffer: Buffer, path: string);
-		addFile(localPath: string, path: string);
+		addBuffer(buffer: Buffer, path: string, options: any);
+		addFile(localPath: string, path: string, options: any);
 		end();
 	}
 }
