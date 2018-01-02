@@ -135,6 +135,7 @@ const TrustedSVGSources = [
 	'img.shields.io',
 	'isitmaintained.com',
 	'marketplace.visualstudio.com',
+	'opencollective.com',
 	'snyk.io',
 	'travis-ci.com',
 	'travis-ci.org',
