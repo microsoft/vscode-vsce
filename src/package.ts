@@ -141,7 +141,8 @@ const TrustedSVGSources = [
 	'travis-ci.org',
 	'vsmarketplacebadge.apphb.com',
 	'www.bithound.io',
-	'www.versioneye.com'
+	'www.versioneye.com',
+	'nodesecurity.io'
 ];
 
 function isHostTrusted(host: string): boolean {
