@@ -73,3 +73,9 @@ export class CancellationToken {
 		}
 	}
 }
+
+export async function sequence(promiseFactories: { (): Promise<any> }[]): Promise<void> {
+	for (const factory of promiseFactories) {
+		await factory();
+	}
+}

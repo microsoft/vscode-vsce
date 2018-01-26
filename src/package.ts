@@ -201,6 +201,19 @@ class ManifestProcessor extends BaseProcessor {
 			this.vsix.links.github = repository;
 		}
 	}
+
+	onEnd(): Promise<void> {
+		let promise = Promise.resolve<void>();
+
+		if (!this.manifest.repository) {
+			console.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
+
+			promise = util.read('Do you want to continue? [y/N] ')
+				.then(answer => /^y$/i.test(answer) ? Promise.resolve() : Promise.reject('Aborted'));
+		}
+
+		return promise;
+	}
 }
 
 export class TagsProcessor extends BaseProcessor {
@@ -650,7 +663,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
 	return Promise.all(processedFiles).then(files => {
-		return Promise.all(processors.map(p => p.onEnd())).then(() => {
+		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
