@@ -14,6 +14,9 @@ import * as _ from 'lodash';
 // don't warn in tests
 console.warn = () => null;
 
+// accept read in tests
+process.env['TESTS'] = 'true';
+
 async function throws(fn: () => Promise<any>): Promise<void> {
 	let didThrow = false;
 

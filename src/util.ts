@@ -6,6 +6,10 @@ import { PublicGalleryAPI } from './publicgalleryapi';
 
 const __read = denodeify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
+	if (process.env['TESTS']) {
+		return Promise.resolve('y');
+	}
+
 	return __read({ prompt, ...options });
 }
 
