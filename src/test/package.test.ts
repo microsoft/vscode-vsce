@@ -15,7 +15,7 @@ import * as _ from 'lodash';
 console.warn = () => null;
 
 // accept read in tests
-process.env['TESTS'] = 'true';
+process.env['VSCE_TESTS'] = 'true';
 
 async function throws(fn: () => Promise<any>): Promise<void> {
 	let didThrow = false;
