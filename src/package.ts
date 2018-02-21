@@ -115,6 +115,9 @@ function toExtensionTags(extensions: string[]): string[] {
 		.map(s => `__ext_${s}`);
 }
 
+/* This list is also maintained by the Marketplace team.
+ * Remember to reach out to them when adding new domains.
+ */
 const TrustedSVGSources = [
 	'api.travis-ci.org',
 	'badge.fury.io',
