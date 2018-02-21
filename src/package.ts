@@ -284,6 +284,9 @@ export class TagsProcessor extends BaseProcessor {
 			const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
 			const json = doesContribute('jsonValidation') ? ['json'] : [];
 
+			const localizationContributions = ((contributes && contributes['localizations']) || [])
+				.reduce((r, l) => [...r, `localization-${l.languageId}`, ...l.translations.map(s => `__localization-${l.languageId}_${s.id}`)], []);
+
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);
 
@@ -307,6 +310,7 @@ export class TagsProcessor extends BaseProcessor {
 				...keybindings,
 				...debuggers,
 				...json,
+				...localizationContributions,
 				...languageContributions,
 				...languageActivations,
 				...grammars,

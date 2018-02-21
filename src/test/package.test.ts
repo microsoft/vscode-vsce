@@ -908,6 +908,31 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should detect localization contributions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				localizations: [{
+					languageId: 'de',
+					translations: [{ id: 'vscode' }, { id: 'vscode.go' }]
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				console.log(tags);
+				assert(tags.some(tag => tag === 'localization-de'));
+				assert(tags.some(tag => tag === '__localization-de_vscode'));
+				assert(tags.some(tag => tag === '__localization-de_vscode.go'));
+			});
+	});
+
 	it('should detect language extensions', () => {
 		const manifest = {
 			name: 'test',
