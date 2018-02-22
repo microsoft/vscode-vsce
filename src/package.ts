@@ -115,6 +115,12 @@ function toExtensionTags(extensions: string[]): string[] {
 		.map(s => `__ext_${s}`);
 }
 
+function toLanguagePackTags(translations: { id: string }[], languageId: string): string[] {
+	return translations
+		.map(({ id }) => [`__lp_${id}`, `__lp-${languageId}_${id}`])
+		.reduce((r, t) => [...r, ...t], []);
+}
+
 /* This list is also maintained by the Marketplace team.
  * Remember to reach out to them when adding new domains.
  */
@@ -285,7 +291,7 @@ export class TagsProcessor extends BaseProcessor {
 			const json = doesContribute('jsonValidation') ? ['json'] : [];
 
 			const localizationContributions = ((contributes && contributes['localizations']) || [])
-				.reduce((r, l) => [...r, `lp-${l.languageId}`, ...l.translations.map(s => `__lp-${l.languageId}_${s.id}`)], []);
+				.reduce((r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)], []);
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);

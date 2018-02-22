@@ -927,7 +927,9 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'lp-de'));
+				assert(tags.some(tag => tag === '__lp_vscode'));
 				assert(tags.some(tag => tag === '__lp-de_vscode'));
+				assert(tags.some(tag => tag === '__lp_vscode.go'));
 				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
 			});
 	});
