@@ -927,9 +927,9 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				console.log(tags);
-				assert(tags.some(tag => tag === 'localization-de'));
-				assert(tags.some(tag => tag === '__localization-de_vscode'));
-				assert(tags.some(tag => tag === '__localization-de_vscode.go'));
+				assert(tags.some(tag => tag === 'lp-de'));
+				assert(tags.some(tag => tag === '__lp-de_vscode'));
+				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
 			});
 	});
 

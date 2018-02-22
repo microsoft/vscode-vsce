@@ -285,7 +285,7 @@ export class TagsProcessor extends BaseProcessor {
 			const json = doesContribute('jsonValidation') ? ['json'] : [];
 
 			const localizationContributions = ((contributes && contributes['localizations']) || [])
-				.reduce((r, l) => [...r, `localization-${l.languageId}`, ...l.translations.map(s => `__localization-${l.languageId}_${s.id}`)], []);
+				.reduce((r, l) => [...r, `lp-${l.languageId}`, ...l.translations.map(s => `__lp-${l.languageId}_${s.id}`)], []);
 
 			const languageContributions = ((contributes && contributes['languages']) || [])
 				.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);
