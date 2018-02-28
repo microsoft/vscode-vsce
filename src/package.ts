@@ -116,7 +116,7 @@ function toExtensionTags(extensions: string[]): string[] {
 }
 
 function toLanguagePackTags(translations: { id: string }[], languageId: string): string[] {
-	return translations
+	return (translations || [])
 		.map(({ id }) => [`__lp_${id}`, `__lp-${languageId}_${id}`])
 		.reduce((r, t) => [...r, ...t], []);
 }
