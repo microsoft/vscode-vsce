@@ -1,8 +1,6 @@
 language: node_js
 node_js:
-- '9'
 - '8'
-- '7'
 sudo: false
 deploy:
   provider: npm
@@ -10,4 +8,5 @@ deploy:
   api_key:
     secure: ZdjeCXZYF9m2FFtjrAq0iIvwgW8HhZRwwGD0RubqE5O5d0XHqJdjyjxoVvlWZe8XEZC1MNGEFMG66yygpmaaw/WIRo15IU77sqNiwlntef3eUP+bDXcVi68ZhPEM178n/0i9YTFQvldtScg/S2mctL/nrGlYxKcxxvgKzpJdxxiqq04AO6SxfC+W+4XXyBvsxP+zY58+ZllA5D85/yinywZdnyvkY4g96dDFlcrljCg7bpleDOYIkJ/tLRfVEEHhIEZ2VWD2uDVyiFbYUGz1mLs14HfRbjy9+glLJSi4rs2RIQio1dGO+aDWSehkppPP1+zobnhuAuRbtcUADJXZW70z5DbvkGKZyvJCPRhlTwXCKPD4sIYbO0fopkPPae5tgRoGsPSGgRUaoH6T1MeoX0bnnmnIjmu0YkW81lfwtmdnJyfNdqY6za2Ub4iz02nu7nOgmrAw5hlnNfW/95usS616/NpU95ebJaaVWDasvi/n/rWuunGnWXtFuiwsmIR6W8Jk7r99+TQXHo1JBmUKOnUS5VQME4W2YjD/QPBiIIBhs07zKgjgWktIqDP3jhuP2ETmB/V/pTXmAfOR246jZcFaxHA4GWIXELrxufaX4SA5oDIxRN69atZ+D7tCQ98Rcwmb+CJiKGfF7SO3JRm3bdUGvuR8gUWAwnkS5lEdVxU=
   on:
+    branch: master
     tags: true
