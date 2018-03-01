@@ -105,7 +105,7 @@ function createManifest(extra: Partial<Manifest>): Manifest {
 }
 
 describe('collect', function () {
-	this.timeout(10000);
+	this.timeout(60000);
 
 	it('should catch all files', () => {
 		const cwd = fixture('uuid');
