@@ -5,7 +5,7 @@
 
 ### Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `0.12`
+- [Node.js](https://nodejs.org/en/) at least `8.x.x`
 
 ### About
 

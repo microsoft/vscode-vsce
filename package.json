@@ -30,7 +30,7 @@
     "prepublish": "gulp compile && mocha"
   },
   "engines": {
-    "node": ">= 4"
+    "node": ">= 8"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.1",
