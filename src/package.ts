@@ -360,7 +360,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			throw new Error(`Make sure to edit the README.md file before you publish your extension.`);
 		}
 
-		const markdownPathRegex = /(!?)\[([^\]\[]+|!\[[^\]\[]+]\([^\)]+\))\]\(([^\)]+)\)/g;
+		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
 		const urlReplace = (all, isImage, title, link) => {
 			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
