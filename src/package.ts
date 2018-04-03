@@ -151,7 +151,8 @@ const TrustedSVGSources = [
 	'vsmarketplacebadge.apphb.com',
 	'www.bithound.io',
 	'www.versioneye.com',
-	'nodesecurity.io'
+	'nodesecurity.io',
+	'fossa.io'
 ];
 
 function isHostTrusted(host: string): boolean {
