@@ -67,7 +67,8 @@ module.exports = function (argv: string[]): void {
 		.option('-o, --out [path]', 'Location of the package')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
-		.action(({ out, baseContentUrl, baseImagesUrl }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
+		.option('--yarn', 'Use yarn instead of npm')
+		.action(({ out, baseContentUrl, baseImagesUrl, yarn }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn })));
 
 	program
 		.command('publish [<version>]')
