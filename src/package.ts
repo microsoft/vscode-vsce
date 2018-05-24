@@ -229,13 +229,13 @@ class ManifestProcessor extends BaseProcessor {
 		if (this.manifest.contributes && this.manifest.contributes['localizations'] && Array.isArray(this.manifest.contributes['localizations'])) {
 			localizations = this.manifest.contributes['localizations'];
 			localizations = localizations.map(x => {
-				return { ...x, mainTranslationPath: x.translations.filter(y => y.id === 'vscode').map(y => util.normalize(path.join('extension', y.path)))[0] };
+				return { ...x, mainTranslationPath: x.translations.filter(y => y.id === 'vscode' && !! y.path).map(y => util.normalize(path.join('extension', y.path)))[0] };
 			});
 		}
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
-		const currentLoc = localizations.filter(x => !x.minimalTranslations && x.mainTranslationPath === util.normalize(file.path))[0];
+		const currentLoc = (localizations || []).filter(x => !x.minimalTranslations && x.mainTranslationPath === util.normalize(file.path))[0];
 		if (currentLoc) {
 			const contents = await read(file);
 			const contentsJson = JSON.parse(contents);
