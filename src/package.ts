@@ -239,7 +239,7 @@ class ManifestProcessor extends BaseProcessor {
 		if (currentLoc) {
 			const contents = await read(file);
 			const contentsJson = JSON.parse(contents);
-			const translations = contentsJson["contents"] ? contentsJson["contents"]["vs/workbench/parts/extensions/electron-browser/extensionTipsService"] : null;
+			const translations = contentsJson["contents"] ? contentsJson["contents"]["vs/platform/node/minimalTranslations"] : null;
 			if (translations) {
 				currentLoc.minimalTranslations = {
 					"searchMarketplace": translations["searchMarketplace"],
