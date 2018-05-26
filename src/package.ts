@@ -81,6 +81,20 @@ export class BaseProcessor implements IProcessor {
 	onEnd() { return Promise.resolve(null); }
 }
 
+interface ILocalization {
+	languageId: string;
+	translations: ITranslation[];
+	mainTranslationPath: string;
+	minimalTranslations: { [key: string]: string };
+}
+
+interface ITranslation {
+	id: string;
+	path: string;
+}
+
+let localizations: ILocalization[] = [];
+
 function getUrl(url: string | { url?: string; }): string {
 	if (!url) {
 		return null;
@@ -531,6 +545,37 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
+class LocProcessor extends BaseProcessor {
+	constructor(manifest: Manifest) {
+		super(manifest);
+		if (this.manifest.contributes && this.manifest.contributes['localizations'] && Array.isArray(this.manifest.contributes['localizations'])) {
+			localizations = this.manifest.contributes['localizations'];
+			localizations = localizations.map(x => {
+				return { ...x, mainTranslationPath: (x.translations || []).filter(y => y.id === 'vscode' && !!y.path).map(y => util.normalize(path.join('extension', y.path)))[0] };
+			}).filter(x => x.mainTranslationPath);
+		}
+	}
+
+	async onFile(file: IFile): Promise<IFile> {
+		const currentLoc = localizations.filter(x => x.mainTranslationPath === util.normalize(file.path))[0];
+		if (currentLoc) {
+			const contents = await read(file);
+			const contentsJson = JSON.parse(contents);
+			currentLoc.minimalTranslations = contentsJson["contents"] ? contentsJson["contents"]["vs/platform/node/minimalTranslations"] : null;
+		}
+
+		return file;
+	}
+
+	onEnd(): Promise<void> {
+		if (localizations.some(x => !x.minimalTranslations)) {
+			return Promise.reject(new Error(`At the bare minimum, translations for the "vs/platform/node/minimalTranslations" should be present in the extension.`));
+		}
+
+		return Promise.resolve<void>();;
+	}
+}
+
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
@@ -674,6 +719,25 @@ function collectFiles(cwd: string, useYarn = false): Promise<string[]> {
 	});
 }
 
+async function addMinimalTranslations(files: IFile[]): Promise<void> {
+	if (!localizations || !localizations.length) {
+		return;
+	}
+	for (let i = 0; i < files.length; i++) {
+		if (util.normalize(files[i].path) === 'extension/package.json') {
+			const contents = await read(files[i]);
+			const contentsJson = JSON.parse(contents);
+
+			(<ILocalization[]>contentsJson["contributes"]["localizations"]).forEach(x => {
+				x.minimalTranslations = localizations.filter(y => y.languageId === x.languageId)[0].minimalTranslations;
+			});
+
+			files[i].contents = new Buffer(JSON.stringify(contentsJson));
+			break;
+		}
+	}
+}
+
 export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
@@ -682,7 +746,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 			const assets = _.flatten(processors.map(p => p.assets));
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
-			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
+			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files), addMinimalTranslations(files)]).then(result => {
 				return [
 					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
 					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
@@ -700,7 +764,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
-		new IconProcessor(manifest)
+		new IconProcessor(manifest),
+		new LocProcessor(manifest)
 	];
 }
 
