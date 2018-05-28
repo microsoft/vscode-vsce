@@ -918,7 +918,7 @@ describe('toVsixManifest', () => {
 			contributes: {
 				localizations: [{
 					languageId: 'de',
-					translations: [{ id: 'vscode' }, { id: 'vscode.go' }]
+					translations: [{ id: 'vscode', path: 'fake.json' }, { id: 'vscode.go', path: 'what.json' }]
 				}]
 			}
 		};
@@ -932,6 +932,32 @@ describe('toVsixManifest', () => {
 				assert(tags.some(tag => tag === '__lp-de_vscode'));
 				assert(tags.some(tag => tag === '__lp_vscode.go'));
 				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
+			});
+	});
+
+	it('should expose localization contributions as assets', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				localizations: [{
+					languageId: 'de',
+					translations: [{ id: 'vscode', path: 'fake.json' }, { id: 'vscode.go', path: 'what.json' }]
+				}]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/fake.json', contents: new Buffer('') }
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const assets = result.PackageManifest.Assets[0].Asset;
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/fake.json'));
 			});
 	});
 

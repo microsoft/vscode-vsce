@@ -4,6 +4,24 @@ export interface Person {
 	email?: string;
 }
 
+export interface Translation {
+	id: string;
+	path: string;
+}
+
+export interface Localization {
+	languageId: string;
+	languageName?: string;
+	languageNameLocalized?: string;
+	translations: Translation[];
+	minimalTranslations?: { [key: string]: string };
+}
+
+export interface Contributions {
+	'localizations'?: Localization[];
+	[contributionType: string]: any;
+}
+
 export interface Manifest {
 	// mandatory (npm)
 	name: string;
@@ -13,7 +31,7 @@ export interface Manifest {
 	// vscode
 	publisher: string;
 	icon?: string;
-	contributes?: { [contributionType: string]: any; };
+	contributes?: Contributions;
 	activationEvents?: string[];
 	extensionDependencies?: string[];
 	galleryBanner?: { color?: string; theme?: string; };

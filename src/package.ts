@@ -531,6 +531,47 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
+export class NLSProcessor extends BaseProcessor {
+
+	private translations: { [path: string]: string } = Object.create(null);
+
+	constructor(manifest: Manifest) {
+		super(manifest);
+
+		if (!manifest.contributes || !manifest.contributes.localizations || manifest.contributes.localizations.length === 0) {
+			return;
+		}
+
+		const localizations = manifest.contributes.localizations;
+		const translations: { [languageId: string]: string } = Object.create(null);
+
+		// take last reference in the manifest for any given language
+		for (const localization of localizations) {
+			for (const translation of localization.translations) {
+				if (translation.id === 'vscode' && !!translation.path) {
+					translations[localization.languageId.toUpperCase()] = `extension/${util.normalize(translation.path)}`;
+				}
+			}
+		}
+
+		// invert the map for later easier retrieval
+		for (const languageId of Object.keys(translations)) {
+			this.translations[translations[languageId]] = languageId;
+		}
+	}
+
+	onFile(file: IFile): Promise<IFile> {
+		const normalizedPath = util.normalize(file.path);
+		const language = this.translations[normalizedPath];
+
+		if (language) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.Translation.${language}`, path: normalizedPath });
+		}
+
+		return Promise.resolve(file);
+	}
+}
+
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
@@ -700,7 +741,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
-		new IconProcessor(manifest)
+		new IconProcessor(manifest),
+		new NLSProcessor(manifest)
 	];
 }
 
