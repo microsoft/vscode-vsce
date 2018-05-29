@@ -942,22 +942,35 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				localizations: [{
-					languageId: 'de',
-					translations: [{ id: 'vscode', path: 'fake.json' }, { id: 'vscode.go', path: 'what.json' }]
-				}]
+				localizations: [
+					{
+						languageId: 'de',
+						translations: [
+							{ id: 'vscode', path: 'de.json' },
+							{ id: 'vscode.go', path: 'what.json' }
+						]
+					},
+					{
+						languageId: 'pt',
+						translations: [
+							{ id: 'vscode', path: './translations/pt.json' }
+						]
+					}
+				]
 			}
 		};
 
 		const files = [
-			{ path: 'extension/fake.json', contents: new Buffer('') }
+			{ path: 'extension/de.json', contents: new Buffer('') },
+			{ path: 'extension/translations/pt.json', contents: new Buffer('') }
 		];
 
 		return _toVsixManifest(manifest, files)
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/fake.json'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' && asset.$.Path === 'extension/translations/pt.json'));
 			});
 	});
 

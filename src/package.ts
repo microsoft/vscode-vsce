@@ -549,7 +549,8 @@ export class NLSProcessor extends BaseProcessor {
 		for (const localization of localizations) {
 			for (const translation of localization.translations) {
 				if (translation.id === 'vscode' && !!translation.path) {
-					translations[localization.languageId.toUpperCase()] = `extension/${util.normalize(translation.path)}`;
+					const translationPath = util.normalize(translation.path.replace(/^\.[\/\\]/, ''));
+					translations[localization.languageId.toUpperCase()] = `extension/${translationPath}`;
 				}
 			}
 		}
