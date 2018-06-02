@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, writeManifest, IPackageResult } from './package';
+import { pack, readManifest, IPackageResult } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read } from './util';
@@ -9,7 +9,9 @@ import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
 import * as semver from 'semver';
+import * as cp from 'child_process';
 
+const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const tmpName = denodeify<string>(tmp.tmpName);
 
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
@@ -98,28 +100,29 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 		return Promise.resolve(null);
 	}
 
-	return readManifest(cwd, false)
-		.then(manifest => {
-			switch (version) {
-				case 'major':
-				case 'minor':
-				case 'patch':
-					return { manifest, version: semver.inc(manifest.version, version) };
-				default:
-					const updatedVersion = semver.valid(version);
-
-					if (!updatedVersion) {
-						return Promise.reject(`Invalid version ${version}`);
-					}
-
-					return { manifest, version: updatedVersion };
-			}
-		}).then(({ manifest, version }) => {
-			if (version !== manifest.version) {
-				manifest.version = version;
-				return writeManifest(cwd, manifest);
-			}
-		});
+	// call `npm version` to do our dirty work
+	switch (version) {
+		case 'major':
+		case 'minor':
+		case 'patch':
+			return exec(`npm version ${version}`, { cwd })
+				.then(({ stdout, stderr }) => {
+					process.stdout.write(stdout);
+					process.stderr.write(stderr);
+					return Promise.resolve(null);
+				})
+				.catch(err => Promise.reject(err.message));
+		case 'premajor':
+		case 'preminor':
+		case 'prepatch':
+		case 'prerelease':
+		case 'from-git':
+			return Promise.reject(`Not supported: ${version}`);
+		default:
+			return semver.valid(version)
+				? Promise.resolve(null)
+				: Promise.reject(`Invalid version ${version}`);
+	}
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
