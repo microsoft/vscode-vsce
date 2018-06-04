@@ -121,7 +121,7 @@ module.exports = function (argv: string[]): void {
 		.description('Show extension metadata')
 		.action((extensionid, { json }) => main(show(extensionid, json)));
 
-		program
+	program
 		.command('search <text>')
 		.option('--json', 'Output result in json format', false)
 		.description('search extension gallery')
