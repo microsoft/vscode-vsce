@@ -77,7 +77,8 @@ module.exports = function (argv: string[]): void {
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
-		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
+		.option('--yarn', 'Use yarn instead of npm while packing extension files')
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn })));
 
 	program
 		.command('unpublish [<extensionid>]')
