@@ -1,0 +1,8 @@
+# pattern of dotted directory without backslash
+.vscode
+
+# pattern of directory with trailing backslash
+out/
+
+# pattern of file name
+*.log

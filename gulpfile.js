@@ -34,8 +34,8 @@ function compile() {
 	const api = ts.dts
 		.pipe(filter('**/api.d.ts'));
 
-	const resources = gulp.src('src/**')
-		.pipe(filter(['**', '!**/*.ts']));
+	const resources = gulp.src('src/**', { dot: true })
+		.pipe(filter(['**', '!**/*.ts'], { dot: true }));
 
 	return es.merge(js, api, resources)
 		.pipe(gulp.dest('out'));
@@ -54,7 +54,7 @@ gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
 function watch(task) {
-	return cb => gulp.watch(['src/**', 'typings/**'], [task]);
+	return () => gulp.watch(['src/**', 'typings/**'], [task]);
 }
 
 gulp.task('watch', ['compile'], watch('just-compile'));
