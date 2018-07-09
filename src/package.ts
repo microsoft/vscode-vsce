@@ -125,11 +125,13 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
  * Remember to reach out to them when adding new domains.
  */
 const TrustedSVGSources = [
+	'api.travis-ci.com',
 	'api.travis-ci.org',
 	'badge.fury.io',
 	'badges.frapsoft.com',
 	'badges.gitter.im',
 	'badges.greenkeeper.io',
+	'cdn.travis-ci.com',
 	'cdn.travis-ci.org',
 	'ci.appveyor.com',
 	'codacy.com',
