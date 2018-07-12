@@ -11,6 +11,7 @@
     <Properties>
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="<%- engine %>" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="<%- extensionDependencies %>" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="<%- extensionPack %>" />
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
         <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="<%- links.repository %>" />

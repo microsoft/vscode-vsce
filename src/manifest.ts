@@ -34,6 +34,7 @@ export interface Manifest {
 	contributes?: Contributions;
 	activationEvents?: string[];
 	extensionDependencies?: string[];
+	extensionPack?: string[];
 	galleryBanner?: { color?: string; theme?: string; };
 	preview?: boolean;
 	badges?: { url: string; href: string; description: string; }[];
