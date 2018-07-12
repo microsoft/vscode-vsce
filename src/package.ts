@@ -206,7 +206,8 @@ class ManifestProcessor extends BaseProcessor {
 			githubMarkdown: manifest.markdown !== 'standard',
 			enableMarketplaceQnA,
 			customerQnALink,
-			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(',')
+			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
+			extensionPack: _(manifest.extensionPack || []).uniq().join(',')
 		};
 
 		if (isGitHub) {
