@@ -137,30 +137,7 @@ describe('collect', function () {
 
 	it('should ignore content of .vscodeignore', () => {
 		const cwd = fixture('vscodeignore');
-
-		// pattern of dotted directory name without backslash
-		if (!fs.existsSync(path.join(cwd, '.vscode'))) {
-			fs.mkdirSync(path.join(cwd, '.vscode'));
-		}
-
-		if (!fs.existsSync(path.join(cwd, '.vscode', 'tasks.json'))) {
-			fs.writeFileSync(path.join(cwd, '.vscode', 'tasks.json'), 'tasks');
-		}
-
-		// pattern of directory name with trailing backslash
-		if (!fs.existsSync(path.join(cwd, 'out'))) {
-			fs.mkdirSync(path.join(cwd, 'out'));
-		}
-
-		if (!fs.existsSync(path.join(cwd, 'out', 'hello'))) {
-			fs.writeFileSync(path.join(cwd, 'out', 'hello'), 'world');
-		}
-
-		// pattern of file name
-		if (!fs.existsSync(path.join(cwd, 'logger.log'))) {
-			fs.writeFileSync(path.join(cwd, 'logger.log'), 'log');
-		}
-
+		
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {

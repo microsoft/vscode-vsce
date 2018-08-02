@@ -54,7 +54,7 @@ gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
 function watch(task) {
-	return () => gulp.watch(['src/**', 'typings/**'], [task]);
+	return cb => gulp.watch(['src/**', 'typings/**'], [task]);
 }
 
 gulp.task('watch', ['compile'], watch('just-compile'));
