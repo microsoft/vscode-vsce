@@ -34,8 +34,8 @@ function compile() {
 	const api = ts.dts
 		.pipe(filter('**/api.d.ts'));
 
-	const resources = gulp.src('src/**')
-		.pipe(filter(['**', '!**/*.ts']));
+	const resources = gulp.src('src/**', { dot: true })
+		.pipe(filter(['**', '!**/*.ts'], { dot: true }));
 
 	return es.merge(js, api, resources)
 		.pipe(gulp.dest('out'));

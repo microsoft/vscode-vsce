@@ -26,12 +26,13 @@ const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
+const lstat = denodeify<string, fs.Stats>(fs.lstat);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
-const MinimatchOptions = { dot: true };
+const MinimatchOptions: minimatch.Options = { dot: true };
 
 export interface IFile {
 	path: string;
@@ -704,7 +705,15 @@ function collectFiles(cwd: string, useYarn = false): Promise<string[]> {
 
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
-			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s))
+			.then(rawIgnore => rawIgnore.split(/[\n\r]/).filter(s => !!s).map(s => s.trim().replace(/\/$/, '')))
+			.then(ignore => {
+				const promises = ignore.map(i => {
+					return lstat(i)
+						.catch<fs.Stats>(() => Promise.resolve())
+						.then(stat => stat && stat.isDirectory() ? `${i}/**` : i);
+				});
+				return Promise.all(promises).then<string[]>(i => Promise.resolve(i));
+			})
 			.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
 			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
 			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))

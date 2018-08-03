@@ -135,6 +135,16 @@ describe('collect', function () {
 			});
 	});
 
+	it('should ignore content of .vscodeignore', () => {
+		const cwd = fixture('vscodeignore');
+		
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd }))
+			.then(files => {
+				assert.equal(files.length, 3);
+			});
+	});
+
 	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
 		return readManifest(cwd)
