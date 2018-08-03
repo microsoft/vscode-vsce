@@ -26,7 +26,6 @@ const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
-const lstat = denodeify<string, fs.Stats>(fs.lstat);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
@@ -705,19 +704,21 @@ function collectFiles(cwd: string, useYarn = false): Promise<string[]> {
 
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
-			.then(rawIgnore => rawIgnore.split(/[\n\r]/).filter(s => !!s).map(s => s.trim().replace(/\/$/, '')))
-			.then(ignore => {
-				const promises = ignore.map(i => {
-					return lstat(i)
-						.catch<fs.Stats>(() => Promise.resolve())
-						.then(stat => stat && stat.isDirectory() ? `${i}/**` : i);
-				});
-				return Promise.all(promises).then<string[]>(i => Promise.resolve(i));
-			})
+
+			// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
+			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s).filter(i => !/^\s*#/.test(i)))
+
+			// Add '/**' to possible folder names
+			.then(ignore => [...ignore, ...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => /\/$/.test(i) ? `${i}**` : `${i}/**`)])
+
+			// Combine with default ignore list
 			.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
-			.then(ignore => ignore.filter(i => !/^\s*#/.test(i)))
+
+			// Split into ignore and negate list
 			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
 			.then(r => ({ ignore: r[0], negate: r[1] }))
+
+			// Filter out files
 			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i, MinimatchOptions)) || negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))));
 	});
 }

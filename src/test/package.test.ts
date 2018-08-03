@@ -137,7 +137,7 @@ describe('collect', function () {
 
 	it('should ignore content of .vscodeignore', () => {
 		const cwd = fixture('vscodeignore');
-		
+
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
