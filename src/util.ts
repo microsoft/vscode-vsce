@@ -13,14 +13,16 @@ export function read(prompt: string, options: _read.Options = {}): Promise<strin
 	return __read({ prompt, ...options });
 }
 
+const marketplaceUrl = process.env['VSCE_MARKETPLACE_URL'] || 'https://marketplace.visualstudio.com';
+
 export function getGalleryAPI(pat: string): IGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
-	return vsoapi.getGalleryApi('https://marketplace.visualstudio.com');
+	return vsoapi.getGalleryApi(marketplaceUrl);
 }
 
 export function getPublicGalleryAPI() {
-	return new PublicGalleryAPI('https://marketplace.visualstudio.com', '3.0-preview.1');
+	return new PublicGalleryAPI(marketplaceUrl, '3.0-preview.1');
 }
 
 export function normalize(path: string): string {
