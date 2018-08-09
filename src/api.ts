@@ -25,6 +25,11 @@ export interface ICreateVSIXOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	baseImagesUrl?: string;
+
+    /**
+	 * Should Yarn be used in place of NPM
+     */
+	useYarn?: boolean;
 }
 
 export interface IPublishOptions {
@@ -52,6 +57,11 @@ export interface IPublishOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	baseImagesUrl?: string;
+
+    /**
+     * Should Yarn be used in place of NPM
+     */
+    useYarn?: boolean;
 }
 
 /**
@@ -93,6 +103,11 @@ export interface IPublishVSIXOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	baseImagesUrl?: string;
+
+    /**
+     * Should Yarn be used in place of NPM
+     */
+    useYarn?: boolean;
 }
 
 /**
