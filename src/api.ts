@@ -26,9 +26,9 @@ export interface ICreateVSIXOptions {
 	 */
 	baseImagesUrl?: string;
 
-    /**
-	 * Should Yarn be used in place of NPM
-     */
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
 	useYarn?: boolean;
 }
 
@@ -58,10 +58,10 @@ export interface IPublishOptions {
 	 */
 	baseImagesUrl?: string;
 
-    /**
-     * Should Yarn be used in place of NPM
-     */
-    useYarn?: boolean;
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
+	useYarn?: boolean;
 }
 
 /**
@@ -104,10 +104,10 @@ export interface IPublishVSIXOptions {
 	 */
 	baseImagesUrl?: string;
 
-    /**
-     * Should Yarn be used in place of NPM
-     */
-    useYarn?: boolean;
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
+	useYarn?: boolean;
 }
 
 /**
