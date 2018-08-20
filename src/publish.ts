@@ -3,7 +3,7 @@ import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, Pagi
 import { pack, readManifest, IPackageResult } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read } from './util';
+import { getGalleryAPI, read, getPublishedUrl } from './util';
 import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
@@ -57,7 +57,8 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 
 	const packageStream = fs.createReadStream(packagePath);
 
-	const fullName = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
+	const name = `${manifest.publisher}.${manifest.name}`;
+	const fullName = `${name}@${manifest.version}`;
 	console.log(`Publishing ${fullName}...`);
 
 	return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
@@ -73,7 +74,7 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 
 			return promise
 				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() => console.log(`Successfully published ${fullName}!`));
+				.then(() => console.log(`Successfully published ${fullName}!\nYour extension will live at ${getPublishedUrl(name)} (might take a few seconds for it to show up).`));
 		})
 		.catch(err => {
 			const message = err && err.message || '';

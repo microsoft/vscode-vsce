@@ -15,6 +15,10 @@ export function read(prompt: string, options: _read.Options = {}): Promise<strin
 
 const marketplaceUrl = process.env['VSCE_MARKETPLACE_URL'] || 'https://marketplace.visualstudio.com';
 
+export function getPublishedUrl(extension: string): string {
+	return `${marketplaceUrl}/items?itemName=${extension}`;
+}
+
 export function getGalleryAPI(pat: string): IGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
