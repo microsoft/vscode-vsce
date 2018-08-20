@@ -64,7 +64,7 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('package')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Location of the package')
+		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm')
