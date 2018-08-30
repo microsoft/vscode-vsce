@@ -176,6 +176,24 @@ describe('collect', function () {
 				assert.equal(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
 			});
 	});
+
+	it('should honor vscode:packagedDependencies', () => {
+
+		const cwd = fixture('packagedDependencies');
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true }))
+			.then(files => {
+				let seenWhich: boolean;
+				let seenIsexe: boolean;
+				files.forEach(file => {
+					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
+					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
+				});
+				assert.equal(seenWhich, false);
+				assert.equal(seenIsexe, true);
+			});
+
+	});
 });
 
 describe('readManifest', () => {
