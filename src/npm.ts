@@ -149,7 +149,7 @@ function selectYarnDependencies(deps: YarnDependency[], entries: string[]): Yarn
 }
 
 async function getYarnProductionDependencies(cwd: string): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --json', { cwd, encoding: 'utf8', env: { ...process.env, NODE_ENV: 'production' } }, (err, stdout) => err ? e(err) : c(stdout)));
+	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env } }, (err, stdout) => err ? e(err) : c(stdout)));
 	const match = /^{"type":"tree".*$/m.exec(raw);
 
 	if (!match || match.length !== 1) {
