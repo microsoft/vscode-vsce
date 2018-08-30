@@ -63,6 +63,7 @@ export interface IPackageOptions {
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
+	packagedDependencies?: string[];
 }
 
 export interface IProcessor {
@@ -685,8 +686,8 @@ const defaultIgnore = [
 	'**/*.vsixmanifest'
 ];
 
-function collectAllFiles(cwd: string, useYarn = false): Promise<string[]> {
-	return getDependencies(cwd, useYarn).then(deps => {
+function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
 		const promises = deps.map(dep => {
 			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
 				.then(files => files
@@ -698,8 +699,8 @@ function collectAllFiles(cwd: string, useYarn = false): Promise<string[]> {
 	});
 }
 
-function collectFiles(cwd: string, useYarn = false): Promise<string[]> {
-	return collectAllFiles(cwd, useYarn).then(files => {
+function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
@@ -757,9 +758,10 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const useYarn = options.useYarn || false;
+	const packagedDependencies = options.packagedDependencies || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn).then(fileNames => {
+	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files, options);
@@ -821,17 +823,17 @@ export function packageCommand(options: IPackageOptions = {}): Promise<any> {
 /**
  * Lists the files included in the extension's package. Does not run prepublish.
  */
-export function listFiles(cwd = process.cwd(), useYarn = false): Promise<string[]> {
+export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[]): Promise<string[]> {
 	return readManifest(cwd)
-		.then(manifest => collectFiles(cwd, useYarn));
+		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies));
 }
 
 /**
  * Lists the files included in the extension's package. Runs prepublish.
  */
-export function ls(cwd = process.cwd(), useYarn = false): Promise<void> {
+export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[]): Promise<void> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collectFiles(cwd, useYarn))
+		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }

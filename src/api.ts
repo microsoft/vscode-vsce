@@ -83,6 +83,13 @@ export interface IListFilesOptions {
 	 * The package manager to use. Defaults to `PackageManager.Npm`.
 	 */
 	packageManager?: PackageManager;
+
+	/**
+	 * A subset of the top level dependencies which should be included. The 
+	 * default is `undefined` which include all dependencies, an empty array means
+	 * no dependencies will be included.
+	 */
+	packagedDependencies?: string[];
 }
 
 export interface IPublishVSIXOptions {
@@ -128,7 +135,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn);
+	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn, options.packagedDependencies);
 }
 
 /**

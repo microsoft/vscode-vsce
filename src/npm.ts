@@ -102,7 +102,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode): YarnDependency | 
 	return { name, version, path: dependencyPath, children };
 }
 
-function selectYarnDependencies(deps: YarnDependency[], entries: string[]): YarnDependency[] {
+function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: string[]): YarnDependency[] {
 
 	const index = new class {
 		private data: { [name: string]: YarnDependency } = Object.create(null);
@@ -144,11 +144,11 @@ function selectYarnDependencies(deps: YarnDependency[], entries: string[]): Yarn
 			visit(child.name);
 		}
 	};
-	entries.forEach(visit);
+	packagedDependencies.forEach(visit);
 	return reached.values;
 }
 
-async function getYarnProductionDependencies(cwd: string): Promise<YarnDependency[]> {
+async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
 	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env } }, (err, stdout) => err ? e(err) : c(stdout)));
 	const match = /^{"type":"tree".*$/m.exec(raw);
 
@@ -162,25 +162,18 @@ async function getYarnProductionDependencies(cwd: string): Promise<YarnDependenc
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree))
 		.filter(dep => !!dep);
 
-	try {
-		let pkg = require(path.join(cwd, 'package.json'));
-		let entries = pkg['vscode:packagedDependencies'];
-		if (Array.isArray(entries) && entries.length > 0) {
-			result = selectYarnDependencies(result, entries);
-		}
-	} catch (err) {
-		console.log(err);
-		// ignore
+	if (Array.isArray(packagedDependencies)) {
+		result = selectYarnDependencies(result, packagedDependencies);
 	}
 
 	return result;
 }
 
-async function getYarnDependencies(cwd: string): Promise<string[]> {
+async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	const result: string[] = [cwd];
 
 	if (await new Promise(c => fs.exists(path.join(cwd, 'yarn.lock'), c))) {
-		const deps = await getYarnProductionDependencies(cwd);
+		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 		const flatten = (dep: YarnDependency) => { result.push(dep.path); dep.children.forEach(flatten); };
 		deps.forEach(flatten);
 	}
@@ -188,8 +181,8 @@ async function getYarnDependencies(cwd: string): Promise<string[]> {
 	return _.uniq(result);
 }
 
-export function getDependencies(cwd: string, useYarn = false): Promise<string[]> {
-	return useYarn ? getYarnDependencies(cwd) : getNpmDependencies(cwd);
+export function getDependencies(cwd: string, useYarn = false, packagedDependencies?: string[]): Promise<string[]> {
+	return useYarn ? getYarnDependencies(cwd, packagedDependencies) : getNpmDependencies(cwd);
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {

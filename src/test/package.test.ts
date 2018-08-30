@@ -177,7 +177,24 @@ describe('collect', function () {
 			});
 	});
 
-	it('should honor vscode:packagedDependencies', () => {
+	it('should honor dependencyEntryPoints', () => {
+
+		const cwd = fixture('packagedDependencies');
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true, packagedDependencies: ['isexe'] }))
+			.then(files => {
+				let seenWhich: boolean;
+				let seenIsexe: boolean;
+				files.forEach(file => {
+					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
+					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
+				});
+				assert.equal(seenWhich, false);
+				assert.equal(seenIsexe, true);
+			});
+	});
+
+	it('should include all node_modules when dependencyEntryPoints is not defined', () => {
 
 		const cwd = fixture('packagedDependencies');
 		return readManifest(cwd)
@@ -189,10 +206,19 @@ describe('collect', function () {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
 				});
-				assert.equal(seenWhich, false);
+				assert.equal(seenWhich, true);
 				assert.equal(seenIsexe, true);
 			});
+	});
 
+	it('should skip all node_modules when dependencyEntryPoints is []', () => {
+
+		const cwd = fixture('packagedDependencies');
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true, packagedDependencies: [] }))
+			.then(files => {
+				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
+			});
 	});
 });
 
