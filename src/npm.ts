@@ -102,6 +102,52 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode): YarnDependency | 
 	return { name, version, path: dependencyPath, children };
 }
 
+function selectYarnDependencies(deps: YarnDependency[], entries: string[]): YarnDependency[] {
+
+	const index = new class {
+		private data: { [name: string]: YarnDependency } = Object.create(null);
+		constructor() {
+			for (const dep of deps) {
+				if (this.data[dep.name]) {
+					throw Error(`Dependency seen more than once: ${dep.name}`);
+				}
+				this.data[dep.name] = dep;
+			}
+		}
+		find(name: string): YarnDependency {
+			let result = this.data[name];
+			if (!result) {
+				throw new Error(`Could not find dependency: ${name}`);
+			}
+			return result;
+		}
+	};
+
+	const reached = new class {
+		values: YarnDependency[] = [];
+		add(dep: YarnDependency): boolean {
+			if (this.values.indexOf(dep) < 0) {
+				this.values.push(dep);
+				return true;
+			}
+			return false;
+		}
+	};
+
+	const visit = (name: string) => {
+		let dep = index.find(name);
+		if (!reached.add(dep)) {
+			// already seen -> done
+			return;
+		}
+		for (const child of dep.children) {
+			visit(child.name);
+		}
+	};
+	entries.forEach(visit);
+	return reached.values;
+}
+
 async function getYarnProductionDependencies(cwd: string): Promise<YarnDependency[]> {
 	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --json', { cwd, encoding: 'utf8', env: { ...process.env, NODE_ENV: 'production' } }, (err, stdout) => err ? e(err) : c(stdout)));
 	const match = /^{"type":"tree".*$/m.exec(raw);
@@ -112,9 +158,22 @@ async function getYarnProductionDependencies(cwd: string): Promise<YarnDependenc
 
 	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
 
-	return trees
+	let result = trees
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree))
 		.filter(dep => !!dep);
+
+	try {
+		let pkg = require(path.join(cwd, 'package.json'));
+		let entries = pkg['vscode:packagedDependencies'];
+		if (Array.isArray(entries) && entries.length > 0) {
+			result = selectYarnDependencies(result, entries);
+		}
+	} catch (err) {
+		console.log(err);
+		// ignore
+	}
+
+	return result;
 }
 
 async function getYarnDependencies(cwd: string): Promise<string[]> {
