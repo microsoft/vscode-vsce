@@ -178,10 +178,10 @@ describe('collect', function () {
 	});
 
 	it('should honor dependencyEntryPoints', () => {
-
 		const cwd = fixture('packagedDependencies');
+		
 		return readManifest(cwd)
-			.then(manifest => collect(manifest, { cwd, useYarn: true, packagedDependencies: ['isexe'] }))
+			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {
 				let seenWhich: boolean;
 				let seenIsexe: boolean;
@@ -195,8 +195,8 @@ describe('collect', function () {
 	});
 
 	it('should include all node_modules when dependencyEntryPoints is not defined', () => {
-
 		const cwd = fixture('packagedDependencies');
+
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true }))
 			.then(files => {
@@ -212,10 +212,10 @@ describe('collect', function () {
 	});
 
 	it('should skip all node_modules when dependencyEntryPoints is []', () => {
-
 		const cwd = fixture('packagedDependencies');
+
 		return readManifest(cwd)
-			.then(manifest => collect(manifest, { cwd, useYarn: true, packagedDependencies: [] }))
+			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: [] }))
 			.then(files => {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});

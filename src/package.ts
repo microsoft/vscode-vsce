@@ -63,7 +63,7 @@ export interface IPackageOptions {
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
-	packagedDependencies?: string[];
+	dependencyEntryPoints?: string[];
 }
 
 export interface IProcessor {
@@ -758,7 +758,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const useYarn = options.useYarn || false;
-	const packagedDependencies = options.packagedDependencies || undefined;
+	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
