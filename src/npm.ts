@@ -72,8 +72,8 @@ export interface YarnDependency {
 	children: YarnDependency[];
 }
 
-function asYarnDependency(prefix: string, tree: YarnTreeNode): YarnDependency | null {
-	if (/@[\^~]/.test(tree.name)) {
+function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): YarnDependency | null {
+	if (prune && /@[\^~]/.test(tree.name)) {
 		return null;
 	}
 
@@ -92,7 +92,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode): YarnDependency | 
 	const children: YarnDependency[] = [];
 
 	for (const child of (tree.children || [])) {
-		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child);
+		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child, prune);
 
 		if (dep) {
 			children.push(dep);
@@ -156,13 +156,14 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 		throw new Error('Could not parse result of `yarn list --json`');
 	}
 
+	const usingPackagedDependencies = Array.isArray(packagedDependencies);
 	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
 
 	let result = trees
-		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree))
+		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
 		.filter(dep => !!dep);
 
-	if (Array.isArray(packagedDependencies)) {
+	if (usingPackagedDependencies) {
 		result = selectYarnDependencies(result, packagedDependencies);
 	}
 

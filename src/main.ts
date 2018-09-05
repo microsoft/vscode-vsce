@@ -59,7 +59,8 @@ module.exports = function (argv: string[]): void {
 		.command('ls')
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm')
-		.action(({ yarn }) => main(ls(undefined, yarn)));
+		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
+		.action(({ yarn, packagedDependencies }) => main(ls(undefined, yarn, packagedDependencies)));
 
 	program
 		.command('package')
