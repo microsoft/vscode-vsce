@@ -999,6 +999,7 @@ describe('toVsixManifest', () => {
 				localizations: [
 					{
 						languageId: 'de',
+						languageName: 'German',
 						translations: [
 							{ id: 'vscode', path: 'de.json' },
 							{ id: 'vscode.go', path: 'what.json' }
@@ -1006,6 +1007,8 @@ describe('toVsixManifest', () => {
 					},
 					{
 						languageId: 'pt',
+						languageName: 'Portuguese',
+						languageNameLocalized: 'Português',
 						translations: [
 							{ id: 'vscode', path: './translations/pt.json' }
 						]
@@ -1025,6 +1028,15 @@ describe('toVsixManifest', () => {
 				const assets = result.PackageManifest.Assets[0].Asset;
 				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'));
 				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' && asset.$.Path === 'extension/translations/pt.json'));
+
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
+				assert.equal(localizedLangProp.length, 1);
+
+				const localizedLangs = localizedLangProp[0].$.Value.split(',');
+				assert.equal(localizedLangs.length, 2);
+				assert.equal(localizedLangs[0], 'German');
+				assert.equal(localizedLangs[1], 'Português');
 			});
 	});
 
