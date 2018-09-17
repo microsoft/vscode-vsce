@@ -208,7 +208,9 @@ class ManifestProcessor extends BaseProcessor {
 			enableMarketplaceQnA,
 			customerQnALink,
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
-			extensionPack: _(manifest.extensionPack || []).uniq().join(',')
+			extensionPack: _(manifest.extensionPack || []).uniq().join(','),
+			localizedLanguages: (manifest.contributes && manifest.contributes.localizations) ?
+				manifest.contributes.localizations.map(loc => loc.languageNameLocalized || loc.languageName || loc.languageId).join(',') : ''
 		};
 
 		if (isGitHub) {
