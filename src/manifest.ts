@@ -12,9 +12,8 @@ export interface Translation {
 export interface Localization {
 	languageId: string;
 	languageName?: string;
-	languageNameLocalized?: string;
+	localizedLanguageName?: string;
 	translations: Translation[];
-	minimalTranslations?: { [key: string]: string };
 }
 
 export interface Contributions {

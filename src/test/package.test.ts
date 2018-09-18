@@ -1008,7 +1008,7 @@ describe('toVsixManifest', () => {
 					{
 						languageId: 'pt',
 						languageName: 'Portuguese',
-						languageNameLocalized: 'Português',
+						localizedLanguageName: 'Português',
 						translations: [
 							{ id: 'vscode', path: './translations/pt.json' }
 						]

@@ -210,7 +210,7 @@ class ManifestProcessor extends BaseProcessor {
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
 			extensionPack: _(manifest.extensionPack || []).uniq().join(','),
 			localizedLanguages: (manifest.contributes && manifest.contributes.localizations) ?
-				manifest.contributes.localizations.map(loc => loc.languageNameLocalized || loc.languageName || loc.languageId).join(',') : ''
+				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : ''
 		};
 
 		if (isGitHub) {
