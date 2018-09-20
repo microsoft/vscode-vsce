@@ -155,7 +155,11 @@ const TrustedSVGSources = [
 	'www.bithound.io',
 	'www.versioneye.com',
 	'nodesecurity.io',
-	'app.fossa.io'
+	'app.fossa.io',
+	'godoc.org',
+	'goreportcard.com',
+	'badge.waffle.io',
+	'api.bintray.com'
 ];
 
 function isHostTrusted(host: string): boolean {
