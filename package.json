@@ -54,6 +54,7 @@
   "devDependencies": {
     "@types/cheerio": "^0.22.1",
     "@types/markdown-it": "0.0.2",
+    "@types/node": "^8",
     "eslint": "^3.17.1",
     "event-stream": "^3.3.1",
     "gulp": "^3.9.0",
