@@ -27,7 +27,7 @@
     "dev": "gulp watch",
     "dev-test": "gulp watch-test",
     "test": "gulp compile && mocha",
-    "prepublish": "gulp compile && mocha"
+    "prepublishOnly": "gulp compile && mocha"
   },
   "engines": {
     "node": ">= 8"
