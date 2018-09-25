@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'vso-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackageResult } from './package';
+import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl } from './util';
@@ -128,7 +128,7 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
-	let promise: Promise<IPackageResult>;
+	let promise: Promise<IPackage>;
 
 	if (options.packagePath) {
 		if (options.version) {

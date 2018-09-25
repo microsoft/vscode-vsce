@@ -24,6 +24,7 @@ interface IReadFile {
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
+const stat = denodeify(fs.stat);
 const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
 
@@ -47,9 +48,13 @@ export function read(file: IFile): Promise<string> {
 	}
 }
 
-export interface IPackageResult {
+export interface IPackage {
 	manifest: Manifest;
 	packagePath: string;
+}
+
+export interface IPackageResult extends IPackage {
+	files: IFile[];
 }
 
 export interface IAsset {
@@ -812,19 +817,34 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 		.catch(err => Promise.reject(err.message));
 }
 
-export function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
+export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 
-	return readManifest(cwd)
-		.then(manifest => prepublish(cwd, manifest))
-		.then(manifest => collect(manifest, options)
-			.then(files => writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)))
-				.then(packagePath => ({ manifest, packagePath }))));
+	let manifest = await readManifest(cwd);
+	manifest = await prepublish(cwd, manifest);
+
+	const files = await collect(manifest, options);
+	const packagePath = await writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)));
+
+	return { manifest, packagePath, files };
 }
 
-export function packageCommand(options: IPackageOptions = {}): Promise<any> {
-	return pack(options)
-		.then(({ packagePath }) => console.log(`Created: ${packagePath}`));
+export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	const { packagePath, files } = await pack(options);
+	const stats = await stat(packagePath);
+
+	let size = 0;
+	let unit = '';
+
+	if (stats.size > 1048576) {
+		size = Math.round(stats.size / 10485.76) / 100;
+		unit = 'MB';
+	} else {
+		size = Math.round(stats.size / 10.24) / 100;
+		unit = 'KB';
+	}
+
+	console.log(`Created: ${packagePath} (${files.length} files, ${size}${unit})`);
 }
 
 /**
