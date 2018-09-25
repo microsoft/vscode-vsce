@@ -689,7 +689,8 @@ const defaultIgnore = [
 	'**/.git/**',
 	'**/*.vsix',
 	'**/.DS_Store',
-	'**/*.vsixmanifest'
+	'**/*.vsixmanifest',
+	'**/.vscode-test/**'
 ];
 
 function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
