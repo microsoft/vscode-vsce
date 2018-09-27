@@ -131,9 +131,13 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
  * Remember to reach out to them when adding new domains.
  */
 const TrustedSVGSources = [
+	'api.bintray.com',
 	'api.travis-ci.com',
 	'api.travis-ci.org',
+	'app.fossa.io',
 	'badge.fury.io',
+	'badge.waffle.io',
+	'badgen.net',
 	'badges.frapsoft.com',
 	'badges.gitter.im',
 	'badges.greenkeeper.io',
@@ -149,22 +153,19 @@ const TrustedSVGSources = [
 	'gemnasium.com',
 	'githost.io',
 	'gitlab.com',
+	'godoc.org',
+	'goreportcard.com',
 	'img.shields.io',
 	'isitmaintained.com',
 	'marketplace.visualstudio.com',
+	'nodesecurity.io',
 	'opencollective.com',
 	'snyk.io',
 	'travis-ci.com',
 	'travis-ci.org',
 	'vsmarketplacebadge.apphb.com',
 	'www.bithound.io',
-	'www.versioneye.com',
-	'nodesecurity.io',
-	'app.fossa.io',
-	'godoc.org',
-	'goreportcard.com',
-	'badge.waffle.io',
-	'api.bintray.com'
+	'www.versioneye.com'
 ];
 
 function isHostTrusted(host: string): boolean {
