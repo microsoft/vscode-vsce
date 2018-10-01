@@ -60,7 +60,8 @@ module.exports = function (argv: string[]): void {
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
-		.action(({ yarn, packagedDependencies }) => main(ls(undefined, yarn, packagedDependencies)));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action(({ yarn, packagedDependencies, ignoreFile }) => main(ls(undefined, yarn, packagedDependencies, ignoreFile)));
 
 	program
 		.command('package')
