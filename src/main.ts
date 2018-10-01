@@ -62,15 +62,16 @@ module.exports = function (argv: string[]): void {
 		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.action(({ yarn, packagedDependencies, ignoreFile }) => main(ls(undefined, yarn, packagedDependencies, ignoreFile)));
-
-	program
+		
+		program
 		.command('package')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm')
-		.action(({ out, baseContentUrl, baseImagesUrl, yarn }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action(({ out, baseContentUrl, baseImagesUrl, yarn, ignoreFile }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile })));
 
 	program
 		.command('publish [<version>]')

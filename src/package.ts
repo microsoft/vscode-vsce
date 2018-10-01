@@ -69,6 +69,7 @@ export interface IPackageOptions {
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	dependencyEntryPoints?: string[];
+	ignoreFile?: string;
 }
 
 export interface IProcessor {
@@ -772,9 +773,10 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const cwd = options.cwd || process.cwd();
 	const useYarn = options.useYarn || false;
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
+	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
+	return collectFiles(cwd, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files, options);
