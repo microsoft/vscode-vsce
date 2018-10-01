@@ -5,10 +5,10 @@
 
 ### Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `0.12`
+- [Node.js](https://nodejs.org/en/) at least `8.x.x`
 
 ### About
 
 This tool assists in publishing Visual Studio Code extensions.
 
-Read the [**Documentation**](https://github.com/Microsoft/vscode-docs/blob/master/docs/tools/vscecli.md) at VS Code's repository.
+Read the [**Documentation**](https://code.visualstudio.com/docs/extensions/publish-extension) at VS Code's repository.

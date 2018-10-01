@@ -2,7 +2,6 @@
 /// <reference path="globals/denodeify/index.d.ts" />
 /// <reference path="globals/es6-promise/index.d.ts" />
 /// <reference path="globals/mocha/index.d.ts" />
-/// <reference path="globals/node/index.d.ts" />
 /// <reference path="globals/q/index.d.ts" />
 /// <reference path="globals/read/index.d.ts" />
 /// <reference path="globals/semver/index.d.ts" />

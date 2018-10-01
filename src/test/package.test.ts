@@ -14,6 +14,23 @@ import * as _ from 'lodash';
 // don't warn in tests
 console.warn = () => null;
 
+// accept read in tests
+process.env['VSCE_TESTS'] = 'true';
+
+async function throws(fn: () => Promise<any>): Promise<void> {
+	let didThrow = false;
+
+	try {
+		await fn();
+	} catch (err) {
+		didThrow = true;
+	}
+
+	if (!didThrow) {
+		throw new Error('Assertion failed');
+	}
+}
+
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
 function xmlParser<T>() { return denodeify<string, T>(parseString); }
@@ -52,13 +69,43 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const processors = createDefaultProcessors(manifest);
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = (_.assign as any)({ assets }, ...processors.map(p => p.vsix));
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
 		return toVsixManifest(assets, vsix);
 	});
 }
 
-describe('collect', () => {
+async function toXMLManifest(manifest: Manifest, files: IFile[] = []): Promise<XMLManifest> {
+	const raw = await _toVsixManifest(manifest, files);
+	return parseXmlManifest(raw);
+}
+
+function assertProperty(manifest: XMLManifest, name: string, value: string): void {
+	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
+	assert.equal(property.length, 1, `Property '${name}' should exist`);
+
+	const enableMarketplaceQnA = property[0].$.Value;
+	assert.equal(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
+}
+
+function assertMissingProperty(manifest: XMLManifest, name: string): void {
+	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
+	assert.equal(property.length, 0, `Property '${name}' should not exist`);
+}
+
+function createManifest(extra: Partial<Manifest>): Manifest {
+	return {
+		name: 'test',
+		publisher: 'mocha',
+		version: '0.0.1',
+		description: 'test extension',
+		engines: { vscode: '*' },
+		...extra
+	};
+}
+
+describe('collect', function () {
+	this.timeout(60000);
 
 	it('should catch all files', () => {
 		const cwd = fixture('uuid');
@@ -80,6 +127,16 @@ describe('collect', () => {
 		if (!fs.existsSync(path.join(cwd, '.git', 'hello'))) {
 			fs.writeFileSync(path.join(cwd, '.git', 'hello'), 'world');
 		}
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd }))
+			.then(files => {
+				assert.equal(files.length, 3);
+			});
+	});
+
+	it('should ignore content of .vscodeignore', () => {
+		const cwd = fixture('vscodeignore');
 
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
@@ -119,6 +176,50 @@ describe('collect', () => {
 				assert.equal(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
 			});
 	});
+
+	it('should honor dependencyEntryPoints', () => {
+		const cwd = fixture('packagedDependencies');
+		
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: ['isexe'] }))
+			.then(files => {
+				let seenWhich: boolean;
+				let seenIsexe: boolean;
+				files.forEach(file => {
+					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
+					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
+				});
+				assert.equal(seenWhich, false);
+				assert.equal(seenIsexe, true);
+			});
+	});
+
+	it('should include all node_modules when dependencyEntryPoints is not defined', () => {
+		const cwd = fixture('packagedDependencies');
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true }))
+			.then(files => {
+				let seenWhich: boolean;
+				let seenIsexe: boolean;
+				files.forEach(file => {
+					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
+					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
+				});
+				assert.equal(seenWhich, true);
+				assert.equal(seenIsexe, true);
+			});
+	});
+
+	it('should skip all node_modules when dependencyEntryPoints is []', () => {
+		const cwd = fixture('packagedDependencies');
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: [] }))
+			.then(files => {
+				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
+			});
+	});
 });
 
 describe('readManifest', () => {
@@ -135,6 +236,19 @@ describe('readManifest', () => {
 				assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
 			});
 	});
+
+	it('should not patch NLS if required', () => {
+		const cwd = fixture('nls');
+		const raw = require('./fixtures/nls/package.json');
+		const translations = require('./fixtures/nls/package.nls.json');
+
+		return readManifest(cwd, false)
+			.then((manifest: any) => {
+				assert.equal(manifest.name, raw.name);
+				assert.notEqual(manifest.description, translations['extension.description']);
+				assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
+			});
+	});
 });
 
 describe('validateManifest', () => {
@@ -146,6 +260,30 @@ describe('validateManifest', () => {
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } }); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null }); });
 		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } }); });
+	});
+
+	it('should prevent SVG icons', () => {
+		assert(validateManifest(createManifest({ icon: 'icon.png' })));
+		assert.throws(() => { validateManifest(createManifest({ icon: 'icon.svg' })); });
+	});
+
+	it('should prevent badges from non HTTPS sources', () => {
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+	});
+
+	it('should allow non SVG badges', () => {
+		assert(validateManifest(createManifest({ badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }] })));
+	});
+
+	it('should allow SVG badges from trusted sources', () => {
+		assert(validateManifest(createManifest({ badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] })));
+	});
+
+	it('should prevent SVG badges from non trusted sources', () => {
+		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
+		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/410.sv%67', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
 	});
 });
 
@@ -825,6 +963,83 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should detect localization contributions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				localizations: [{
+					languageId: 'de',
+					translations: [{ id: 'vscode', path: 'fake.json' }, { id: 'vscode.go', path: 'what.json' }]
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'lp-de'));
+				assert(tags.some(tag => tag === '__lp_vscode'));
+				assert(tags.some(tag => tag === '__lp-de_vscode'));
+				assert(tags.some(tag => tag === '__lp_vscode.go'));
+				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
+			});
+	});
+
+	it('should expose localization contributions as assets', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				localizations: [
+					{
+						languageId: 'de',
+						languageName: 'German',
+						translations: [
+							{ id: 'vscode', path: 'de.json' },
+							{ id: 'vscode.go', path: 'what.json' }
+						]
+					},
+					{
+						languageId: 'pt',
+						languageName: 'Portuguese',
+						localizedLanguageName: 'Português',
+						translations: [
+							{ id: 'vscode', path: './translations/pt.json' }
+						]
+					}
+				]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/de.json', contents: new Buffer('') },
+			{ path: 'extension/translations/pt.json', contents: new Buffer('') }
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const assets = result.PackageManifest.Assets[0].Asset;
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' && asset.$.Path === 'extension/translations/pt.json'));
+
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
+				assert.equal(localizedLangProp.length, 1);
+
+				const localizedLangs = localizedLangProp[0].$.Value.split(',');
+				assert.equal(localizedLangs.length, 2);
+				assert.equal(localizedLangs[0], 'German');
+				assert.equal(localizedLangs[1], 'Português');
+			});
+	});
+
 	it('should detect language extensions', () => {
 		const manifest = {
 			name: 'test',
@@ -845,6 +1060,28 @@ describe('toVsixManifest', () => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === '__ext_go'));
 				assert(tags.some(tag => tag === '__ext_golang'));
+			});
+	});
+
+	it('should detect and sanitize language extensions', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languages: [{
+					id: 'go',
+					extensions: ['.go']
+				}]
+			}
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === '__ext_go'));
 			});
 	});
 
@@ -881,7 +1118,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			"contributes": {
-        "grammars": [
+				"grammars": [
 					{
 						"language": "javascript",
 						"scopeName": "source.js.jsx",
@@ -891,7 +1128,7 @@ describe('toVsixManifest', () => {
 						"scopeName": "source.regexp.babel",
 						"path": "./syntaxes/Babel Regex.json"
 					}
-        ]
+				]
 			}
 		};
 
@@ -986,6 +1223,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			extensionDependencies: [
 				"foo.bar",
+				"foo.bar",
 				"monkey.hello"
 			]
 		};
@@ -1002,6 +1240,86 @@ describe('toVsixManifest', () => {
 				assert(dependencies.some(d => d === 'foo.bar'));
 				assert(dependencies.some(d => d === 'monkey.hello'));
 			});
+	});
+
+	describe('qna', () => {
+		it('should use marketplace qna by default', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null)
+			});
+
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should not use marketplace in a github repo, without specifying it', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				repository: 'https://github.com/username/repository'
+			});
+
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should use marketplace in a github repo, when specifying it', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				repository: 'https://github.com/username/repository',
+				qna: 'marketplace'
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should handle qna=marketplace', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: 'marketplace'
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should handle qna=false', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: false
+			});
+
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		});
+
+		it('should handle custom qna', async () => {
+			const xmlManifest = await toXMLManifest({
+				name: 'test',
+				publisher: 'mocha',
+				version: '0.0.1',
+				engines: Object.create(null),
+				qna: 'http://myqna'
+			});
+
+			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
+		});
 	});
 });
 
@@ -1030,10 +1348,10 @@ describe('toContentTypes', () => {
 		return toContentTypes(files)
 			.then(xml => parseContentTypes(xml))
 			.then(result => {
-				assert.ok(result.Types.Default);
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'));
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'));
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && d.$.ContentType === 'text/x-markdown'));
+				assert.ok(result.Types.Default, 'there are content types');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'), 'there are txt');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'), 'there are png');
+				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)), 'there are md');
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
 	});
@@ -1041,7 +1359,7 @@ describe('toContentTypes', () => {
 
 describe('MarkdownProcessor', () => {
 
-	it('should be no-op when no baseContentUrl is provided', () => {
+	it('should throw when no baseContentUrl is provided', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1057,14 +1375,15 @@ describe('MarkdownProcessor', () => {
 			localPath: path.join(root, 'readme.md')
 		};
 
-		return processor.onFile(readme)
-			.then(file => read(file))
-			.then(actual => {
-				return readFile(path.join(root, 'readme.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
-			});
+		let didThrow = false;
+
+		try {
+			await processor.onFile(readme);
+		} catch (err) {
+			didThrow = true;
+		}
+
+		assert.ok(didThrow);
 	});
 
 	it('should take baseContentUrl', () => {
@@ -1179,5 +1498,79 @@ describe('MarkdownProcessor', () => {
 						assert.equal(actual, expected);
 					});
 			});
+	});
+
+	it('should prevent non-HTTPS images', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](http://foo.png)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent non-HTTPS img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="http://foo.png" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent SVGs from not trusted sources', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](https://foo/hello.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should allow SVGs from trusted sources', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `![title](https://badges.gitter.im/hello.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should prevent SVGs from not trusted sources in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="https://foo/hello.svg" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should allow SVGs from trusted sources in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="https://badges.gitter.im/hello.svg" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should prevent SVG tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M224 387.814V512L32 320l192-192v126.912C447.375 260.152 437.794 103.016 380.93 0 521.287 151.707 491.48 394.785 224 387.814z"/></svg>`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	});
+
+	it('should prevent SVG data urls in img tags', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBkPSJNMjI0IDM4Ny44MTRWNTEyTDMyIDMyMGwxOTItMTkydjEyNi45MTJDNDQ3LjM3NSAyNjAuMTUyIDQzNy43OTQgMTAzLjAxNiAzODAuOTMgMCA1MjEuMjg3IDE1MS43MDcgNDkxLjQ4IDM5NC43ODUgMjI0IDM4Ny44MTR6Ii8+PC9zdmc+" />`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
 	});
 });

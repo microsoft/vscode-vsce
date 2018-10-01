@@ -1,44 +1,43 @@
 'use strict';
 
+const path = require('path');
 const gulp = require('gulp');
-const tsb = require('gulp-tsb');
+const gts = require('gulp-typescript');
+const sm = require('gulp-sourcemaps');
 const filter = require('gulp-filter');
 const tslint = require('gulp-tslint');
 const rimraf = require('rimraf');
-const path = require('path');
 const es = require('event-stream');
 const cp = require('child_process');
-const options = require('./tsconfig.json').compilerOptions;
-options.sourceMap = true;
-options.sourceRoot = path.join(__dirname, 'src');
-options.declaration = true;
 
-const compilation = tsb.create(options);
+const project = gts.createProject('tsconfig.json');
 
 function compile() {
-	const ts = filter('**/*.ts', { restore: true });
 	const tsd = filter(['**', '!**/*.d.ts'], { restore: true });
-	const input = es.merge(
-		gulp.src('src/**', { base: 'src', dot: true }),
-		gulp.src('typings/**/*.d.ts')
-	);
 
-	const result = input
-		.pipe(ts)
+	const ts = project.src()
 		.pipe(tsd)
-		.pipe(tslint({ configuration: require('./tslint.json') }))
+		.pipe(tslint())
 		.pipe(tslint.report({ summarizeFailureOutput: true, emitError: false }))
 		.pipe(tsd.restore)
-		.pipe(compilation())
-		.pipe(ts.restore);
+		.pipe(sm.init())
+		.pipe(project());
 
-	const api = result
+	const js = ts.js
+		.pipe(sm.write('.', {
+			includeContent: false, sourceRoot: file => {
+				const dirname = path.dirname(file.relative);
+				return dirname === '.' ? '../src' : ('../src/' + dirname);
+			}
+		}));
+
+	const api = ts.dts
 		.pipe(filter('**/api.d.ts'));
 
-	const compiled = result
-		.pipe(filter(['**', '!**/*.d.ts']));
+	const resources = gulp.src('src/**', { dot: true })
+		.pipe(filter(['**', '!**/*.ts'], { dot: true }));
 
-	return es.merge(api, compiled)
+	return es.merge(js, api, resources)
 		.pipe(gulp.dest('out'));
 }
 
@@ -55,7 +54,7 @@ gulp.task('test', ['compile'], test);
 gulp.task('just-test', ['just-compile'], test);
 
 function watch(task) {
-	return () => gulp.watch(['src/**', 'typings/**'], [task]);
+	return cb => gulp.watch(['src/**', 'typings/**'], [task]);
 }
 
 gulp.task('watch', ['compile'], watch('just-compile'));

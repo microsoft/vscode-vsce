@@ -1,6 +1,8 @@
 import * as program from 'commander';
 import { packageCommand, ls } from './package';
 import { publish, list, unpublish } from './publish';
+import { show } from './show';
+import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, isCancelledError } from './util';
@@ -42,7 +44,7 @@ function main<T>(task: Promise<any>): void {
 		.catch(fatal)
 		.then(() => {
 			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-				console.log(`\nThe latest version of ${ pkg.name } is ${ latestVersion } and you have ${ pkg.version }.\nUpdate it now: npm install -g ${ pkg.name }`);
+				console.log(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
 			} else {
 				token.cancel();
 			}
@@ -56,15 +58,18 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
-		.action(() => main(ls()));
+		.option('--yarn', 'Use yarn instead of npm')
+		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
+		.action(({ yarn, packagedDependencies }) => main(ls(undefined, yarn, packagedDependencies)));
 
 	program
 		.command('package')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Location of the package')
+		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
-		.action(({ out, baseContentUrl, baseImagesUrl }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl })));
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--yarn', 'Use yarn instead of npm')
+		.action(({ out, baseContentUrl, baseImagesUrl, yarn }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn })));
 
 	program
 		.command('publish [<version>]')
@@ -72,8 +77,9 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md will with this url.')
-		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl })));
+		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--yarn', 'Use yarn instead of npm while packing extension files')
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn })));
 
 	program
 		.command('unpublish [<extensionid>]')
@@ -110,6 +116,18 @@ module.exports = function (argv: string[]): void {
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
 		.action(name => main(logoutPublisher(name)));
+
+	program
+		.command('show <extensionid>')
+		.option('--json', 'Output data in json format', false)
+		.description('Show extension metadata')
+		.action((extensionid, { json }) => main(show(extensionid, json)));
+
+	program
+		.command('search <text>')
+		.option('--json', 'Output result in json format', false)
+		.description('search extension gallery')
+		.action((text, { json }) => main(search(text, json)));
 
 	program
 		.command('*')

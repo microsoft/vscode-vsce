@@ -4,6 +4,23 @@ export interface Person {
 	email?: string;
 }
 
+export interface Translation {
+	id: string;
+	path: string;
+}
+
+export interface Localization {
+	languageId: string;
+	languageName?: string;
+	localizedLanguageName?: string;
+	translations: Translation[];
+}
+
+export interface Contributions {
+	'localizations'?: Localization[];
+	[contributionType: string]: any;
+}
+
 export interface Manifest {
 	// mandatory (npm)
 	name: string;
@@ -13,15 +30,18 @@ export interface Manifest {
 	// vscode
 	publisher: string;
 	icon?: string;
-	contributes?: { [contributionType: string]: any; };
+	contributes?: Contributions;
 	activationEvents?: string[];
 	extensionDependencies?: string[];
+	extensionPack?: string[];
 	galleryBanner?: { color?: string; theme?: string; };
 	preview?: boolean;
 	badges?: { url: string; href: string; description: string; }[];
 	markdown?: 'github' | 'standard';
 	_bundling?: { [name: string]: string; }[];
 	_testing?: string;
+	enableProposedApi?: boolean;
+	qna?: 'marketplace' | string | false;
 
 	// optional (npm)
 	author?: string | Person;

@@ -6,7 +6,7 @@ import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
-const writeFile = denodeify<string, string, void>(fs.writeFile);
+const writeFile = denodeify<string, string, void>(fs.writeFile as any);
 const storePath = path.join(home(), '.vsce');
 
 export interface IPublisher {
@@ -30,7 +30,7 @@ function load(): Promise<IStore> {
 			try {
 				return Promise.resolve(JSON.parse(rawStore));
 			} catch (e) {
-				return Promise.reject(`Error parsing store: ${ storePath }`);
+				return Promise.reject(`Error parsing store: ${storePath}`);
 			}
 		})
 		.then(store => {
@@ -55,16 +55,20 @@ function removePublisherFromStore(store: IStore, publisherName: string): Promise
 }
 
 function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
-	return read(`Personal Access Token for publisher '${ publisherName }':`, { silent: true, replace: '*' })
+	return read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' })
 		.then(pat => {
 			const api = getGalleryAPI(pat);
 
 			return api.getPublisher(publisherName).then(p => {
-				if (p.publisherName !== publisherName) {
-					return Promise.reject(`Wrong publisher name '${ publisherName }'. Found '${ p.publisherName }' instead.`);
+				if (!p) {
+					return Promise.reject(`Publisher '${publisherName}' not found. Please create one with 'vsce create-publisher'.`);
 				}
 
-				console.log(`Authentication successful. Found publisher '${ p.displayName }'.`);
+				if (p.publisherName !== publisherName) {
+					return Promise.reject(`Wrong publisher name '${publisherName}'. Found '${p.publisherName}' instead.`);
+				}
+
+				console.log(`Authentication successful. Found publisher '${p.displayName}'.`);
 				return pat;
 			});
 		})
@@ -88,7 +92,7 @@ export function loginPublisher(publisherName: string): Promise<IPublisher> {
 			const publisher = store.publishers.filter(p => p.name === publisherName)[0];
 
 			if (publisher) {
-				console.log(`Publisher '${ publisherName }' is already known`);
+				console.log(`Publisher '${publisherName}' is already known`);
 				return read('Do you want to overwrite its PAT? [y/N] ')
 					.then(answer => /^y$/i.test(answer) ? store : Promise.reject('Aborted'));
 			}
@@ -105,7 +109,7 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
 
 		if (!publisher) {
-			return Promise.reject(`Unknown publisher '${ publisherName }'`);
+			return Promise.reject(`Unknown publisher '${publisherName}'`);
 		}
 
 		return removePublisherFromStore(store, publisherName);
@@ -138,17 +142,17 @@ export function createPublisher(publisherName: string): Promise<any> {
 				.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
 		});
 	})
-	.then(() => console.log(`Successfully created publisher '${ publisherName }'.`));
+		.then(() => console.log(`Successfully created publisher '${publisherName}'.`));
 }
 
 export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
-		return read(`This will FOREVER delete '${ publisherName }'! Are you sure? [y/N] `)
+		return read(`This will FOREVER delete '${publisherName}'! Are you sure? [y/N] `)
 			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
 			.then(() => getGalleryAPI(pat))
 			.then(api => api.deletePublisher(publisherName))
 			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
-			.then(() => console.log(`Successfully deleted publisher '${ publisherName }'.`));
+			.then(() => console.log(`Successfully deleted publisher '${publisherName}'.`));
 	});
 }
 

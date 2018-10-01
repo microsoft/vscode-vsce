@@ -8,3 +8,9 @@ jsconfig.json
 tsconfig.json
 tsd.json
 *.js.map
+yarn.lock
+typings.json
+tslint.json
+.eslintrc
+.travis.yml
+.vscode/

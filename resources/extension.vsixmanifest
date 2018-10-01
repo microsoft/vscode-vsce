@@ -11,6 +11,8 @@
     <Properties>
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="<%- engine %>" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="<%- extensionDependencies %>" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="<%- extensionPack %>" />
+      <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="<%- localizedLanguages %>" />
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
         <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="<%- links.repository %>" />
@@ -25,6 +27,8 @@
       <% if (galleryBanner.color) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="<%- galleryBanner.color %>" /><% } %>
       <% if (galleryBanner.theme) { %><Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="<%- galleryBanner.theme %>" /><% } %>
       <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="<%- githubMarkdown %>" />
+      <% if (typeof enableMarketplaceQnA === 'boolean') { %><Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="<%- enableMarketplaceQnA %>" /><% } %>
+      <% if (customerQnALink) { %><Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="<%- customerQnALink %>" /><% } %>
     </Properties>
     <% if (license) { %><License><%- license %></License><% } %>
     <% if (icon) { %><Icon><%- icon %></Icon><% } %>
