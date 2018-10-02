@@ -95,6 +95,7 @@ export interface IPublishOptions {
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
+	ignoreFile?: string;
 }
 
 function versionBump(cwd: string = process.cwd(), version?: string): Promise<void> {
@@ -142,10 +143,11 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseContentUrl = options.baseContentUrl;
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
+		const ignoreFile = options.ignoreFile;
 
 		promise = versionBump(options.cwd, options.version)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn }));
+			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
 	}
 
 	return promise.then(({ manifest, packagePath }) => {

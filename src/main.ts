@@ -72,8 +72,8 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.action(({ out, baseContentUrl, baseImagesUrl, yarn, ignoreFile }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile })));
-
-	program
+		
+		program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
 		.option('-p, --pat <token>', 'Personal Access Token')
@@ -81,7 +81,8 @@ module.exports = function (argv: string[]): void {
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
-		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn, ignoreFile }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile })));
 
 	program
 		.command('unpublish [<extensionid>]')
