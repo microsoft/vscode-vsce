@@ -3,6 +3,7 @@ import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 import { PublicGalleryAPI } from './publicgalleryapi';
+import { ISecurityRolesApi } from 'vso-node-api/SecurityRolesApi';
 
 const __read = denodeify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -23,6 +24,12 @@ export function getGalleryAPI(pat: string): IGalleryApi {
 	const authHandler = getBasicHandler('oauth', pat);
 	const vsoapi = new WebApi('oauth', authHandler);
 	return vsoapi.getGalleryApi(marketplaceUrl);
+}
+
+export function getSecurityRolesAPI(pat: string): ISecurityRolesApi {
+	const authHandler = getBasicHandler('oauth', pat);
+	const vsoapi = new WebApi('oauth', authHandler);
+	return vsoapi.getSecurityRolesApi(marketplaceUrl);
 }
 
 export function getPublicGalleryAPI() {

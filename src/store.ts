@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { home } from 'osenv';
-import { read, getGalleryAPI } from './util';
+import { read, getGalleryAPI, getSecurityRolesAPI } from './util';
 import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
@@ -54,25 +54,16 @@ function removePublisherFromStore(store: IStore, publisherName: string): Promise
 	return save(store);
 }
 
-function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
-	return read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' })
-		.then(pat => {
-			const api = getGalleryAPI(pat);
+async function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
+	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
 
-			return api.getPublisher(publisherName).then(p => {
-				if (!p) {
-					return Promise.reject(`Publisher '${publisherName}' not found. Please create one with 'vsce create-publisher'.`);
-				}
+	// If the caller of the `getRoleAssignments` API has any of the roles
+	// (Creator, Owner, Contributor, Reader) on the publisher, we get a 200,
+	// otherwise we get a 403.
+	const api = getSecurityRolesAPI(pat);
+	await api.getRoleAssignments('gallery.publisher', publisherName);
 
-				if (p.publisherName !== publisherName) {
-					return Promise.reject(`Wrong publisher name '${publisherName}'. Found '${p.publisherName}' instead.`);
-				}
-
-				console.log(`Authentication successful. Found publisher '${p.displayName}'.`);
-				return pat;
-			});
-		})
-		.then(pat => addPublisherToStore(store, { name: publisherName, pat }));
+	return await addPublisherToStore(store, { name: publisherName, pat });
 }
 
 export function getPublisher(publisherName: string): Promise<IPublisher> {
