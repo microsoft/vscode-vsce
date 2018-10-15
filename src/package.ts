@@ -289,7 +289,7 @@ export class TagsProcessor extends BaseProcessor {
 
 		let promise = Promise.resolve(trimmedKeywords);
 
-		if (keywords.length !== trimmedKeywords.length) {
+		if (keywords.length !== trimmedKeywords.length && !process.env['VSCE_IGNORE_KEYWORDS_LENGTH']) {
 			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: ${trimmedKeywords.join(', ')}.`);
 			promise = util.read('Do you want to continue? [y/N] ')
 				.then(answer => /^y$/i.test(answer) ? Promise.resolve(trimmedKeywords) : Promise.reject('Aborted'));
