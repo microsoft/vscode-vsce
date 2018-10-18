@@ -285,66 +285,56 @@ export class TagsProcessor extends BaseProcessor {
 
 	onEnd(): Promise<void> {
 		const keywords = this.manifest.keywords || [];
-		const trimmedKeywords = keywords.filter((keyword, index) => index < 5 || keyword === 'multi-root ready');
+		const contributes = this.manifest.contributes;
+		const activationEvents = this.manifest.activationEvents || [];
+		const doesContribute = name => contributes && contributes[name] && contributes[name].length > 0;
 
-		let promise = Promise.resolve(trimmedKeywords);
+		const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
+		const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
+		const snippets = doesContribute('snippets') ? ['snippet'] : [];
+		const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
+		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
+		const json = doesContribute('jsonValidation') ? ['json'] : [];
 
-		if (keywords.length !== trimmedKeywords.length && !process.env['VSCE_IGNORE_KEYWORDS_LENGTH']) {
-			console.warn(`The keyword list is limited to 5 keywords; only the following keywords will be in your extension: ${trimmedKeywords.join(', ')}.`);
-			promise = util.read('Do you want to continue? [y/N] ')
-				.then(answer => /^y$/i.test(answer) ? Promise.resolve(trimmedKeywords) : Promise.reject('Aborted'));
-		}
+		const localizationContributions = ((contributes && contributes['localizations']) || [])
+			.reduce((r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)], []);
 
-		return promise.then<any>(keywords => {
-			const contributes = this.manifest.contributes;
-			const activationEvents = this.manifest.activationEvents || [];
-			const doesContribute = name => contributes && contributes[name] && contributes[name].length > 0;
+		const languageContributions = ((contributes && contributes['languages']) || [])
+			.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);
 
-			const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
-			const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
-			const snippets = doesContribute('snippets') ? ['snippet'] : [];
-			const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
-			const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
-			const json = doesContribute('jsonValidation') ? ['json'] : [];
+		const languageActivations = activationEvents
+			.map(e => /^onLanguage:(.*)$/.exec(e))
+			.filter(r => !!r)
+			.map(r => r[1]);
 
-			const localizationContributions = ((contributes && contributes['localizations']) || [])
-				.reduce((r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)], []);
+		const grammars = ((contributes && contributes['grammars']) || [])
+			.map(g => g.language);
 
-			const languageContributions = ((contributes && contributes['languages']) || [])
-				.reduce((r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])], []);
+		const description = this.manifest.description || '';
+		const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
+			.reduce((r, k) => r.concat(new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
 
-			const languageActivations = activationEvents
-				.map(e => /^onLanguage:(.*)$/.exec(e))
-				.filter(r => !!r)
-				.map(r => r[1]);
+		const tags = [
+			...keywords,
+			...colorThemes,
+			...iconThemes,
+			...snippets,
+			...keybindings,
+			...debuggers,
+			...json,
+			...localizationContributions,
+			...languageContributions,
+			...languageActivations,
+			...grammars,
+			...descriptionKeywords
+		];
 
-			const grammars = ((contributes && contributes['grammars']) || [])
-				.map(g => g.language);
+		this.vsix.tags = _(tags)
+			.uniq() // deduplicate
+			.compact() // remove falsey values
+			.join(',');
 
-			const description = this.manifest.description || '';
-			const descriptionKeywords = Object.keys(TagsProcessor.Keywords)
-				.reduce((r, k) => r.concat(new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []), []);
-
-			keywords = [
-				...keywords,
-				...colorThemes,
-				...iconThemes,
-				...snippets,
-				...keybindings,
-				...debuggers,
-				...json,
-				...localizationContributions,
-				...languageContributions,
-				...languageActivations,
-				...grammars,
-				...descriptionKeywords
-			];
-
-			this.vsix.tags = _(keywords)
-				.uniq() // deduplicate
-				.compact() // remove falsey values
-				.join(',');
-		});
+		return Promise.resolve(null);
 	}
 }
 
