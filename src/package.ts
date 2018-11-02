@@ -228,17 +228,18 @@ class ManifestProcessor extends BaseProcessor {
 		}
 	}
 
-	onEnd(): Promise<void> {
-		let promise = Promise.resolve<void>();
+	async onEnd(): Promise<void> {
+		if (this.manifest.publisher === 'vscode-samples') {
+			throw new Error('It\'s not allowed to use the \'vscode-samples\' publisher');
+		}
 
 		if (!this.manifest.repository) {
 			console.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
 
-			promise = util.read('Do you want to continue? [y/N] ')
-				.then(answer => /^y$/i.test(answer) ? Promise.resolve() : Promise.reject('Aborted'));
+			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
+				throw new Error('Aborted');
+			}
 		}
-
-		return promise;
 	}
 }
 
