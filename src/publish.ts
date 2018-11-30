@@ -102,18 +102,11 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 		return Promise.resolve(null);
 	}
 
-	// call `npm version` to do our dirty work
 	switch (version) {
 		case 'major':
 		case 'minor':
 		case 'patch':
-			return exec(`npm version ${version}`, { cwd })
-				.then(({ stdout, stderr }) => {
-					process.stdout.write(stdout);
-					process.stderr.write(stderr);
-					return Promise.resolve(null);
-				})
-				.catch(err => Promise.reject(err.message));
+			break;
 		case 'premajor':
 		case 'preminor':
 		case 'prepatch':
@@ -121,10 +114,19 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 		case 'from-git':
 			return Promise.reject(`Not supported: ${version}`);
 		default:
-			return semver.valid(version)
-				? Promise.resolve(null)
-				: Promise.reject(`Invalid version ${version}`);
+			if (!semver.valid(version)) {
+				return Promise.reject(`Invalid version ${version}`);
+			}
 	}
+
+	// call `npm version` to do our dirty work
+	return exec(`npm version ${version}`, { cwd })
+		.then(({ stdout, stderr }) => {
+			process.stdout.write(stdout);
+			process.stderr.write(stderr);
+			return Promise.resolve(null);
+		})
+		.catch(err => Promise.reject(err.message));
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
