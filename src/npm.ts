@@ -54,7 +54,7 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 
 function getNpmDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
-		.then(() => exec('npm list --production --parseable --depth=99999', { cwd }))
+		.then(() => exec('npm list --production --parseable --depth=99999', { cwd, maxBuffer: 5000 * 1024 }))
 		.then(({ stdout }) => stdout
 			.split(/[\r\n]/)
 			.filter(dir => path.isAbsolute(dir)));
@@ -149,7 +149,7 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 }
 
 async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env } }, (err, stdout) => err ? e(err) : c(stdout)));
+	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 }, (err, stdout) => err ? e(err) : c(stdout)));
 	const match = /^{"type":"tree".*$/m.exec(raw);
 
 	if (!match || match.length !== 1) {

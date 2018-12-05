@@ -25,7 +25,7 @@ interface IReadFile {
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const stat = denodeify(fs.stat);
-const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
+const exec = denodeify<string, { cwd?: string; env?: any; maxBuffer?: number; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
 const glob = denodeify<string, _glob.Options, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
@@ -800,7 +800,7 @@ function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
 
 	console.warn(`Executing prepublish script 'npm run vscode:prepublish'...`);
 
-	return exec('npm run vscode:prepublish', { cwd })
+	return exec('npm run vscode:prepublish', { cwd, maxBuffer: 5000 * 1024 })
 		.then(({ stdout, stderr }) => {
 			process.stdout.write(stdout);
 			process.stderr.write(stderr);
