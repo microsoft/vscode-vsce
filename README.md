@@ -9,6 +9,6 @@
 
 ### About
 
-This tool assists in publishing Visual Studio Code extensions.
+This tool assists in packaging and publishing Visual Studio Code extensions.
 
-Read the [**Documentation**](https://code.visualstudio.com/docs/extensions/publish-extension) at VS Code's repository.
+Read the [**Documentation**](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) on the VS Code website.
