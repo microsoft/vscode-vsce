@@ -23,7 +23,7 @@ function fatal<T>(message: any, ...args: any[]): void {
 
 	if (/Unauthorized\(401\)/.test(message)) {
 		console.error(`Be sure to use a Personal Access Token which has access to **all accessible accounts**.
-See https://code.visualstudio.com/docs/tools/vscecli#_common-questions for more information.`);
+See https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions for more information.`);
 	}
 
 	process.exit(1);
