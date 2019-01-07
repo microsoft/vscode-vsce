@@ -684,6 +684,7 @@ export function toContentTypes(files: IFile[]): Promise<string> {
 const defaultIgnore = [
 	'.vscodeignore',
 	'package-lock.json',
+	'yarn.lock',
 	'.editorconfig',
 	'.npmrc',
 	'.yarnrc',
