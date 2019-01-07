@@ -230,7 +230,7 @@ class ManifestProcessor extends BaseProcessor {
 
 	async onEnd(): Promise<void> {
 		if (this.manifest.publisher === 'vscode-samples') {
-			throw new Error('It\'s not allowed to use the \'vscode-samples\' publisher. Learn more at: https://code.visualstudio.com/docs/extensions/publish-extension.');
+			throw new Error('It\'s not allowed to use the \'vscode-samples\' publisher. Learn more at: https://code.visualstudio.com/api/working-with-extensions/publishing-extension.');
 		}
 
 		if (!this.manifest.repository) {

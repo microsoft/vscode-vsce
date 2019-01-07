@@ -4,11 +4,11 @@ const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
 export function validatePublisher(publisher: string): void {
 	if (!publisher) {
-		throw new Error(`Missing publisher name. Learn more: https://code.visualstudio.com/docs/extensions/publish-extension#_publishing-extensions`);
+		throw new Error(`Missing publisher name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`);
 	}
 
 	if (!nameRegex.test(publisher)) {
-		throw new Error(`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.  Learn more: https://code.visualstudio.com/docs/extensions/publish-extension#_publishing-extensions`);
+		throw new Error(`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.  Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`);
 	}
 }
 
