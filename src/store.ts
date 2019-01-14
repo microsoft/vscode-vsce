@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { home } from 'osenv';
-import { read, getGalleryAPI, getSecurityRolesAPI } from './util';
+import { read, getGalleryAPI, getSecurityRolesAPI, DONE } from './util';
 import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
@@ -133,7 +133,7 @@ export function createPublisher(publisherName: string): Promise<any> {
 				.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
 		});
 	})
-		.then(() => console.log(`Successfully created publisher '${publisherName}'.`));
+		.then(() => console.log(`${DONE} Created publisher '${publisherName}'.`));
 }
 
 export function deletePublisher(publisherName: string): Promise<any> {
@@ -143,7 +143,7 @@ export function deletePublisher(publisherName: string): Promise<any> {
 			.then(() => getGalleryAPI(pat))
 			.then(api => api.deletePublisher(publisherName))
 			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
-			.then(() => console.log(`Successfully deleted publisher '${publisherName}'.`));
+			.then(() => console.log(`${DONE} Deleted publisher '${publisherName}'.`));
 	});
 }
 

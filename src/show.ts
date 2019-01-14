@@ -1,4 +1,4 @@
-import { getPublicGalleryAPI } from './util';
+import { getPublicGalleryAPI, ERROR } from './util';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
 import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap, icons } from './viewutils';
 
@@ -25,7 +25,7 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 				console.log(JSON.stringify(extension, undefined, '\t'));
 			} else {
 				if (extension === undefined) {
-					console.log(`Error: Extension "${extensionId}" not found.`);
+					console.log(`${ERROR} Extension "${extensionId}" not found.`);
 				} else {
 					showOverview(extension);
 				}
@@ -61,7 +61,7 @@ function showOverview({
 		averagerating = 0,
 		ratingcount = 0,
 	} = statistics
-			.reduce((map, { statisticName, value }) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
+		.reduce((map, { statisticName, value }) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
 
 	// Render
 	console.log([

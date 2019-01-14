@@ -5,7 +5,7 @@ import { show } from './show';
 import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, isCancelledError } from './util';
+import { CancellationToken, isCancelledError, ERROR } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 const pkg = require('../package.json');
@@ -19,7 +19,7 @@ function fatal<T>(message: any, ...args: any[]): void {
 		}
 	}
 
-	console.error('Error:', message, ...args);
+	console.error(`${ERROR} `, message, ...args);
 
 	if (/Unauthorized\(401\)/.test(message)) {
 		console.error(`Be sure to use a Personal Access Token which has access to **all accessible accounts**.
