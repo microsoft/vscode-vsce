@@ -2,6 +2,7 @@ import * as _read from 'read';
 import { WebApi, getBasicHandler } from 'vso-node-api/WebApi';
 import { IGalleryApi } from 'vso-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
+import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'vso-node-api/SecurityRolesApi';
 
@@ -97,13 +98,7 @@ export async function sequence(promiseFactories: { (): Promise<any> }[]): Promis
 	}
 }
 
-const ANSI_COLORS = {
-	reset: '\x1b[0m',
-	bgGreen: '\x1b[42m',
-	bgYellow: '\x1b[43m',
-	bgRed: '\x1b[41m',
-	fgBlack: '\x1b[30m',
-};
-export const DONE = `${ANSI_COLORS.bgGreen}${ANSI_COLORS.fgBlack} DONE ${ANSI_COLORS.reset}`;
-export const WARN = `${ANSI_COLORS.bgYellow}${ANSI_COLORS.fgBlack} WARNING ${ANSI_COLORS.reset}`;
-export const ERROR = `${ANSI_COLORS.bgRed}${ANSI_COLORS.fgBlack} ERROR ${ANSI_COLORS.reset}`;
+export const DONE = chalk.bgGreen.black(' DONE ');
+export const INFO = chalk.bgBlueBright.black(' INFO ');
+export const WARN = chalk.bgYellow.black(' WARNING ');
+export const ERROR = chalk.bgRed.black(' ERROR ');
