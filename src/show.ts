@@ -1,4 +1,4 @@
-import { getPublicGalleryAPI, ERROR } from './util';
+import { getPublicGalleryAPI, log } from './util';
 import { ExtensionQueryFlags, PublishedExtension } from 'vso-node-api/interfaces/GalleryInterfaces';
 import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap, icons } from './viewutils';
 
@@ -25,7 +25,7 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 				console.log(JSON.stringify(extension, undefined, '\t'));
 			} else {
 				if (extension === undefined) {
-					console.log(`${ERROR} Extension "${extensionId}" not found.`);
+					log.error(`Extension "${extensionId}" not found.`);
 				} else {
 					showOverview(extension);
 				}

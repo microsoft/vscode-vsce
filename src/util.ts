@@ -98,7 +98,39 @@ export async function sequence(promiseFactories: { (): Promise<any> }[]): Promis
 	}
 }
 
-export const DONE = chalk.bgGreen.black(' DONE ');
-export const INFO = chalk.bgBlueBright.black(' INFO ');
-export const WARN = chalk.bgYellow.black(' WARNING ');
-export const ERROR = chalk.bgRed.black(' ERROR ');
+enum LogMessageType {
+	DONE,
+	INFO,
+	WARNING,
+	ERROR
+}
+
+const LogPrefix = {
+	[LogMessageType.DONE]: chalk.bgGreen.black(' DONE '),
+	[LogMessageType.INFO]: chalk.bgBlueBright.black(' INFO '),
+	[LogMessageType.WARNING]: chalk.bgYellow.black(' WARNING '),
+	[LogMessageType.ERROR]: chalk.bgRed.black(' ERROR '),
+};
+
+function _log(type: LogMessageType, msg: any, ...args: any[]): void {
+	args = [LogPrefix[type], msg, ...args];
+
+	if (type === LogMessageType.WARNING) {
+		console.warn(...args);
+	} else if (type === LogMessageType.ERROR) {
+		console.error(...args);
+	} else {
+		console.log(...args);
+	}
+}
+
+export interface LogFn {
+	(msg: any, ...args: any[]): void;
+}
+
+export const log = {
+	done: _log.bind(null, LogMessageType.DONE) as LogFn,
+	info: _log.bind(null, LogMessageType.INFO) as LogFn,
+	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
+	error: _log.bind(null, LogMessageType.ERROR) as LogFn
+}

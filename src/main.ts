@@ -5,7 +5,7 @@ import { show } from './show';
 import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, isCancelledError, ERROR } from './util';
+import { CancellationToken, isCancelledError, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 const pkg = require('../package.json');
@@ -19,10 +19,10 @@ function fatal<T>(message: any, ...args: any[]): void {
 		}
 	}
 
-	console.error(`${ERROR} `, message, ...args);
+	log.error(message, ...args);
 
 	if (/Unauthorized\(401\)/.test(message)) {
-		console.error(`Be sure to use a Personal Access Token which has access to **all accessible accounts**.
+		log.error(`Be sure to use a Personal Access Token which has access to **all accessible accounts**.
 See https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions for more information.`);
 	}
 
@@ -37,14 +37,14 @@ function main<T>(task: Promise<any>): void {
 	if (isatty(1)) {
 		getLatestVersion(pkg.name, token)
 			.then(version => latestVersion = version)
-			.catch(err => !isCancelledError(err) && console.error(err));
+			.catch(err => !isCancelledError(err) && log.error(err));
 	}
 
 	task
 		.catch(fatal)
 		.then(() => {
 			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-				console.log(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
+				log.warn(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
 			} else {
 				token.cancel();
 			}

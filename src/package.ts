@@ -234,7 +234,7 @@ class ManifestProcessor extends BaseProcessor {
 		}
 
 		if (!this.manifest.repository) {
-			console.warn(`${util.WARN} A 'repository' field is missing from the 'package.json' manifest file.`);
+			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -854,7 +854,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 		unit = 'KB';
 	}
 
-	console.log(`${util.DONE} Packaged: ${packagePath} (${files.length} files, ${size}${unit})`);
+	util.log.done(`Packaged: ${packagePath} (${files.length} files, ${size}${unit})`);
 }
 
 /**

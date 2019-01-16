@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
-import { CancellationToken, ERROR } from './util';
+import { CancellationToken, log } from './util';
 
 interface IOptions {
 	cwd?: string;
@@ -84,7 +84,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): Y
 		name = parseResult.name;
 		version = parseResult.version;
 	} catch (err) {
-		console.error(`${ERROR} Failed to parse dependency:`, tree.name);
+		log.error('Failed to parse dependency:', tree.name);
 		return null;
 	}
 
