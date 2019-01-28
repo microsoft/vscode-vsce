@@ -133,4 +133,4 @@ export const log = {
 	info: _log.bind(null, LogMessageType.INFO) as LogFn,
 	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
 	error: _log.bind(null, LogMessageType.ERROR) as LogFn
-}
+};
