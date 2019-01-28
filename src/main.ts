@@ -29,7 +29,7 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 	process.exit(1);
 }
 
-function main<T>(task: Promise<any>): void {
+function main(task: Promise<any>): void {
 	let latestVersion: string = null;
 
 	const token = new CancellationToken();
