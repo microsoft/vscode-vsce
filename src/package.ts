@@ -616,6 +616,12 @@ export function validateManifest(manifest: Manifest): Manifest {
 		}
 	});
 
+	Object.keys((manifest.dependencies || {})).forEach(dep => {
+		if (dep === 'vscode') {
+			throw new Error(`You should not depend on 'vscode' in your 'dependencies'. Did you mean to add it to 'devDependencies'?`);
+		}
+	});
+
 	return manifest;
 }
 
