@@ -232,10 +232,6 @@ describe('collect', function () {
 					{ id: 'Monokai', label: 'Monokai', uiTheme: 'vs', contents: '{ "theme": "monokai" }' },
 					{ id: 'monokai-dark.json', label: 'monokai-dark.json', uiTheme: 'vs-dark', contents: '{ "theme": "monokai-dark" }' }
 				]);
-				const iconThemesFile = files.filter(f => f.path === 'iconThemes.json')[0];
-				assert.deepEqual(JSON.parse(iconThemesFile.contents.toString()), [
-					{ id: 'fakeicons', label: 'fakeicons', contents: '{ "theme": "fakeicons" }' }
-				]);
 			});
 	});
 });
@@ -803,26 +799,6 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'icon-theme'));
-			});
-	});
-
-	it('should expose icon theme contributions as assets', () => {
-		const manifest = {
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-		};
-
-		const files = [
-			{ path: 'iconThemes.json', contents: new Buffer('') },
-		];
-
-		return _toVsixManifest(manifest, files)
-			.then(parseXmlManifest)
-			.then(result => {
-				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.IconThemes' && asset.$.Path === 'iconThemes.json'));
 			});
 	});
 

@@ -770,7 +770,6 @@ class ExtensionFilesCollector implements IFilesCollector {
 class ThemeFilesCollector implements IFilesCollector {
 
 	static COLOR_THEME_PATH: string = 'colorThemes.json';
-	static ICON_THEME_PATH: string = 'iconThemes.json';
 
 	constructor(private manifest: Manifest, private options: IPackageOptions) {
 	}
@@ -779,9 +778,6 @@ class ThemeFilesCollector implements IFilesCollector {
 		const promises: Promise<IFile>[] = [];
 		if (this.manifest.contributes && this.manifest.contributes.themes && this.manifest.contributes.themes.length > 0) {
 			promises.push(this.collectColorThemesFile(this.manifest.contributes.themes));
-		}
-		if (this.manifest.contributes && this.manifest.contributes.iconThemes && this.manifest.contributes.iconThemes.length > 0) {
-			promises.push(this.collectIconThemesFile(this.manifest.contributes.iconThemes));
 		}
 		return Promise.all(promises);
 	}
@@ -793,17 +789,6 @@ class ThemeFilesCollector implements IFilesCollector {
 				return {
 					contents: JSON.stringify(themes),
 					path: ThemeFilesCollector.COLOR_THEME_PATH
-				};
-			});
-	}
-
-	private collectIconThemesFile(iconThemes: Theme[]): Promise<IFile> {
-		return Promise.all(iconThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ theme, contents }))))
-			.then(result => {
-				const themes = result.map(({theme, contents}) => ({ id: this.getId(theme), label: this.getLabel(theme), contents }));
-				return {
-					contents: JSON.stringify(themes),
-					path: ThemeFilesCollector.ICON_THEME_PATH
 				};
 			});
 	}
@@ -823,9 +808,6 @@ export class ThemeProcessor extends BaseProcessor {
 	onFile(file: IFile): Promise<IFile> {
 		if (ThemeFilesCollector.COLOR_THEME_PATH === file.path) {
 			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorThemes`, path: file.path });
-		}
-		if (ThemeFilesCollector.ICON_THEME_PATH === file.path) {
-			this.assets.push({ type: `Microsoft.VisualStudio.Code.IconThemes`, path: file.path });
 		}
 		return Promise.resolve(file);
 	}
