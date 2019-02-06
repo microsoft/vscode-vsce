@@ -16,8 +16,20 @@ export interface Localization {
 	translations: Translation[];
 }
 
+export interface Theme {
+	id: string;
+	path: string;
+	label?: string;
+}
+
+export interface ColorTheme extends Theme {
+	uiTheme: string;
+}
+
 export interface Contributions {
 	'localizations'?: Localization[];
+	'themes'?: ColorTheme[];
+	'iconThemes'?: Theme[];
 	[contributionType: string]: any;
 }
 

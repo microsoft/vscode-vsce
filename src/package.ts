@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
-import { Manifest } from './manifest';
+import { Manifest, Theme } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
@@ -220,7 +220,11 @@ class ManifestProcessor extends BaseProcessor {
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
 			extensionPack: _(manifest.extensionPack || []).uniq().join(','),
 			localizedLanguages: (manifest.contributes && manifest.contributes.localizations) ?
-				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : ''
+				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : '',
+			colorThemes: (manifest.contributes && manifest.contributes.themes && manifest.contributes.themes.length > 0) ?
+				manifest.contributes.themes.map(theme => theme.id).join(',') : '',
+			iconThemes: (manifest.contributes && manifest.contributes.iconThemes && manifest.contributes.iconThemes.length > 0) ?
+				manifest.contributes.iconThemes.map(theme => theme.id).join(',') : ''
 		};
 
 		if (isGitHub) {
@@ -579,6 +583,56 @@ export class NLSProcessor extends BaseProcessor {
 	}
 }
 
+export class ThemeProcessor extends BaseProcessor {
+
+	private colorThemes: { [path: string]: string } = Object.create(null);
+	private iconThemes: { [path: string]: string } = Object.create(null);
+
+	constructor(manifest: Manifest) {
+		super(manifest);
+
+		// Color Themes
+		if (manifest.contributes && manifest.contributes.themes && manifest.contributes.themes.length > 0) {
+			this.populateThemes(manifest.contributes.themes, this.colorThemes);
+		}
+
+		// Icon Themes
+		if (manifest.contributes && manifest.contributes.iconThemes && manifest.contributes.iconThemes.length > 0) {
+			this.populateThemes(manifest.contributes.iconThemes, this.iconThemes);
+		}
+	}
+
+	private populateThemes(themes: Theme[], themesPathsMap: { [path: string]: string }) {
+		const themesMap: { [languageId: string]: string; } = Object.create(null);
+
+		// take last reference in the manifest for any given theme
+		for (const theme of themes) {
+			themesMap[theme.id] = `extension/${theme.path}`;
+		}
+
+		// invert the map for later easier retrieval
+		for (const themeId of Object.keys(themesMap)) {
+			themesPathsMap[themesMap[themeId]] = themeId;
+		}
+	}
+
+	onFile(file: IFile): Promise<IFile> {
+		const normalizedPath = util.normalize(file.path);
+
+		const colorTheme = this.colorThemes[normalizedPath];
+		if (colorTheme) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorTheme.${colorTheme}`, path: normalizedPath });
+		}
+
+		const iconTheme = this.iconThemes[normalizedPath];
+		if (iconTheme) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.IconTheme.${iconTheme}`, path: normalizedPath });
+		}
+
+		return Promise.resolve(file);
+	}
+}
+
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
@@ -779,7 +833,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
-		new NLSProcessor(manifest)
+		new NLSProcessor(manifest),
+		new ThemeProcessor(manifest)
 	];
 }
 

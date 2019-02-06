@@ -683,7 +683,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' }]
 			}
 		};
 
@@ -718,7 +718,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' }]
 			}
 		};
 
@@ -727,6 +727,66 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'color-theme'));
+			});
+	});
+
+	it('should expose color theme contributions as properties', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				themes: [
+					{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' },
+					{ label: 'monokai-dark', uiTheme: 'vs-dark', path: 'monokai-dark.tmTheme', id: 'monokai-dark' }
+				]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/monokai.tmTheme', contents: new Buffer('') },
+			{ path: 'extension/monokai-dark.tmTheme', contents: new Buffer('') },
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const colorThemesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ColorThemes');
+				assert.equal(colorThemesProp.length, 1);
+
+				const colorThemes = colorThemesProp[0].$.Value.split(',');
+				assert.deepEqual(colorThemes, ['monokai', 'monokai-dark']);
+			});
+	});
+
+
+	it('should expose color theme contributions as assets', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				themes: [
+					{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' },
+					{ label: 'monokai-dark', uiTheme: 'vs-dark', path: 'monokai-dark.tmTheme', id: 'monokai-dark' }
+				]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/monokai.tmTheme', contents: new Buffer('') },
+			{ path: 'extension/monokai-dark.tmTheme', contents: new Buffer('') },
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const assets = result.PackageManifest.Assets[0].Asset;
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorTheme.monokai' && asset.$.Path === 'extension/monokai.tmTheme'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorTheme.monokai-dark' && asset.$.Path === 'extension/monokai-dark.tmTheme'));
 			});
 	});
 
@@ -765,6 +825,60 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'icon-theme'));
+			});
+	});
+
+	it('should expose icon theme contributions as properties', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				iconThemes: [
+					{ label: 'fakeicons', path: 'fake.icons', id: 'fakeicons' }
+				]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/fake.icons', contents: new Buffer('') },
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const iconThemesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.IconThemes');
+				assert.equal(iconThemesProp.length, 1);
+
+				const iconThemes = iconThemesProp[0].$.Value.split(',');
+				assert.deepEqual(iconThemes, ['fakeicons']);
+			});
+	});
+
+	it('should expose icon theme contributions as assets', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				iconThemes: [
+					{ label: 'fakeicons', path: 'fake.icons', id: 'fakeicons' }
+				]
+			}
+		};
+
+		const files = [
+			{ path: 'extension/fake.icons', contents: new Buffer('') },
+		];
+
+		return _toVsixManifest(manifest, files)
+			.then(parseXmlManifest)
+			.then(result => {
+				const assets = result.PackageManifest.Assets[0].Asset;
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.IconTheme.fakeicons' && asset.$.Path === 'extension/fake.icons'));
 			});
 	});
 
