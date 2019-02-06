@@ -6,19 +6,19 @@
 	"contributes": {
 		"themes": [
 			{
-				"id": "monokai",
 				"label": "Monokai",
 				"path": "./themes/monokai.json",
 				"uiTheme": "vs"
 			},
 			{
-				"label": "Monokai Dark",
 				"path": "./themes/monokai-dark.json",
 				"uiTheme": "vs-dark"
 			}
 		],
 		"iconThemes": [
 			{
+				"id": "fakeicons",
+				"label": "fakeicons",
 				"path": "./themes/fakeicons.json"
 			}
 		]
