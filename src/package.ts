@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
-import { Manifest, Theme } from './manifest';
+import { Manifest, Theme, ColorTheme } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
@@ -69,6 +69,10 @@ export interface IPackageOptions {
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	dependencyEntryPoints?: string[];
+}
+
+export interface IFilesCollector {
+	collect(): Promise<IFile[]>;
 }
 
 export interface IProcessor {
@@ -220,11 +224,7 @@ class ManifestProcessor extends BaseProcessor {
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
 			extensionPack: _(manifest.extensionPack || []).uniq().join(','),
 			localizedLanguages: (manifest.contributes && manifest.contributes.localizations) ?
-				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : '',
-			colorThemes: (manifest.contributes && manifest.contributes.themes && manifest.contributes.themes.length > 0) ?
-				manifest.contributes.themes.map(theme => theme.id).join(',') : '',
-			iconThemes: (manifest.contributes && manifest.contributes.iconThemes && manifest.contributes.iconThemes.length > 0) ?
-				manifest.contributes.iconThemes.map(theme => theme.id).join(',') : ''
+				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : ''
 		};
 
 		if (isGitHub) {
@@ -583,56 +583,6 @@ export class NLSProcessor extends BaseProcessor {
 	}
 }
 
-export class ThemeProcessor extends BaseProcessor {
-
-	private colorThemes: { [path: string]: string } = Object.create(null);
-	private iconThemes: { [path: string]: string } = Object.create(null);
-
-	constructor(manifest: Manifest) {
-		super(manifest);
-
-		// Color Themes
-		if (manifest.contributes && manifest.contributes.themes && manifest.contributes.themes.length > 0) {
-			this.populateThemes(manifest.contributes.themes, this.colorThemes);
-		}
-
-		// Icon Themes
-		if (manifest.contributes && manifest.contributes.iconThemes && manifest.contributes.iconThemes.length > 0) {
-			this.populateThemes(manifest.contributes.iconThemes, this.iconThemes);
-		}
-	}
-
-	private populateThemes(themes: Theme[], themesPathsMap: { [path: string]: string }) {
-		const themesMap: { [languageId: string]: string; } = Object.create(null);
-
-		// take last reference in the manifest for any given theme
-		for (const theme of themes) {
-			themesMap[theme.id] = `extension/${theme.path}`;
-		}
-
-		// invert the map for later easier retrieval
-		for (const themeId of Object.keys(themesMap)) {
-			themesPathsMap[themesMap[themeId]] = themeId;
-		}
-	}
-
-	onFile(file: IFile): Promise<IFile> {
-		const normalizedPath = util.normalize(file.path);
-
-		const colorTheme = this.colorThemes[normalizedPath];
-		if (colorTheme) {
-			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorTheme.${colorTheme}`, path: normalizedPath });
-		}
-
-		const iconTheme = this.iconThemes[normalizedPath];
-		if (iconTheme) {
-			this.assets.push({ type: `Microsoft.VisualStudio.Code.IconTheme.${iconTheme}`, path: normalizedPath });
-		}
-
-		return Promise.resolve(file);
-	}
-}
-
 export function validateManifest(manifest: Manifest): Manifest {
 	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
@@ -806,6 +756,73 @@ function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: stri
 	});
 }
 
+class ExtensionFilesCollector implements IFilesCollector {
+
+	constructor(private packageOptions: IPackageOptions) { }
+
+	collect(): Promise<IFile[]> {
+		return collectFiles(this.packageOptions.cwd, this.packageOptions.useYarn, this.packageOptions.dependencyEntryPoints)
+			.then(fileNames => fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(this.packageOptions.cwd, f) })));
+	}
+
+}
+
+class ThemeFilesCollector implements IFilesCollector {
+
+	static COLOR_THEME_PATH: string = 'colorThemes.json';
+	static ICON_THEME_PATH: string = 'iconThemes.json';
+
+	constructor(private manifest: Manifest, private options: IPackageOptions) {
+	}
+
+	collect(): Promise<IFile[]> {
+		const promises: Promise<IFile>[] = [];
+		if (this.manifest.contributes && this.manifest.contributes.themes && this.manifest.contributes.themes.length > 0) {
+			promises.push(this.collectColorThemesFile(this.manifest.contributes.themes));
+		}
+		if (this.manifest.contributes && this.manifest.contributes.iconThemes && this.manifest.contributes.iconThemes.length > 0) {
+			promises.push(this.collectIconThemesFile(this.manifest.contributes.iconThemes));
+		}
+		return Promise.all(promises);
+	}
+
+	private collectColorThemesFile(colorThemes: ColorTheme[]): Promise<IFile> {
+		return Promise.all(colorThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ ...theme, contents }))))
+			.then(result => {
+				const themes = result.map(({ id, label, uiTheme, contents }) => ({ id, label, uiTheme, contents }));
+				return {
+					contents: JSON.stringify(themes),
+					path: ThemeFilesCollector.COLOR_THEME_PATH
+				};
+			});
+	}
+
+	private collectIconThemesFile(iconThemes: Theme[]): Promise<IFile> {
+		return Promise.all(iconThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ ...theme, contents }))))
+			.then(result => {
+				const themes = result.map(({ id, label, contents }) => ({ id, label, contents }));
+				return {
+					contents: JSON.stringify(themes),
+					path: ThemeFilesCollector.ICON_THEME_PATH
+				};
+			});
+	}
+
+}
+
+export class ThemeProcessor extends BaseProcessor {
+
+	onFile(file: IFile): Promise<IFile> {
+		if (ThemeFilesCollector.COLOR_THEME_PATH === file.path) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorThemes`, path: file.path });
+		}
+		if (ThemeFilesCollector.ICON_THEME_PATH === file.path) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.IconThemes`, path: file.path });
+		}
+		return Promise.resolve(file);
+	}
+}
+
 export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
@@ -825,6 +842,13 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	});
 }
 
+function createFilesCollectors(manifest: Manifest, options: IPackageOptions): IFilesCollector[] {
+	return [
+		new ExtensionFilesCollector(options),
+		new ThemeFilesCollector(manifest, options)
+	];
+}
+
 export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
 	return [
 		new ManifestProcessor(manifest),
@@ -839,16 +863,15 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 }
 
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
-	const cwd = options.cwd || process.cwd();
-	const useYarn = options.useYarn || false;
-	const packagedDependencies = options.dependencyEntryPoints || undefined;
+	options.cwd = options.cwd || process.cwd();
+	options.useYarn = options.useYarn || false;
+	options.dependencyEntryPoints = options.dependencyEntryPoints || undefined;
+
+	const collectors = createFilesCollectors(manifest, options);
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
-
-		return processFiles(processors, files, options);
-	});
+	return Promise.all(collectors.map(c => c.collect())).then(util.flatten)
+		.then(files => processFiles(processors, files, options));
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<string> {

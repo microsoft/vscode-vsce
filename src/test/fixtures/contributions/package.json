@@ -1,0 +1,29 @@
+{
+	"name": "contributions",
+	"publisher": "joaomoreno",
+	"version": "1.0.0",
+	"engines": { "vscode": "*" },
+	"contributes": {
+		"themes": [
+			{
+				"id": "monokai",
+				"label": "Monokai",
+				"path": "./themes/monokai.json",
+				"uiTheme": "vs"
+			},
+			{
+				"id": "monokai-dark",
+				"label": "Monokai Dark",
+				"path": "./themes/monokai-dark.json",
+				"uiTheme": "vs-dark"
+			}
+		],
+		"iconThemes": [
+			{
+				"id": "fakeicons",
+				"label": "fakeicons",
+				"path": "./themes/fakeicons.json"
+			}
+		]
+	}
+}

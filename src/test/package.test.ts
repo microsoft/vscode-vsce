@@ -220,6 +220,24 @@ describe('collect', function () {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});
 	});
+
+	it('should collect theme files', () => {
+		const cwd = fixture('contributions');
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: [] }))
+			.then(files => {
+				const colorThemesFile = files.filter(f => f.path === 'colorThemes.json')[0];
+				assert.deepEqual(JSON.parse(colorThemesFile.contents.toString()), [
+					{ id: 'monokai', label: 'Monokai', uiTheme: 'vs', contents: '{ "theme": "monokai" }' },
+					{ id: 'monokai-dark', label: 'Monokai Dark', uiTheme: 'vs-dark', contents: '{ "theme": "monokai-dark" }' }
+				]);
+				const iconThemesFile = files.filter(f => f.path === 'iconThemes.json')[0];
+				assert.deepEqual(JSON.parse(iconThemesFile.contents.toString()), [
+					{ id: 'fakeicons', label: 'fakeicons', contents: '{ "theme": "fakeicons" }' }
+				]);
+			});
+	});
 });
 
 describe('readManifest', () => {
@@ -730,63 +748,23 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should expose color theme contributions as properties', () => {
-		const manifest = {
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-			contributes: {
-				themes: [
-					{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' },
-					{ label: 'monokai-dark', uiTheme: 'vs-dark', path: 'monokai-dark.tmTheme', id: 'monokai-dark' }
-				]
-			}
-		};
-
-		const files = [
-			{ path: 'extension/monokai.tmTheme', contents: new Buffer('') },
-			{ path: 'extension/monokai-dark.tmTheme', contents: new Buffer('') },
-		];
-
-		return _toVsixManifest(manifest, files)
-			.then(parseXmlManifest)
-			.then(result => {
-				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				const colorThemesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ColorThemes');
-				assert.equal(colorThemesProp.length, 1);
-
-				const colorThemes = colorThemesProp[0].$.Value.split(',');
-				assert.deepEqual(colorThemes, ['monokai', 'monokai-dark']);
-			});
-	});
-
-
 	it('should expose color theme contributions as assets', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			contributes: {
-				themes: [
-					{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' },
-					{ label: 'monokai-dark', uiTheme: 'vs-dark', path: 'monokai-dark.tmTheme', id: 'monokai-dark' }
-				]
-			}
 		};
 
 		const files = [
-			{ path: 'extension/monokai.tmTheme', contents: new Buffer('') },
-			{ path: 'extension/monokai-dark.tmTheme', contents: new Buffer('') },
+			{ path: 'colorThemes.json', contents: new Buffer('') },
 		];
 
 		return _toVsixManifest(manifest, files)
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorTheme.monokai' && asset.$.Path === 'extension/monokai.tmTheme'));
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorTheme.monokai-dark' && asset.$.Path === 'extension/monokai-dark.tmTheme'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorThemes' && asset.$.Path === 'colorThemes.json'));
 			});
 	});
 
@@ -828,57 +806,23 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it('should expose icon theme contributions as properties', () => {
-		const manifest = {
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-			contributes: {
-				iconThemes: [
-					{ label: 'fakeicons', path: 'fake.icons', id: 'fakeicons' }
-				]
-			}
-		};
-
-		const files = [
-			{ path: 'extension/fake.icons', contents: new Buffer('') },
-		];
-
-		return _toVsixManifest(manifest, files)
-			.then(parseXmlManifest)
-			.then(result => {
-				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				const iconThemesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.IconThemes');
-				assert.equal(iconThemesProp.length, 1);
-
-				const iconThemes = iconThemesProp[0].$.Value.split(',');
-				assert.deepEqual(iconThemes, ['fakeicons']);
-			});
-	});
-
 	it('should expose icon theme contributions as assets', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			contributes: {
-				iconThemes: [
-					{ label: 'fakeicons', path: 'fake.icons', id: 'fakeicons' }
-				]
-			}
 		};
 
 		const files = [
-			{ path: 'extension/fake.icons', contents: new Buffer('') },
+			{ path: 'iconThemes.json', contents: new Buffer('') },
 		];
 
 		return _toVsixManifest(manifest, files)
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.IconTheme.fakeicons' && asset.$.Path === 'extension/fake.icons'));
+				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.IconThemes' && asset.$.Path === 'iconThemes.json'));
 			});
 	});
 

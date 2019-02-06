@@ -13,8 +13,6 @@
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="<%- extensionDependencies %>" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="<%- extensionPack %>" />
       <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="<%- localizedLanguages %>" />
-      <Property Id="Microsoft.VisualStudio.Code.ColorThemes" Value="<%- colorThemes %>" />
-      <Property Id="Microsoft.VisualStudio.Code.IconThemes" Value="<%- iconThemes %>" />
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
         <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="<%- links.repository %>" />

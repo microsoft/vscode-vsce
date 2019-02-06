@@ -17,7 +17,7 @@ export interface Localization {
 }
 
 export interface Theme {
-	id: string;
+	id?: string;
 	path: string;
 	label?: string;
 }
