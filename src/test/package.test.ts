@@ -701,7 +701,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' }]
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
 			}
 		};
 
@@ -736,7 +736,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme', id: 'monokai' }]
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
 			}
 		};
 
