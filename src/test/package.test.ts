@@ -230,11 +230,11 @@ describe('collect', function () {
 				const colorThemesFile = files.filter(f => f.path === 'colorThemes.json')[0];
 				assert.deepEqual(JSON.parse(colorThemesFile.contents.toString()), [
 					{ id: 'monokai', label: 'Monokai', uiTheme: 'vs', contents: '{ "theme": "monokai" }' },
-					{ id: 'monokai-dark', label: 'Monokai Dark', uiTheme: 'vs-dark', contents: '{ "theme": "monokai-dark" }' }
+					{ id: 'Monokai Dark', label: 'Monokai Dark', uiTheme: 'vs-dark', contents: '{ "theme": "monokai-dark" }' }
 				]);
 				const iconThemesFile = files.filter(f => f.path === 'iconThemes.json')[0];
 				assert.deepEqual(JSON.parse(iconThemesFile.contents.toString()), [
-					{ id: 'fakeicons', label: 'fakeicons', contents: '{ "theme": "fakeicons" }' }
+					{ id: 'fakeicons.json', label: 'fakeicons.json', contents: '{ "theme": "fakeicons" }' }
 				]);
 			});
 	});

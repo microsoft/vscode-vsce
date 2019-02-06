@@ -787,9 +787,9 @@ class ThemeFilesCollector implements IFilesCollector {
 	}
 
 	private collectColorThemesFile(colorThemes: ColorTheme[]): Promise<IFile> {
-		return Promise.all(colorThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ ...theme, contents }))))
+		return Promise.all(colorThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ theme, contents }))))
 			.then(result => {
-				const themes = result.map(({ id, label, uiTheme, contents }) => ({ id, label, uiTheme, contents }));
+				const themes = result.map(({ theme, contents }) => ({ id: this.getId(theme), label: this.getLabel(theme), uiTheme: theme.uiTheme, contents }));
 				return {
 					contents: JSON.stringify(themes),
 					path: ThemeFilesCollector.COLOR_THEME_PATH
@@ -798,14 +798,22 @@ class ThemeFilesCollector implements IFilesCollector {
 	}
 
 	private collectIconThemesFile(iconThemes: Theme[]): Promise<IFile> {
-		return Promise.all(iconThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ ...theme, contents }))))
+		return Promise.all(iconThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ theme, contents }))))
 			.then(result => {
-				const themes = result.map(({ id, label, contents }) => ({ id, label, contents }));
+				const themes = result.map(({theme, contents}) => ({ id: this.getId(theme), label: this.getLabel(theme), contents }));
 				return {
 					contents: JSON.stringify(themes),
 					path: ThemeFilesCollector.ICON_THEME_PATH
 				};
 			});
+	}
+
+	private getId(theme: Theme): string {
+		return theme.id || this.getLabel(theme);
+	}
+
+	private getLabel(theme: Theme): string {
+		return theme.label || path.basename(theme.path);
 	}
 
 }
