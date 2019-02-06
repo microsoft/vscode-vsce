@@ -29,7 +29,6 @@ export interface ColorTheme extends Theme {
 export interface Contributions {
 	'localizations'?: Localization[];
 	'themes'?: ColorTheme[];
-	'iconThemes'?: Theme[];
 	[contributionType: string]: any;
 }
 
