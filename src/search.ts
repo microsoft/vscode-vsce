@@ -1,5 +1,5 @@
 import { getPublicGalleryAPI } from './util';
-import { PublishedExtension, ExtensionQueryFilterType } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFilterType } from 'vso-node-api/interfaces/GalleryInterfaces';
 import { tableView, wordTrim } from './viewutils';
 
 const pageSize = 100;
