@@ -764,22 +764,20 @@ class ExtensionFilesCollector implements IFilesCollector {
 		return collectFiles(this.packageOptions.cwd, this.packageOptions.useYarn, this.packageOptions.dependencyEntryPoints)
 			.then(fileNames => fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(this.packageOptions.cwd, f) })));
 	}
-
 }
 
 class ThemeFilesCollector implements IFilesCollector {
 
 	static COLOR_THEME_PATH: string = 'colorThemes.json';
 
-	constructor(private manifest: Manifest, private options: IPackageOptions) {
-	}
+	constructor(private manifest: Manifest, private options: IPackageOptions) { }
 
-	collect(): Promise<IFile[]> {
-		const promises: Promise<IFile>[] = [];
+	async collect(): Promise<IFile[]> {
 		if (this.manifest.contributes && this.manifest.contributes.themes && this.manifest.contributes.themes.length > 0) {
-			promises.push(this.collectColorThemesFile(this.manifest.contributes.themes));
+			return [await this.collectColorThemesFile(this.manifest.contributes.themes)];
 		}
-		return Promise.all(promises);
+
+		return [];
 	}
 
 	private collectColorThemesFile(colorThemes: ColorTheme[]): Promise<IFile> {
@@ -800,7 +798,6 @@ class ThemeFilesCollector implements IFilesCollector {
 	private getLabel(theme: Theme): string {
 		return theme.label || path.basename(theme.path);
 	}
-
 }
 
 export class ThemeProcessor extends BaseProcessor {
@@ -809,6 +806,7 @@ export class ThemeProcessor extends BaseProcessor {
 		if (ThemeFilesCollector.COLOR_THEME_PATH === file.path) {
 			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorThemes`, path: file.path });
 		}
+
 		return Promise.resolve(file);
 	}
 }
@@ -852,7 +850,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
-export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
+export async function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	options.cwd = options.cwd || process.cwd();
 	options.useYarn = options.useYarn || false;
 	options.dependencyEntryPoints = options.dependencyEntryPoints || undefined;
@@ -860,8 +858,8 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const collectors = createFilesCollectors(manifest, options);
 	const processors = createDefaultProcessors(manifest, options);
 
-	return Promise.all(collectors.map(c => c.collect())).then(util.flatten)
-		.then(files => processFiles(processors, files, options));
+	const files = util.flatten(await Promise.all(collectors.map(c => c.collect())));
+	return await processFiles(processors, files, options);
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<string> {
