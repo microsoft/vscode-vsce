@@ -1,0 +1,19 @@
+{
+	"name": "contributions",
+	"publisher": "joaomoreno",
+	"version": "1.0.0",
+	"engines": { "vscode": "*" },
+	"contributes": {
+		"themes": [
+			{
+				"label": "Monokai",
+				"path": "./themes/monokai.json",
+				"uiTheme": "vs"
+			},
+			{
+				"path": "./themes/monokai-dark.json",
+				"uiTheme": "vs-dark"
+			}
+		]
+	}
+}

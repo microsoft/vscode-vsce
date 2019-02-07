@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
-import { Manifest } from './manifest';
+import { Manifest, Theme, ColorTheme } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
@@ -69,6 +69,10 @@ export interface IPackageOptions {
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	dependencyEntryPoints?: string[];
+}
+
+export interface IFilesCollector {
+	collect(): Promise<IFile[]>;
 }
 
 export interface IProcessor {
@@ -752,6 +756,63 @@ function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: stri
 	});
 }
 
+class ExtensionFilesCollector implements IFilesCollector {
+
+	constructor(private packageOptions: IPackageOptions) { }
+
+	collect(): Promise<IFile[]> {
+		return collectFiles(this.packageOptions.cwd, this.packageOptions.useYarn, this.packageOptions.dependencyEntryPoints)
+			.then(fileNames => fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(this.packageOptions.cwd, f) })));
+	}
+
+}
+
+class ThemeFilesCollector implements IFilesCollector {
+
+	static COLOR_THEME_PATH: string = 'colorThemes.json';
+
+	constructor(private manifest: Manifest, private options: IPackageOptions) {
+	}
+
+	collect(): Promise<IFile[]> {
+		const promises: Promise<IFile>[] = [];
+		if (this.manifest.contributes && this.manifest.contributes.themes && this.manifest.contributes.themes.length > 0) {
+			promises.push(this.collectColorThemesFile(this.manifest.contributes.themes));
+		}
+		return Promise.all(promises);
+	}
+
+	private collectColorThemesFile(colorThemes: ColorTheme[]): Promise<IFile> {
+		return Promise.all(colorThemes.map(theme => readFile(path.join(this.options.cwd, theme.path), 'utf8').then(contents => ({ theme, contents }))))
+			.then(result => {
+				const themes = result.map(({ theme, contents }) => ({ id: this.getId(theme), label: this.getLabel(theme), uiTheme: theme.uiTheme, contents }));
+				return {
+					contents: JSON.stringify(themes),
+					path: ThemeFilesCollector.COLOR_THEME_PATH
+				};
+			});
+	}
+
+	private getId(theme: Theme): string {
+		return theme.id || this.getLabel(theme);
+	}
+
+	private getLabel(theme: Theme): string {
+		return theme.label || path.basename(theme.path);
+	}
+
+}
+
+export class ThemeProcessor extends BaseProcessor {
+
+	onFile(file: IFile): Promise<IFile> {
+		if (ThemeFilesCollector.COLOR_THEME_PATH === file.path) {
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.ColorThemes`, path: file.path });
+		}
+		return Promise.resolve(file);
+	}
+}
+
 export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
@@ -771,6 +832,13 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 	});
 }
 
+function createFilesCollectors(manifest: Manifest, options: IPackageOptions): IFilesCollector[] {
+	return [
+		new ExtensionFilesCollector(options),
+		new ThemeFilesCollector(manifest, options)
+	];
+}
+
 export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
 	return [
 		new ManifestProcessor(manifest),
@@ -779,21 +847,21 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
-		new NLSProcessor(manifest)
+		new NLSProcessor(manifest),
+		new ThemeProcessor(manifest)
 	];
 }
 
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
-	const cwd = options.cwd || process.cwd();
-	const useYarn = options.useYarn || false;
-	const packagedDependencies = options.dependencyEntryPoints || undefined;
+	options.cwd = options.cwd || process.cwd();
+	options.useYarn = options.useYarn || false;
+	options.dependencyEntryPoints = options.dependencyEntryPoints || undefined;
+
+	const collectors = createFilesCollectors(manifest, options);
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
-
-		return processFiles(processors, files, options);
-	});
+	return Promise.all(collectors.map(c => c.collect())).then(util.flatten)
+		.then(files => processFiles(processors, files, options));
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<string> {
