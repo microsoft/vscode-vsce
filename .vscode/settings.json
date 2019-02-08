@@ -7,6 +7,5 @@
 		"out": true,
 		"typings": true
 	},
-	"typescript.tsdk": "./node_modules/typescript/lib",
-	"mochaExplorer.files": "out/**/test/*.test.js",
+	"typescript.tsdk": "./node_modules/typescript/lib"
 }

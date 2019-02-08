@@ -220,20 +220,6 @@ describe('collect', function () {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});
 	});
-
-	it('should collect theme files', () => {
-		const cwd = fixture('contributions');
-
-		return readManifest(cwd)
-			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: [] }))
-			.then(files => {
-				const colorThemesFile = files.filter(f => f.path === 'colorThemes.json')[0];
-				assert.deepEqual(JSON.parse(colorThemesFile.contents.toString()), [
-					{ id: 'Monokai', label: 'Monokai', uiTheme: 'vs', contents: '{ "theme": "monokai" }' },
-					{ id: 'monokai-dark.json', label: 'monokai-dark.json', uiTheme: 'vs-dark', contents: '{ "theme": "monokai-dark" }' }
-				]);
-			});
-	});
 });
 
 describe('readManifest', () => {
@@ -741,26 +727,6 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'color-theme'));
-			});
-	});
-
-	it('should expose color theme contributions as assets', () => {
-		const manifest = {
-			name: 'test',
-			publisher: 'mocha',
-			version: '0.0.1',
-			engines: Object.create(null),
-		};
-
-		const files = [
-			{ path: 'colorThemes.json', contents: new Buffer('') },
-		];
-
-		return _toVsixManifest(manifest, files)
-			.then(parseXmlManifest)
-			.then(result => {
-				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.ColorThemes' && asset.$.Path === 'colorThemes.json'));
 			});
 	});
 
