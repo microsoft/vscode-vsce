@@ -434,6 +434,31 @@ export class MarkdownProcessor extends BaseProcessor {
 		// Replace Markdown issue references with urls
 		contents = contents.replace(markdownIssueRegex, issueReplace);
 
+		const htmlPathRegex = /(<img\b.*?\bsrc="|<a\b.*?\bhref=")([^"]*)/g;
+
+		const urlReplace2 = (all, tag, link) => {
+			const isLinkRelative = !/^(\w+:\/\/|data:image\/)/.test(link) && link[0] !== '#';
+			const isImage = tag.indexOf('<img') >= 0;
+
+			if (!this.baseContentUrl && !this.baseImagesUrl) {
+				const asset = isImage ? 'image' : 'link';
+
+				if (isLinkRelative) {
+					throw new Error(`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+				}
+			}
+
+			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+
+			if (!prefix || !isLinkRelative) {
+				return `${tag}${link}`;
+			}
+
+			return `${tag}${urljoin(prefix, link)}`;
+		};
+
+		contents = contents.replace(htmlPathRegex, urlReplace2);
+
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
 

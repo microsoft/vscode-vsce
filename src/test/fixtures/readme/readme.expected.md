@@ -26,6 +26,8 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 ![Add to dictionary](https://github.com/username/repository/raw/master/images/SpellMDDemo3.gif)
 
+<img src="https://github.com/username/repository/raw/master/images/SpellMDDemo4.gif" width="400px" />
+
 ![issue](https://github.com/username/repository/raw/master/issue)
 
 [mono](https://github.com/username/repository/blob/master/monkey)
