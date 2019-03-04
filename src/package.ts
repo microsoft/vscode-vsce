@@ -840,6 +840,9 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	manifest = await prepublish(cwd, manifest);
 
 	const files = await collect(manifest, options);
+	if (files.length > 100) {
+		console.log(`This extension consists of ${files.length} separate files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension`);
+	}
 	const packagePath = await writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)));
 
 	return { manifest, packagePath, files };
