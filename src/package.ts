@@ -153,6 +153,7 @@ const TrustedSVGSources = [
 	'david-dm.org',
 	'deepscan.io',
 	'dev.azure.com',
+	'flat.badgen.net',
 	'gemnasium.com',
 	'githost.io',
 	'gitlab.com',
