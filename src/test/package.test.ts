@@ -33,7 +33,7 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 const fixture = name => path.join(__dirname, 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
-function xmlParser<T>() { return denodeify<string, T>(parseString); }
+function createXMLParser<T>(): (raw: string) => Promise<T> { return denodeify<string, T>(parseString); }
 
 type XMLManifest = {
 	PackageManifest: {
@@ -62,8 +62,8 @@ type ContentTypes = {
 	}
 };
 
-const parseXmlManifest = xmlParser<XMLManifest>();
-const parseContentTypes = xmlParser<ContentTypes>();
+const parseXmlManifest = createXMLParser<XMLManifest>();
+const parseContentTypes = createXMLParser<ContentTypes>();
 
 function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 	const processors = createDefaultProcessors(manifest);
@@ -179,7 +179,7 @@ describe('collect', function () {
 
 	it('should honor dependencyEntryPoints', () => {
 		const cwd = fixture('packagedDependencies');
-		
+
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {

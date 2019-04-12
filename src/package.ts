@@ -12,7 +12,7 @@ import * as denodeify from 'denodeify';
 import * as markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
 import * as url from 'url';
-import * as mime from 'mime';
+import { lookup } from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility } from './validation';
 import { getDependencies } from './npm';
@@ -26,13 +26,13 @@ const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const stat = denodeify(fs.stat);
 const exec = denodeify<string, { cwd?: string; env?: any; maxBuffer?: number; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
-const glob = denodeify<string, _glob.Options, string[]>(_glob);
+const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
-const MinimatchOptions: minimatch.Options = { dot: true };
+const MinimatchOptions: minimatch.IOptions = { dot: true };
 
 export interface IFile {
 	path: string;
@@ -679,7 +679,7 @@ const defaultExtensions = {
 export function toContentTypes(files: IFile[]): Promise<string> {
 	const extensions = Object.keys(_.keyBy(files, f => path.extname(f.path).toLowerCase()))
 		.filter(e => !!e)
-		.reduce((r, e) => ({ ...r, [e]: mime.lookup(e) }), {});
+		.reduce((r, e) => ({ ...r, [e]: lookup(e) }), {});
 
 	const allExtensions = { ...extensions, ...defaultExtensions };
 	const contentTypes = Object.keys(allExtensions).map(extension => ({
@@ -721,7 +721,7 @@ const defaultIgnore = [
 
 function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
 	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
-		const promises = deps.map(dep => {
+		const promises: Promise<string[]>[] = deps.map(dep => {
 			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
 				.then(files => files
 					.map(f => path.relative(cwd, path.join(dep, f)))

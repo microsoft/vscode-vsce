@@ -3,9 +3,7 @@
 	"editor.insertSpaces": false,
 	"search.exclude": {
 		"**/node_modules": true,
-		"**/bower_components": true,
-		"out": true,
-		"typings": true
+		"out": true
 	},
 	"typescript.tsdk": "./node_modules/typescript/lib",
 	"mochaExplorer.files": "out/**/test/*.test.js"

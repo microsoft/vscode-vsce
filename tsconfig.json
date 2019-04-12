@@ -1,12 +1,11 @@
 {
 	"compilerOptions": {
-		"target": "ES5",
+		"target": "es2015",
 		"module": "commonjs",
 		"declaration": true,
 		"outDir": "out"
 	},
 	"include": [
-		"src",
-		"typings"
+		"src"
 	]
 }

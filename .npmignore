@@ -1,5 +1,4 @@
 src/
-typings/
 test
 out/test/
 .gitignore
@@ -7,7 +6,6 @@ tsconfig.json
 tsd.json
 *.js.map
 yarn.lock
-typings.json
 .travis.yml
 .vscode/
 out/**/*.d.ts
