@@ -27,7 +27,7 @@
     "compile": "tsc",
     "watch": "tsc --watch",
     "watch-test": "concurrently \"tsc --watch\" \"mocha --watch\"",
-    "test": "mocha",
+    "test": "tsc && mocha",
     "prepublishOnly": "tsc && mocha"
   },
   "engines": {
