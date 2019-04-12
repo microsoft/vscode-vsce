@@ -31,7 +31,7 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 	}
 }
 
-const fixture = name => path.join(__dirname, 'fixtures', name);
+const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
 function createXMLParser<T>(): (raw: string) => Promise<T> { return denodeify<string, T>(parseString); }
 
@@ -226,8 +226,8 @@ describe('readManifest', () => {
 
 	it('should patch NLS', () => {
 		const cwd = fixture('nls');
-		const raw = require('./fixtures/nls/package.json');
-		const translations = require('./fixtures/nls/package.nls.json');
+		const raw = require(path.join(cwd, 'package.json'));
+		const translations = require(path.join(cwd, 'package.nls.json'));
 
 		return readManifest(cwd)
 			.then((manifest: any) => {
@@ -239,8 +239,8 @@ describe('readManifest', () => {
 
 	it('should not patch NLS if required', () => {
 		const cwd = fixture('nls');
-		const raw = require('./fixtures/nls/package.json');
-		const translations = require('./fixtures/nls/package.nls.json');
+		const raw = require(path.join(cwd, 'package.json'));
+		const translations = require(path.join(cwd, 'package.nls.json'));
 
 		return readManifest(cwd, false)
 			.then((manifest: any) => {
