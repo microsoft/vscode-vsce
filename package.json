@@ -24,10 +24,11 @@
     "vsce": "out/vsce"
   },
   "scripts": {
-    "watch": "gulp watch",
-    "watch-test": "gulp watch-test",
-    "test": "gulp compile && mocha",
-    "prepublishOnly": "gulp compile && mocha"
+    "compile": "tsc",
+    "watch": "tsc --watch",
+    "watch-test": "concurrently \"tsc --watch\" \"mocha --watch\"",
+    "test": "mocha",
+    "prepublishOnly": "tsc && mocha"
   },
   "engines": {
     "node": ">= 8"
@@ -56,18 +57,10 @@
     "@types/cheerio": "^0.22.1",
     "@types/markdown-it": "0.0.2",
     "@types/node": "^8",
-    "eslint": "^3.17.1",
-    "event-stream": "3.3.4",
-    "gulp": "^3.9.0",
-    "gulp-filter": "^4.0.0",
-    "gulp-sourcemaps": "^2.4.1",
+    "concurrently": "^4.1.0",
     "gulp-tsb": "^1.6.0",
-    "gulp-tslint": "^6.1.1",
-    "gulp-typescript": "^3.1.5",
     "mocha": "^5.2.0",
-    "rimraf": "^2.4.3",
     "source-map-support": "^0.4.2",
-    "tslint": "^3.15.1",
     "typescript": "^2.2.1",
     "xml2js": "^0.4.12"
   }

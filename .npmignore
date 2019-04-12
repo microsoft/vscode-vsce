@@ -3,14 +3,12 @@ typings/
 test
 out/test/
 .gitignore
-gulpfile.js
-jsconfig.json
 tsconfig.json
 tsd.json
 *.js.map
 yarn.lock
 typings.json
-tslint.json
-.eslintrc
 .travis.yml
 .vscode/
+out/**/*.d.ts
+!out/api.d.ts
