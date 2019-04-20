@@ -145,8 +145,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
 
-		promise = versionBump(options.cwd, options.version)
-			.then(() => tmpName())
+		promise = tmpName()
 			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn }));
 	}
 
@@ -159,7 +158,8 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			? Promise.resolve(options.pat)
 			: getPublisher(manifest.publisher).then(p => p.pat);
 
-		return patPromise.then(pat => _publish(packagePath, pat, manifest));
+		return versionBump(options.cwd, options.version)
+			.then(() => patPromise.then(pat => _publish(packagePath, pat, manifest)))
 	});
 }
 
