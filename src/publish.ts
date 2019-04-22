@@ -158,8 +158,12 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			? Promise.resolve(options.pat)
 			: getPublisher(manifest.publisher).then(p => p.pat);
 
-		return versionBump(options.cwd, options.version)
-			.then(() => patPromise.then(pat => _publish(packagePath, pat, manifest)))
+		return patPromise.then(pat => 
+			versionBump(options.cwd, options.version).then(() => 
+				_publish(packagePath, pat, manifest)
+			)
+		)
+
 	});
 }
 
