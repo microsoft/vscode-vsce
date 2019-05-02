@@ -79,7 +79,8 @@ module.exports = function (argv: string[]): void {
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
-		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn })));
+		.option('--noVerify')
+		.action((version, { pat, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify }) => main(publish({ pat, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify })));
 
 	program
 		.command('unpublish [<extensionid>]')

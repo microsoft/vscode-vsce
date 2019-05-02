@@ -95,6 +95,7 @@ export interface IPublishOptions {
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
+	noVerify?: boolean;
 }
 
 function versionBump(cwd: string = process.cwd(), version?: string): Promise<void> {
@@ -151,7 +152,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 	}
 
 	return promise.then(({ manifest, packagePath }) => {
-		if (manifest.enableProposedApi) {
+		if (!options.noVerify && manifest.enableProposedApi) {
 			throw new Error('Extensions using proposed API (enableProposedApi: true) can\'t be published to the Marketplace');
 		}
 
