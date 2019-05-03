@@ -1,5 +1,5 @@
 import * as _read from 'read';
-import { WebApi, getPersonalAccessTokenHandler } from 'azure-devops-node-api/WebApi';
+import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 import chalk from 'chalk';
@@ -23,7 +23,7 @@ export function getPublishedUrl(extension: string): string {
 
 export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
 	// from https://github.com/Microsoft/tfs-cli/blob/master/app/exec/extension/default.ts#L287-L292
-	const authHandler = getPersonalAccessTokenHandler(pat);
+	const authHandler = getBasicHandler('OAuth', pat);
 	return new GalleryApi(marketplaceUrl, [authHandler]);
 
 	// const vsoapi = new WebApi(marketplaceUrl, authHandler);
@@ -31,7 +31,7 @@ export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
 }
 
 export async function getSecurityRolesAPI(pat: string): Promise<ISecurityRolesApi> {
-	const authHandler = getPersonalAccessTokenHandler(pat);
+	const authHandler = getBasicHandler('OAuth', pat);
 	const vsoapi = new WebApi(marketplaceUrl, authHandler);
 	return await vsoapi.getSecurityRolesApi();
 }
