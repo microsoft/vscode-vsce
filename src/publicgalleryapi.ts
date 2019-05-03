@@ -1,8 +1,10 @@
-import { HttpClient, HttpClientResponse } from 'vso-node-api/HttpClient';
-import { PublishedExtension, ExtensionQueryFlags, FilterCriteria, SortOrderType,
-	SortByType, ExtensionQueryFilterType, TypeInfo} from 'vso-node-api/interfaces/GalleryInterfaces';
-import { IHeaders } from 'vso-node-api/interfaces/common/VsoBaseInterfaces';
-import { ContractSerializer } from 'vso-node-api/Serialization';
+import { HttpClient, HttpClientResponse } from 'typed-rest-client/HttpClient';
+import {
+	PublishedExtension, ExtensionQueryFlags, FilterCriteria, SortOrderType,
+	SortByType, ExtensionQueryFilterType, TypeInfo
+} from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { IHeaders } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
+import { ContractSerializer } from 'azure-devops-node-api/Serialization';
 
 export interface ExtensionQuery {
 	pageNumber?: number;
@@ -21,7 +23,7 @@ export class PublicGalleryAPI {
 		this.client = new HttpClient('vsce');
 	}
 
-	post(url: string, data: string, additionalHeaders?: IHeaders): Promise<HttpClientResponse> {
+	private post(url: string, data: string, additionalHeaders?: IHeaders): Promise<HttpClientResponse> {
 		return this.client.post(`${this.baseUrl}/_apis/public${url}`, data, additionalHeaders);
 	}
 
@@ -35,17 +37,17 @@ export class PublicGalleryAPI {
 		assetTypes = [],
 	}: ExtensionQuery): Promise<PublishedExtension[]> {
 		return this.post('/gallery/extensionquery', JSON.stringify({
-			filters: [{pageNumber, pageSize, criteria}],
+			filters: [{ pageNumber, pageSize, criteria }],
 			assetTypes,
 			flags: flags.reduce((memo, flag) => memo | flag, 0)
 		}), {
-			Accept: `application/json;api-version=${this.apiVersion}`,
-			'Content-Type': 'application/json',
-		})
+				Accept: `application/json;api-version=${this.apiVersion}`,
+				'Content-Type': 'application/json',
+			})
 			.then(res => res.readBody())
 			.then(data => JSON.parse(data))
-			.then(({results: [result = {}] = []}) => result)
-			.then(({extensions = []}) =>
+			.then(({ results: [result = {}] = [] }) => result)
+			.then(({ extensions = [] }) =>
 				ContractSerializer.deserialize(extensions, TypeInfo.PublishedExtension, false, false)
 			);
 	}
@@ -55,9 +57,9 @@ export class PublicGalleryAPI {
 			criteria: [{ filterType: ExtensionQueryFilterType.Name, value: extensionId }],
 			flags,
 		})
-		.then(result => result.filter(({publisher: {publisherName}, extensionName}) =>
-			extensionId.toLowerCase() === `${publisherName}.${extensionName}`.toLowerCase())
-		)
-		.then(([extension]) => extension);
+			.then(result => result.filter(({ publisher: { publisherName }, extensionName }) =>
+				extensionId.toLowerCase() === `${publisherName}.${extensionName}`.toLowerCase())
+			)
+			.then(([extension]) => extension);
 	}
 }

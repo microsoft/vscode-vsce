@@ -60,7 +60,7 @@ async function requestPAT(store: IStore, publisherName: string): Promise<IPublis
 	// If the caller of the `getRoleAssignments` API has any of the roles
 	// (Creator, Owner, Contributor, Reader) on the publisher, we get a 200,
 	// otherwise we get a 403.
-	const api = getSecurityRolesAPI(pat);
+	const api = await getSecurityRolesAPI(pat);
 	await api.getRoleAssignments('gallery.publisher', publisherName);
 
 	return await addPublisherToStore(store, { name: publisherName, pat });
@@ -113,8 +113,8 @@ export function createPublisher(publisherName: string): Promise<any> {
 	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
 		return read(`E-mail: `).then(email => {
 			return read(`Personal Access Token:`, { silent: true, replace: '*' })
-				.then(pat => {
-					const api = getGalleryAPI(pat);
+				.then(async pat => {
+					const api = await getGalleryAPI(pat);
 					const raw = {
 						publisherName,
 						displayName,
@@ -127,8 +127,8 @@ export function createPublisher(publisherName: string): Promise<any> {
 						emailAddress: [email]
 					};
 
-					return api.createPublisher(raw)
-						.then(() => ({ name: publisherName, pat }));
+					await api.createPublisher(raw);
+					return { name: publisherName, pat };
 				})
 				.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
 		});

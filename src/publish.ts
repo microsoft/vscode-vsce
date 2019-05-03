@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'vso-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
@@ -52,8 +52,8 @@ function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 	});
 }
 
-function _publish(packagePath: string, pat: string, manifest: Manifest): Promise<void> {
-	const api = getGalleryAPI(pat);
+async function _publish(packagePath: string, pat: string, manifest: Manifest): Promise<void> {
+	const api = await getGalleryAPI(pat);
 
 	const packageStream = fs.createReadStream(packagePath);
 
@@ -61,7 +61,7 @@ function _publish(packagePath: string, pat: string, manifest: Manifest): Promise
 	const fullName = `${name}@${manifest.version}`;
 	console.log(`Publishing ${fullName}...`);
 
-	return api.getExtension(manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
+	return api.getExtension(null, manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
 		.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
 		.then(extension => {
 			if (extension && extension.versions.some(v => v.version === manifest.version)) {
@@ -162,25 +162,6 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 		return patPromise.then(pat => _publish(packagePath, pat, manifest));
 	});
-}
-
-export function list(publisher: string): Promise<any> {
-	validatePublisher(publisher);
-
-	return getPublisher(publisher)
-		.then(p => p.pat)
-		.then(getGalleryAPI)
-		.then(api => {
-			const criteria = [{ filterType: ExtensionQueryFilterType.InstallationTarget, value: 'Microsoft.VisualStudio.Code' }];
-			const filters = [{ criteria, direction: PagingDirection.Forward, pageNumber: 0, pageSize: 1000, pagingToken: null, sortBy: SortByType.Relevance, sortOrder: SortOrderType.Default }];
-			const query = { filters, flags: ExtensionQueryFlags.IncludeLatestVersionOnly | ExtensionQueryFlags.IncludeVersionProperties, assetTypes: [] };
-
-			return api.queryExtensions(query).then(result => {
-				return result.results[0].extensions
-					.filter(e => e.publisher.publisherName === publisher)
-					.forEach(e => console.log(`${e.extensionName} @ ${e.versions[0].version}`));
-			});
-		});
 }
 
 export interface IUnpublishOptions extends IPublishOptions {
