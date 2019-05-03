@@ -17,17 +17,16 @@ export interface ExtensionQuery {
 }
 
 export class PublicGalleryAPI {
-	client: HttpClient;
 
-	constructor(public baseUrl: string, public apiVersion = '3.0-preview.1') {
-		this.client = new HttpClient('vsce');
-	}
+	private client = new HttpClient('vsce');
+
+	constructor(private baseUrl: string, private apiVersion = '3.0-preview.1') { }
 
 	private post(url: string, data: string, additionalHeaders?: IHeaders): Promise<HttpClientResponse> {
 		return this.client.post(`${this.baseUrl}/_apis/public${url}`, data, additionalHeaders);
 	}
 
-	extensionQuery({
+	async extensionQuery({
 		pageNumber = 1,
 		pageSize = 1,
 		sortBy = SortByType.Relevance,
@@ -36,30 +35,21 @@ export class PublicGalleryAPI {
 		criteria = [],
 		assetTypes = [],
 	}: ExtensionQuery): Promise<PublishedExtension[]> {
-		return this.post('/gallery/extensionquery', JSON.stringify({
+		const data = JSON.stringify({
 			filters: [{ pageNumber, pageSize, criteria }],
 			assetTypes,
 			flags: flags.reduce((memo, flag) => memo | flag, 0)
-		}), {
-				Accept: `application/json;api-version=${this.apiVersion}`,
-				'Content-Type': 'application/json',
-			})
-			.then(res => res.readBody())
-			.then(data => JSON.parse(data))
-			.then(({ results: [result = {}] = [] }) => result)
-			.then(({ extensions = [] }) =>
-				ContractSerializer.deserialize(extensions, TypeInfo.PublishedExtension, false, false)
-			);
+		});
+
+		const res = await this.post('/gallery/extensionquery', data, { Accept: `application/json;api-version=${this.apiVersion}`, 'Content-Type': 'application/json', });
+		const raw = JSON.parse(await res.readBody());
+
+		return ContractSerializer.deserialize(raw.results[0].extensions, TypeInfo.PublishedExtension, false, false);
 	}
 
-	getExtension(extensionId: string, flags: ExtensionQueryFlags[] = []): Promise<PublishedExtension> {
-		return this.extensionQuery({
-			criteria: [{ filterType: ExtensionQueryFilterType.Name, value: extensionId }],
-			flags,
-		})
-			.then(result => result.filter(({ publisher: { publisherName }, extensionName }) =>
-				extensionId.toLowerCase() === `${publisherName}.${extensionName}`.toLowerCase())
-			)
-			.then(([extension]) => extension);
+	async getExtension(extensionId: string, flags: ExtensionQueryFlags[] = []): Promise<PublishedExtension> {
+		const query = { criteria: [{ filterType: ExtensionQueryFilterType.Name, value: extensionId }], flags, };
+		const extensions = await this.extensionQuery(query);
+		return extensions.filter(({ publisher: { publisherName: publisher }, extensionName: name }) => extensionId.toLowerCase() === `${publisher}.${name}`.toLowerCase())[0];
 	}
 }
