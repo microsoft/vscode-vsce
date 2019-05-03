@@ -1,6 +1,6 @@
 import * as program from 'commander';
 import { packageCommand, ls } from './package';
-import { publish, unpublish } from './publish';
+import { publish, deleteExtension, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
@@ -87,6 +87,12 @@ module.exports = function (argv: string[]): void {
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.action((id, { pat }) => main(unpublish({ id, pat })));
+
+	program
+		.command('delete [<extensionid>]')
+		.description('Deletes an extension. Example extension id: microsoft.csharp.')
+		.option('-p, --pat <token>', 'Personal Access Token')
+		.action((id, { pat }) => main(deleteExtension({ id, pat })));
 
 	program
 		.command('ls-publishers')

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType, PublishedExtensionFlags } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
@@ -168,7 +168,26 @@ export interface IUnpublishOptions extends IPublishOptions {
 	id?: string;
 }
 
-export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+	let publisher: string, name: string;
+
+	if (options.id) {
+		[publisher, name] = options.id.split('.');
+	} else {
+		const manifest = await readManifest(options.cwd);
+		publisher = manifest.publisher;
+		name = manifest.name;
+	}
+
+	const fullName = `${publisher}.${name}`;
+	const pat = options.pat || (await getPublisher(publisher)).pat;
+	const api = await getGalleryAPI(pat);
+	const ext = await api.getExtension(null, publisher, name);
+	await api.updateExtensionProperties(publisher, name, ext.flags | PublishedExtensionFlags.Unpublished); // https://github.com/Microsoft/vscode-vsce/issues/318
+	log.done(`Unpublished extension: ${fullName}!`);
+}
+
+export function deleteExtension(options: IUnpublishOptions = {}): Promise<any> {
 	let promise: Promise<{ publisher: string; name: string; }>;
 
 	if (options.id) {
