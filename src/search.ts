@@ -15,8 +15,6 @@ export async function search(searchText: string, json: boolean = false, pageNumb
 		flags,
 	});
 
-	console.log('results', results);
-
 	if (json) {
 		console.log(JSON.stringify(results, undefined, '\t'));
 		return;
