@@ -1500,6 +1500,60 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should replace issue links with urls if its a github repo.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository.git'
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.github.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it('should not replace issue links with urls if its not a github repo.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://some-other-provider.com/username/repository.git'
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.github.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.github.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
 	it('should prevent non-HTTPS images', async () => {
 		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
 		const contents = `![title](http://foo.png)`;
