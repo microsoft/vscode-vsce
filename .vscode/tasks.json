@@ -4,13 +4,22 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "gulp",
-			"task": "compile",
 			"label": "compile",
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
+			},
+			"command": "npm",
+			"presentation": {
+				"reveal": "silent"
+			},
+			"args": [
+				"run",
+				"compile",
+				"--loglevel",
+				"silent"
+			],
+			"problemMatcher": [],
 		}
 	]
 }
