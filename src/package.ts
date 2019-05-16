@@ -135,6 +135,7 @@ const TrustedSVGSources = [
 	'api.travis-ci.com',
 	'api.travis-ci.org',
 	'app.fossa.io',
+	'badge.buildkite.com',
 	'badge.fury.io',
 	'badge.waffle.io',
 	'badgen.net',
