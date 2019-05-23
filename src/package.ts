@@ -14,7 +14,7 @@ import * as cheerio from 'cheerio';
 import * as url from 'url';
 import { lookup } from 'mime';
 import * as urljoin from 'url-join';
-import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility } from './validation';
+import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
 
 interface IReadFile {
@@ -604,6 +604,10 @@ export function validateManifest(manifest: Manifest): Manifest {
 	}
 
 	validateEngineCompatibility(manifest.engines['vscode']);
+
+	if (manifest.devDependencies && manifest.devDependencies['@types/vscode']) {
+		validateVSCodeTypesCompatibility(manifest.engines['vscode'], manifest.devDependencies['@types/vscode']);
+	}
 
 	if (/\.svg$/i.test(manifest.icon || '')) {
 		throw new Error(`SVGs can't be used as icons: ${manifest.icon}`);
