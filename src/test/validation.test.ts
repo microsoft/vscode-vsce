@@ -103,22 +103,26 @@ describe('validateEngineCompatibility', () => {
 describe('validateVSCodeTypesCompatibility', () => {
 
 	it('should validate', () => {
-		validateVSCodeTypesCompatibility('*', '1.30.0')
-		validateVSCodeTypesCompatibility('*', '^1.30.0')
-		validateVSCodeTypesCompatibility('*', '~1.30.0')
+		validateVSCodeTypesCompatibility('*', '1.30.0');
+		validateVSCodeTypesCompatibility('*', '^1.30.0');
+		validateVSCodeTypesCompatibility('*', '~1.30.0');
 
-		validateVSCodeTypesCompatibility('1.30.0', '1.30.0')
-		validateVSCodeTypesCompatibility('1.30.0', '1.20.0')
+		validateVSCodeTypesCompatibility('1.30.0', '1.30.0');
+		validateVSCodeTypesCompatibility('1.30.0', '1.20.0');
 
-		assert.throws(() => validateVSCodeTypesCompatibility('1.x.x', '1.30.0'))
-		assert.throws(() => validateVSCodeTypesCompatibility('1.x.0', '1.30.0'))
+		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '^1.40.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '~1.40.0'));
 
-		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'))
-		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '^1.40.0'))
-		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '~1.40.0'))
+		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('^1.30.0', '1.40.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('~1.30.0', '1.40.0'));
 
-		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'))
-		assert.throws(() => validateVSCodeTypesCompatibility('^1.30.0', '1.40.0'))
-		assert.throws(() => validateVSCodeTypesCompatibility('~1.30.0', '1.40.0'))
+		assert.throws(() => validateVSCodeTypesCompatibility('1.x.x', '1.30.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('1.x.0', '1.30.0'));
+
+		assert.throws(() => validateVSCodeTypesCompatibility('1.5.0', '1.30.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('1.5', '1.30.0'));
+		assert.throws(() => validateVSCodeTypesCompatibility('1.5', '1.30'));
 	});
 });

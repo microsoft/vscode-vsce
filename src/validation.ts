@@ -48,29 +48,52 @@ export function validateEngineCompatibility(version: string): void {
  */
 export function validateVSCodeTypesCompatibility(engineVersion: string, typeVersion: string): void {
 	if (engineVersion === '*') {
-		return
+		return;
 	}
 
 	if (!typeVersion) {
 		throw new Error(`Missing @types/vscode version`);
 	}
-	
+
 	let plainEngineVersion: string, plainTypeVersion: string;
 
 	try {
 		const engineSemver = parseSemver(`vscode@${engineVersion}`);
 		const typeSemver = parseSemver(`@types/vscode@${typeVersion}`);
-		
+
 		plainEngineVersion = engineSemver.version;
 		plainTypeVersion = typeSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode and @types/vscode');
 	}
-	
+
 	// For all `x`, use smallest version for comparison
-	plainEngineVersion = plainEngineVersion.replace(/x/g, '0')
-	
-	if(plainTypeVersion > plainEngineVersion) {
-		throw new Error(`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`)
+	plainEngineVersion = plainEngineVersion.replace(/x/g, '0');
+
+	const [typeMajor, typeMinor, typePatch] = plainTypeVersion.split('.').map(x => {
+		try {
+			return parseInt(x);
+		} catch (err) {
+			return 0;
+		}
+	});
+	const [engineMajor, engineMinor, enginePatch] = plainEngineVersion.split('.').map(x => {
+		try {
+			return parseInt(x);
+		} catch (err) {
+			return 0;
+		}
+	});
+
+	const error = new Error(`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`);
+
+	if (typeof typeMajor === 'number' && typeof engineMajor === 'number' && typeMajor > engineMajor) {
+		throw error;
+	}
+	if (typeof typeMinor === 'number' && typeof engineMinor === 'number' && typeMinor > engineMinor) {
+		throw error;
+	}
+	if (typeof typePatch === 'number' && typeof enginePatch === 'number' && typePatch > enginePatch) {
+		throw error;
 	}
 }
