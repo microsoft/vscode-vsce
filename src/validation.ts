@@ -59,12 +59,16 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 
 	try {
 		const engineSemver = parseSemver(`vscode@${engineVersion}`);
-		const typeSemver = parseSemver(`@types/vscode@${typeVersion}`);
-
 		plainEngineVersion = engineSemver.version;
+	} catch (err) {
+		throw new Error('Failed to parse semver of engines.vscode');
+	}
+
+	try {
+		const typeSemver = parseSemver(`@types/vscode@${typeVersion}`);
 		plainTypeVersion = typeSemver.version;
 	} catch (err) {
-		throw new Error('Failed to parse semver of engines.vscode and @types/vscode');
+		throw new Error('Failed to parse semver of @types/vscode');
 	}
 
 	// For all `x`, use smallest version for comparison
