@@ -1,4 +1,6 @@
 import * as program from 'commander';
+const didYouMean = require('didyoumean');
+
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
@@ -49,6 +51,17 @@ function main(task: Promise<any>): void {
 				token.cancel();
 			}
 		});
+}
+
+function suggestCommands(cmd: string): void {
+	const availableCommands = program.commands.map(cmd => {
+		return cmd._name;
+	  });
+	
+	  const suggestion: string | string[] = didYouMean(cmd, availableCommands);
+	  if (suggestion) {
+		log.warn(`Did you mean ${suggestion}?`);
+	  }
 }
 
 module.exports = function (argv: string[]): void {
@@ -127,7 +140,11 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('*')
-		.action(() => program.help());
+		.action((cmd: string) => {
+			program.outputHelp();
+			log.error(`Unknown command ${cmd}`);
+			suggestCommands(cmd);
+		});
 
 	program.parse(argv);
 
