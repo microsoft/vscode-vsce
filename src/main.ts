@@ -58,7 +58,7 @@ function suggestCommands(cmd: string): void {
 	
 	  const suggestion: string | string[] = didYouMean(cmd, availableCommands);
 	  if (suggestion) {
-		log.warn(`Did you mean ${suggestion}?`);
+		log.warn(`Did you mean '${suggestion}'?`);
 	  }
 }
 
