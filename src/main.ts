@@ -54,9 +54,7 @@ function main(task: Promise<any>): void {
 }
 
 function suggestCommands(cmd: string): void {
-	const availableCommands = program.commands.map(cmd => {
-		return cmd._name;
-	  });
+	const availableCommands = program.commands.map(c => c._name);
 	
 	  const suggestion: string | string[] = didYouMean(cmd, availableCommands);
 	  if (suggestion) {
