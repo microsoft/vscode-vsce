@@ -53,7 +53,8 @@ function main(task: Promise<any>): void {
 
 module.exports = function (argv: string[]): void {
 	program
-		.version(pkg.version);
+		.version(pkg.version)
+		.usage('<command> [options]');
 
 	program
 		.command('ls')
