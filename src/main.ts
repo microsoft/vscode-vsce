@@ -53,15 +53,6 @@ function main(task: Promise<any>): void {
 		});
 }
 
-function suggestCommands(cmd: string): void {
-	const availableCommands = program.commands.map(c => c._name);
-	
-	  const suggestion: string | string[] = didYouMean(cmd, availableCommands);
-	  if (suggestion) {
-		log.warn(`Did you mean '${suggestion}'?`);
-	  }
-}
-
 module.exports = function (argv: string[]): void {
 	program
 		.version(pkg.version);
@@ -141,7 +132,12 @@ module.exports = function (argv: string[]): void {
 		.action((cmd: string) => {
 			program.outputHelp();
 			log.error(`Unknown command ${cmd}`);
-			suggestCommands(cmd);
+
+			const availableCommands: string[] = program.commands.map(c => c._name);
+			const suggestion: string | string[] = didYouMean(cmd, availableCommands);
+			if (suggestion) {
+				log.warn(`Did you mean '${suggestion}'?`);
+			}
 		});
 
 	program.parse(argv);
