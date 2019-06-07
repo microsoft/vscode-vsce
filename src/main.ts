@@ -1,5 +1,5 @@
 import * as program from 'commander';
-const didYouMean = require('didyoumean');
+import * as didYouMean from 'didyoumean';
 
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
