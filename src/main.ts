@@ -129,7 +129,7 @@ module.exports = function (argv: string[]): void {
 		.action((text, { json }) => main(search(text, json)));
 
 	program
-		.command('*')
+		.command('*', '', { noHelp: true })
 		.action((cmd: string) => {
 			program.help(help => {
 				const suggestion = didYouMean(cmd, program.commands.map(c => c._name));
