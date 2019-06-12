@@ -1,4 +1,6 @@
 import * as program from 'commander';
+import * as didYouMean from 'didyoumean';
+
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
@@ -128,7 +130,16 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('*')
-		.action(() => program.help());
+		.action((cmd: string) => {
+			program.outputHelp();
+			log.error(`Unknown command ${cmd}`);
+
+			const availableCommands: string[] = program.commands.map(c => c._name);
+			const suggestion: string | string[] = didYouMean(cmd, availableCommands);
+			if (suggestion) {
+				log.warn(`Did you mean '${suggestion}'?`);
+			}
+		});
 
 	program.parse(argv);
 
