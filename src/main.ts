@@ -131,14 +131,21 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('*')
 		.action((cmd: string) => {
-			program.outputHelp();
-			log.error(`Unknown command ${cmd}`);
+			program.help(help => {
+				const suggestion = didYouMean(cmd, program.commands.map(c => c._name));
 
-			const availableCommands: string[] = program.commands.map(c => c._name);
-			const suggestion: string | string[] = didYouMean(cmd, availableCommands);
-			if (suggestion) {
-				log.warn(`Did you mean '${suggestion}'?`);
-			}
+				help = `${help}
+Unknown command '${cmd}'`;
+
+				if (suggestion) {
+					help = `${help}, did you mean '${suggestion}'?`;
+				} else {
+					help = `${help}.`;
+				}
+
+				return `${help}
+`;
+			});
 		});
 
 	program.parse(argv);

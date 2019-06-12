@@ -12,6 +12,11 @@
   resolved "https://registry.yarnpkg.com/@types/denodeify/-/denodeify-1.2.31.tgz#9a737b063bf1a8e3a63cc006cbbb0de601ce3584"
   integrity sha512-Jgy3dvCyIxhNb5RstVJkubeHZifw8KJXca13ov8OO4IqhDLPRHiJJ6VArJbZZ4HuEMJEB83yCuABodNMlYylzQ==
 
+"@types/didyoumean@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@types/didyoumean/-/didyoumean-1.2.0.tgz#e597a710fc6b18fe3ed6cdac17772f8fb51a07c1"
+  integrity sha512-3QMjBOgPEXaOkhfQxiGgzn6JpofPSi8Z0RmQq65FIpZv4kCPT/jvYiYrwqaUrfiHZmwwRvyYJjJmoKopbvLPQw==
+
 "@types/events@*":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@types/events/-/events-3.0.0.tgz#2862f3f58a9a7f7c3e78d79f130dd4d71c25c2a7"
