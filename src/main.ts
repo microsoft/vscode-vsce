@@ -1,5 +1,6 @@
 import * as program from 'commander';
 import * as didYouMean from 'didyoumean';
+import * as updateNotifier from 'update-notifier';
 
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
@@ -54,6 +55,8 @@ function main(task: Promise<any>): void {
 }
 
 module.exports = function (argv: string[]): void {
+	updateNotifier({pkg}).notify();
+
 	program
 		.version(pkg.version)
 		.usage('<command> [options]');
