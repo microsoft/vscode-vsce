@@ -90,6 +90,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 export interface IPublishOptions {
 	packagePath?: string;
 	version?: string;
+	commitMessage?: string;
 	cwd?: string;
 	pat?: string;
 	baseContentUrl?: string;
@@ -98,9 +99,14 @@ export interface IPublishOptions {
 	noVerify?: boolean;
 }
 
-function versionBump(cwd: string = process.cwd(), version?: string): Promise<void> {
+function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
 	if (!version) {
 		return Promise.resolve(null);
+	}
+
+	if (commitMessage === undefined || commitMessage === null) {
+		// see, https://docs.npmjs.com/cli/version#description
+		commitMessage = "%s";
 	}
 
 	switch (version) {
@@ -121,7 +127,7 @@ function versionBump(cwd: string = process.cwd(), version?: string): Promise<voi
 	}
 
 	// call `npm version` to do our dirty work
-	return exec(`npm version ${version}`, { cwd })
+	return exec(`npm version ${version} -m "${commitMessage}"`, { cwd })
 		.then(({ stdout, stderr }) => {
 			process.stdout.write(stdout);
 			process.stderr.write(stderr);
@@ -146,7 +152,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
 
-		promise = versionBump(options.cwd, options.version)
+		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
 			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn }));
 	}
