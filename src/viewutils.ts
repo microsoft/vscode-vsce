@@ -1,5 +1,3 @@
-const os = require('os');
-
 export type ViewTableRow = string[];
 export type ViewTable = ViewTableRow[];
 
@@ -13,7 +11,7 @@ const columns = process.stdout.columns ? process.stdout.columns : 80;
 
 // xxx: Windows cmd + powershell standard fonts currently don't support the full
 // unicode charset. For now we use fallback icons when on windows.
-const useFallbackIcons = os.platform() === 'win32';
+const useFallbackIcons = process.platform === 'win32';
 
 export const icons = useFallbackIcons?
 {
