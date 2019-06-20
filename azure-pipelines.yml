@@ -1,0 +1,23 @@
+trigger:
+  branches:
+    include: ['*']
+  tags:
+    include: ['*']
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: "10.15.1"
+
+- task: geeklearningio.gl-vsts-tasks-yarn.yarn-installer-task.YarnInstaller@2
+  inputs:
+    versionSpec: "1.10.1"
+
+- script: yarn
+  displayName: Install Dependencies
+
+- script: yarn compile
+  displayName: Compile
+
+- script: yarn test
+  displayName: Run Tests
