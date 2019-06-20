@@ -1,7 +1,7 @@
 # vsce
 > *The Visual Studio Code Extension Manager*
 
-[![build status](https://travis-ci.org/Microsoft/vscode-vsce.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-vsce)
+[![Build Status](https://dev.azure.com/vscode/VSCE/_apis/build/status/VSCE?branchName=master)](https://dev.azure.com/vscode/VSCE/_build/latest?definitionId=16&branchName=master)
 
 ### Requirements
 
