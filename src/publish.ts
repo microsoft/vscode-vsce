@@ -104,11 +104,6 @@ function versionBump(cwd: string = process.cwd(), version?: string, commitMessag
 		return Promise.resolve(null);
 	}
 
-	if (commitMessage === undefined || commitMessage === null) {
-		// see, https://docs.npmjs.com/cli/version#description
-		commitMessage = "%s";
-	}
-
 	switch (version) {
 		case 'major':
 		case 'minor':
@@ -126,8 +121,14 @@ function versionBump(cwd: string = process.cwd(), version?: string, commitMessag
 			}
 	}
 
+	let command = `npm version ${version}`;
+
+	if (commitMessage) {
+		command = `${command} -m "${commitMessage}"`;
+	}
+
 	// call `npm version` to do our dirty work
-	return exec(`npm version ${version} -m "${commitMessage}"`, { cwd })
+	return exec(command, { cwd })
 		.then(({ stdout, stderr }) => {
 			process.stdout.write(stdout);
 			process.stderr.write(stderr);
