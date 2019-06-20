@@ -28,7 +28,8 @@
     "watch": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\"",
     "watch-test": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\" \"mocha --watch\"",
     "test": "mocha",
-    "prepublishOnly": "tsc && cpx src/vsce out && mocha"
+    "prepublishOnly": "tsc && cpx src/vsce out && mocha",
+    "vsce": "out/vsce"
   },
   "engines": {
     "node": ">= 8"
