@@ -24,11 +24,11 @@
     "vsce": "out/vsce"
   },
   "scripts": {
-    "compile": "concurrently \"tsc\" \"cpx src/vsce out\"",
+    "compile": "tsc && cpx src/vsce out",
     "watch": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\"",
     "watch-test": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\" \"mocha --watch\"",
     "test": "mocha",
-    "prepublishOnly": "concurrently \"tsc\" \"cpx src/vsce out\" && mocha"
+    "prepublishOnly": "tsc && cpx src/vsce out && mocha"
   },
   "engines": {
     "node": ">= 8"
