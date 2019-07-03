@@ -138,14 +138,7 @@ module.exports = function (argv: string[]): void {
 				help = `${help}
 Unknown command '${cmd}'`;
 
-				if (suggestion) {
-					help = `${help}, did you mean '${suggestion}'?`;
-				} else {
-					help = `${help}.`;
-				}
-
-				return `${help}
-`;
+				return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 			});
 		});
 
