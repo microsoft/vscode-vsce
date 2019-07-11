@@ -179,6 +179,10 @@ function isHostTrusted(host: string): boolean {
 	return TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
 }
 
+function isGitHubRepository(repository: string): boolean {
+	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
+}
+
 class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
@@ -191,7 +195,7 @@ class ManifestProcessor extends BaseProcessor {
 		}
 
 		const repository = getRepositoryUrl(manifest.repository);
-		const isGitHub = /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
+		const isGitHub = isGitHubRepository(repository);
 
 		let enableMarketplaceQnA: boolean | undefined;
 		let customerQnALink: string | undefined;
@@ -350,6 +354,8 @@ export class MarkdownProcessor extends BaseProcessor {
 
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
+	private isGitHub: boolean;
+	private repositoryUrl: string;
 
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
@@ -358,6 +364,8 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
+		this.repositoryUrl = (guess && guess.repository);
+		this.isGitHub = isGitHubRepository(this.repositoryUrl);
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
@@ -396,8 +404,35 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			return `${isImage}[${title}](${urljoin(prefix, link)})`;
 		};
-
+		// Replace Markdown links with urls
 		contents = contents.replace(markdownPathRegex, urlReplace);
+
+		const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g
+		const issueReplace = (all: string, prefix: string, ownerAndRepositoryName: string, issueNumber: string): string => {
+			let result = all;
+			let owner: string;
+			let repositoryName: string;
+
+			if (ownerAndRepositoryName) {
+				[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
+			}
+
+			if (this.isGitHub){
+				if (owner && repositoryName && issueNumber) {
+					 // Issue in external repository
+					const issueUrl = urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber);
+					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
+
+				} else if (!owner && !repositoryName && issueNumber) {
+					// Issue in own repository
+					result = prefix + `[#${issueNumber}](${urljoin(this.repositoryUrl, 'issues', issueNumber)})`;
+				}
+			}
+
+			return result;
+		}
+		// Replace Markdown issue references with urls
+		contents = contents.replace(markdownIssueRegex, issueReplace);
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
@@ -430,7 +465,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	// GitHub heuristics
-	private guessBaseUrls(): { content: string; images: string; } {
+	private guessBaseUrls(): { content: string; images: string; repository: string} {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -455,7 +490,8 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		return {
 			content: `https://github.com/${account}/${repositoryName}/blob/master`,
-			images: `https://github.com/${account}/${repositoryName}/raw/master`
+			images: `https://github.com/${account}/${repositoryName}/raw/master`,
+			repository: `https://github.com/${account}/${repositoryName}`
 		};
 	}
 }
