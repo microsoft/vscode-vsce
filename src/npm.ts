@@ -67,7 +67,6 @@ interface YarnTreeNode {
 
 export interface YarnDependency {
 	name: string;
-	version: string;
 	path: string;
 	children: YarnDependency[];
 }
@@ -77,15 +76,13 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): Y
 		return null;
 	}
 
-	let name: string, version: string;
+	let name: string;
 
 	try {
 		const parseResult = parseSemver(tree.name);
 		name = parseResult.name;
-		version = parseResult.version;
 	} catch (err) {
-		log.error('Failed to parse dependency:', tree.name);
-		return null;
+		name = tree.name.replace(/^([^@+])@.*$/, '$1');
 	}
 
 	const dependencyPath = path.join(prefix, name);
@@ -99,7 +96,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): Y
 		}
 	}
 
-	return { name, version, path: dependencyPath, children };
+	return { name, path: dependencyPath, children };
 }
 
 function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: string[]): YarnDependency[] {
