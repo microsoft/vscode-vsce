@@ -39,7 +39,7 @@ function main(task: Promise<any>): void {
 	if (isatty(1)) {
 		getLatestVersion(pkg.name, token)
 			.then(version => latestVersion = version)
-			.catch(err => !isCancelledError(err) && log.error(err));
+			.catch(_ => { /* noop */ });
 	}
 
 	task
