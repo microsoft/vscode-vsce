@@ -864,14 +864,14 @@ function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${manifest.name}-${manifest.version}.vsix`);
 }
 
-function prepublish(cwd: string, manifest: Manifest): Promise<Manifest> {
+function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<Manifest> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return Promise.resolve(manifest);
 	}
 
-	console.warn(`Executing prepublish script 'npm run vscode:prepublish'...`);
+	console.warn(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
-	return exec('npm run vscode:prepublish', { cwd, maxBuffer: 5000 * 1024 })
+	return exec(`${useYarn ? 'yarn' : 'npm'} run vscode:prepublish`, { cwd, maxBuffer: 5000 * 1024 })
 		.then(({ stdout, stderr }) => {
 			process.stdout.write(stdout);
 			process.stderr.write(stderr);
@@ -884,7 +884,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	const cwd = options.cwd || process.cwd();
 
 	let manifest = await readManifest(cwd);
-	manifest = await prepublish(cwd, manifest);
+	manifest = await prepublish(cwd, manifest, options.useYarn);
 
 	const files = await collect(manifest, options);
 	if (files.length > 100) {
@@ -926,7 +926,7 @@ export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependen
  */
 export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[]): Promise<void> {
 	return readManifest(cwd)
-		.then(manifest => prepublish(cwd, manifest))
+		.then(manifest => prepublish(cwd, manifest, useYarn))
 		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }
