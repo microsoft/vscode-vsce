@@ -837,7 +837,14 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
+		const files = fileNames.map(f => {
+			// In case of a yarn workspace the filepath can point to node_modules at a higher level, we can just strip that within the extension
+			let basePathF = f;
+			while(basePathF.indexOf('../') === 0) {
+				basePathF = basePathF.substr(3);
+			}
+			return ({ path: `extension/${basePathF}`, localPath: path.join(cwd, f) });
+		});
 
 		return processFiles(processors, files, options);
 	});

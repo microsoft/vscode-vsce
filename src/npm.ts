@@ -71,29 +71,39 @@ export interface YarnDependency {
 	children: YarnDependency[];
 }
 
-function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): YarnDependency | null {
-	if (prune && /@[\^~]/.test(tree.name)) {
+function asYarnDependency(prefix: string, name: string, prune: boolean, parentStack:string[]): YarnDependency | null {
+	if (prune && /@[\^~]/.test(name)) {
 		return null;
 	}
 
-	let name: string;
-
-	try {
-		const parseResult = parseSemver(tree.name);
-		name = parseResult.name;
-	} catch (err) {
-		name = tree.name.replace(/^([^@+])@.*$/, '$1');
-	}
-
-	const dependencyPath = path.join(prefix, name);
-	const children: YarnDependency[] = [];
-
-	for (const child of (tree.children || [])) {
-		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child, prune);
-
-		if (dep) {
-			children.push(dep);
+	let dependencyPath;
+	let newPrefix = prefix;
+	// Follow the same resolve logic that is used within npm / yarn
+	while(newPrefix !== "/" && !dependencyPath) {
+		if (fs.existsSync(path.join(newPrefix, "node_modules", name)))
+		{
+			dependencyPath = path.join(newPrefix, "node_modules", name)
 		}
+		else {
+			newPrefix = path.join(newPrefix, '..');
+		}
+	}
+	if(!dependencyPath) {
+		dependencyPath = path.join(prefix, "node_modules", name)
+	}
+	const depPackage = require(path.join(dependencyPath, "package.json"));
+	const children = [];
+	parentStack.push(name);
+	if(depPackage.dependencies) {
+		const depChildren = Object.keys(depPackage.dependencies);
+		depChildren.forEach((childName) => {
+			if(parentStack.indexOf(childName) === -1) {
+				const dep = asYarnDependency(dependencyPath, childName, prune, parentStack.concat());
+				if (dep) {
+					children.push(dep);
+				}
+			}
+		});
 	}
 
 	return { name, path: dependencyPath, children };
@@ -146,18 +156,13 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 }
 
 async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 }, (err, stdout) => err ? e(err) : c(stdout)));
-	const match = /^{"type":"tree".*$/m.exec(raw);
-
-	if (!match || match.length !== 1) {
-		throw new Error('Could not parse result of `yarn list --json`');
-	}
-
+	// `yarn list` command does not behave like `npm ls` and as a result is not reliable to get project dependencies, instead let's just mimic what npm does internally (technically this could be shared with npm implementation to be only one like of code)
 	const usingPackagedDependencies = Array.isArray(packagedDependencies);
-	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
+	const rootPackage = require(path.join(cwd, 'package.json'));
+	const trees = Object.keys(rootPackage.dependencies);
 
 	let result = trees
-		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
+		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies, []))
 		.filter(dep => !!dep);
 
 	if (usingPackagedDependencies) {
