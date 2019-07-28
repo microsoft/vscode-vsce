@@ -407,7 +407,6 @@ export class MarkdownProcessor extends BaseProcessor {
 		// Replace Markdown links with urls
 		contents = contents.replace(markdownPathRegex, urlReplace);
 
-		const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g
 		const issueReplace = (all: string, prefix: string, ownerAndRepositoryName: string, issueNumber: string): string => {
 			let result = all;
 			let owner: string;
@@ -431,8 +430,24 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			return result;
 		}
+		const lines = contents.split('\n');
+		const resultLines = [];
+		let inBlock = false;
+		const markdownIssueRegexAtStart = /^()([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
+		const markdownIssueRegexWithSpace = /(\s)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
+		for(let line of lines){
+			if(line.startsWith('```')){
+				inBlock = !inBlock;
+			}
+			if(!inBlock){
+				line = line.replace(markdownIssueRegexAtStart, issueReplace);
+				line = line.replace(markdownIssueRegexWithSpace, issueReplace);
+			}
+			resultLines.push(line);
+		}
+
 		// Replace Markdown issue references with urls
-		contents = contents.replace(markdownIssueRegex, issueReplace);
+		contents = resultLines.join('\n');
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);

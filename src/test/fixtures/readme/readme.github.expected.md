@@ -12,3 +12,15 @@
  * foo/$234/#7
  * [#7](http://shouldnottouchthis/)
  * [other/repositoryName#8](http://shouldnottouchthis/)
+
+```json
+{
+  "color": "#141414"
+}
+```
+
+```json
+{
+  "color": "linear-gradient(to right, #141414, #141414)"
+}
+```
