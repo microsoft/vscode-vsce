@@ -417,9 +417,9 @@ export class MarkdownProcessor extends BaseProcessor {
 				[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
 			}
 
-			if (this.isGitHub){
+			if (this.isGitHub) {
 				if (owner && repositoryName && issueNumber) {
-					 // Issue in external repository
+					// Issue in external repository
 					const issueUrl = urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber);
 					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
 
@@ -465,7 +465,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	// GitHub heuristics
-	private guessBaseUrls(): { content: string; images: string; repository: string} {
+	private guessBaseUrls(): { content: string; images: string; repository: string } {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -619,6 +619,42 @@ export class NLSProcessor extends BaseProcessor {
 		}
 
 		return Promise.resolve(file);
+	}
+}
+
+export class ValidationProcessor extends BaseProcessor {
+
+	private files = new Map<string, string[]>();
+	private duplicates = new Set<string>();
+
+	async onFile(file: IFile): Promise<IFile> {
+		const lower = file.path.toLowerCase();
+		const existing = this.files.get(lower);
+
+		if (existing) {
+			this.duplicates.add(lower);
+			existing.push(file.path);
+		} else {
+			this.files.set(lower, [file.path]);
+		}
+
+		return file;
+	}
+
+	async onEnd() {
+		if (this.duplicates.size === 0) {
+			return;
+		}
+
+		const messages = [`The following files have the same case insensitive path, which isn't supported by the VSIX format:`];
+
+		for (const lower of this.duplicates) {
+			for (const filePath of this.files.get(lower)) {
+				messages.push(`  - ${filePath}`);
+			}
+		}
+
+		throw new Error(messages.join('\n'));
 	}
 }
 
@@ -826,7 +862,8 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ChangelogProcessor(manifest, options),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
-		new NLSProcessor(manifest)
+		new NLSProcessor(manifest),
+		new ValidationProcessor(manifest)
 	];
 }
 

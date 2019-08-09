@@ -1242,6 +1242,30 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should error with files with same case insensitive name', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null)
+		};
+
+		const files = [
+			{ path: 'extension/file.txt' },
+			{ path: 'extension/FILE.txt' },
+		];
+
+		try {
+			await _toVsixManifest(manifest, files);
+		} catch (err) {
+			assert(/have the same case insensitive path/i.test(err.message));
+			return;
+		}
+
+		throw new Error('Should not reach here');
+	});
+
 	describe('qna', () => {
 		it('should use marketplace qna by default', async () => {
 			const xmlManifest = await toXMLManifest({
