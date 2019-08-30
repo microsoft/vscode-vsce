@@ -925,7 +925,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 
 	const files = await collect(manifest, options);
 	if (files.length > 100) {
-		console.log(`This extension consists of ${files.length} separate files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore`);
+		console.log(`This extension consists of ${files.length} separate files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension . You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore`);
 	}
 	const packagePath = await writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)));
 
