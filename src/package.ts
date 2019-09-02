@@ -127,58 +127,6 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
 		.reduce((r, t) => [...r, ...t], []);
 }
 
-/* This list is also maintained by the Marketplace team.
- * Remember to reach out to them when adding new domains.
- */
-const TrustedSVGSources = [
-	'api.bintray.com',
-	'api.travis-ci.com',
-	'api.travis-ci.org',
-	'app.fossa.io',
-	'badge.buildkite.com',
-	'badge.fury.io',
-	'badge.waffle.io',
-	'badgen.net',
-	'badges.frapsoft.com',
-	'badges.gitter.im',
-	'badges.greenkeeper.io',
-	'cdn.travis-ci.com',
-	'cdn.travis-ci.org',
-	'ci.appveyor.com',
-	'circleci.com',
-	'cla.opensource.microsoft.com',
-	'codacy.com',
-	'codeclimate.com',
-	'codecov.io',
-	'coveralls.io',
-	'david-dm.org',
-	'deepscan.io',
-	'dev.azure.com',
-	'docs.rs',
-	'flat.badgen.net',
-	'gemnasium.com',
-	'githost.io',
-	'gitlab.com',
-	'godoc.org',
-	'goreportcard.com',
-	'img.shields.io',
-	'isitmaintained.com',
-	'marketplace.visualstudio.com',
-	'nodesecurity.io',
-	'opencollective.com',
-	'snyk.io',
-	'travis-ci.com',
-	'travis-ci.org',
-	'visualstudio.com',
-	'vsmarketplacebadge.apphb.com',
-	'www.bithound.io',
-	'www.versioneye.com'
-];
-
-function isHostTrusted(host: string): boolean {
-	return TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
-}
-
 function isGitHubRepository(repository: string): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
 }
@@ -448,13 +396,9 @@ export class MarkdownProcessor extends BaseProcessor {
 			if (!/^https:$/i.test(srcUrl.protocol)) {
 				throw new Error(`Images in ${this.name} must come from an HTTPS source: ${src}`);
 			}
-
-			if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl.host)) {
-				throw new Error(`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`);
-			}
 		});
 
-		$('svg').each((_, svg) => {
+		$('svg').each(() => {
 			throw new Error(`SVG tags are not allowed in ${this.name}.`);
 		});
 
@@ -685,19 +629,6 @@ export function validateManifest(manifest: Manifest): Manifest {
 	if (/\.svg$/i.test(manifest.icon || '')) {
 		throw new Error(`SVGs can't be used as icons: ${manifest.icon}`);
 	}
-
-	(manifest.badges || []).forEach(badge => {
-		const decodedUrl = decodeURI(badge.url);
-		const srcUrl = url.parse(decodedUrl);
-
-		if (!/^https:$/i.test(srcUrl.protocol)) {
-			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);
-		}
-
-		if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl.host)) {
-			throw new Error(`Badge SVGs are restricted. Please use other file image formats, such as PNG: ${badge.url}`);
-		}
-	});
 
 	Object.keys((manifest.dependencies || {})).forEach(dep => {
 		if (dep === 'vscode') {

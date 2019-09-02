@@ -266,25 +266,6 @@ describe('validateManifest', () => {
 		assert(validateManifest(createManifest({ icon: 'icon.png' })));
 		assert.throws(() => { validateManifest(createManifest({ icon: 'icon.svg' })); });
 	});
-
-	it('should prevent badges from non HTTPS sources', () => {
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })); });
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
-	});
-
-	it('should allow non SVG badges', () => {
-		assert(validateManifest(createManifest({ badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }] })));
-	});
-
-	it('should allow SVG badges from trusted sources', () => {
-		assert(validateManifest(createManifest({ badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] })));
-	});
-
-	it('should prevent SVG badges from non trusted sources', () => {
-		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
-		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/410.sv%67', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
-	});
 });
 
 describe('toVsixManifest', () => {
@@ -1594,44 +1575,6 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
-	});
-
-	it('should prevent SVGs from not trusted sources', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
-		const contents = `![title](https://foo/hello.svg)`;
-		const processor = new ReadmeProcessor(manifest, {});
-		const readme = { path: 'extension/readme.md', contents };
-
-		await throws(() => processor.onFile(readme));
-	});
-
-	it('should allow SVGs from trusted sources', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
-		const contents = `![title](https://badges.gitter.im/hello.svg)`;
-		const processor = new ReadmeProcessor(manifest, {});
-		const readme = { path: 'extension/readme.md', contents };
-
-		const file = await processor.onFile(readme);
-		assert(file);
-	});
-
-	it('should prevent SVGs from not trusted sources in img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
-		const contents = `<img src="https://foo/hello.svg" />`;
-		const processor = new ReadmeProcessor(manifest, {});
-		const readme = { path: 'extension/readme.md', contents };
-
-		await throws(() => processor.onFile(readme));
-	});
-
-	it('should allow SVGs from trusted sources in img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
-		const contents = `<img src="https://badges.gitter.im/hello.svg" />`;
-		const processor = new ReadmeProcessor(manifest, {});
-		const readme = { path: 'extension/readme.md', contents };
-
-		const file = await processor.onFile(readme);
-		assert(file);
 	});
 
 	it('should prevent SVG tags', async () => {
