@@ -24,11 +24,11 @@
     "vsce": "out/vsce"
   },
   "scripts": {
-    "compile": "tsc && cpx src/vsce out",
-    "watch": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\"",
-    "watch-test": "concurrently \"tsc --watch\" \"cpx --watch src/vsce out\" \"mocha --watch\"",
+    "compile": "tsc && cp src/vsce out/vsce",
+    "watch": "cp src/vsce out/vsce && tsc --watch",
+    "watch-test": "cp src/vsce out/vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
     "test": "mocha",
-    "prepublishOnly": "tsc && cpx src/vsce out && mocha",
+    "prepublishOnly": "tsc && cp src/vsce out/vsce && mocha",
     "vsce": "out/vsce"
   },
   "engines": {
@@ -72,7 +72,6 @@
     "@types/tmp": "^0.1.0",
     "@types/xml2js": "^0.4.4",
     "concurrently": "^4.1.0",
-    "cpx": "^1.5.0",
     "mocha": "^5.2.0",
     "source-map-support": "^0.4.2",
     "typescript": "^3.4.3",
