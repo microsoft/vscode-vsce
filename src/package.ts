@@ -328,7 +328,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		let contents = await read(file);
 
 		if (/This is the README for your extension /.test(contents)) {
-			throw new Error(`Make sure to edit the README.md file before you publish your extension.`);
+			throw new Error(`Make sure to edit the README.md file before you package or publish your extension.`);
 		}
 
 		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
