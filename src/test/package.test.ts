@@ -1594,4 +1594,13 @@ describe('MarkdownProcessor', () => {
 
 		await throws(() => processor.onFile(readme));
 	});
+
+	it('should catch an unchanged README.md', async () => {
+		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const contents = `This is the README for your extension `;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		await throws(() => processor.onFile(readme));
+	})
 });
