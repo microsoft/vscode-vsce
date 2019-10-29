@@ -384,7 +384,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		}
 
 		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
-		const urlReplace = (all, isImage, title, link) => {
+		const urlReplace = (_, isImage, title, link) => {
 			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
 			if (!this.baseContentUrl && !this.baseImagesUrl) {
@@ -404,8 +404,25 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			return `${isImage}[${title}](${urljoin(prefix, link)})`;
 		};
+
 		// Replace Markdown links with urls
 		contents = contents.replace(markdownPathRegex, urlReplace);
+
+		// Replace <img> links with urls
+		contents = contents.replace(/<img.+?src=["']([/.\w\s-]+)['"].*?>/g, (all, link) => {
+			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+
+			if (!this.baseImagesUrl && isLinkRelative) {
+				throw new Error(`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`);
+			}
+			const prefix = this.baseImagesUrl;
+
+			if (!prefix || !isLinkRelative) {
+				return all;
+			}
+
+			return all.replace(link, urljoin(prefix, link));
+		});
 
 		const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g
 		const issueReplace = (all: string, prefix: string, ownerAndRepositoryName: string, issueNumber: string): string => {

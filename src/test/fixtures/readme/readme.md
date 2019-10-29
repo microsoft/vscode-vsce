@@ -21,6 +21,7 @@ The status bar lets you quickly navigate to any issue and you can see all positi
 [![Jump to issues](images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
 [![Jump to issues](images/SpellMDDemo2.gif)](monkey)
 ![](images/SpellMDDemo2.gif)
+<img src="/images/myImage.gif">
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.
 
