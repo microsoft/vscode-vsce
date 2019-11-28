@@ -1,10 +1,9 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log } from './util';
-import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';

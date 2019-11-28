@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
-import { CancellationToken, log } from './util';
+import { CancellationToken } from './util';
 
 interface IOptions {
 	cwd?: string;

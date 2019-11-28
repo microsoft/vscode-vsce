@@ -71,7 +71,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
-		return toVsixManifest(assets, vsix);
+		return toVsixManifest(vsix);
 	});
 }
 

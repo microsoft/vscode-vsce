@@ -4,7 +4,7 @@ import { tableView, wordTrim } from './viewutils';
 
 const pageSize = 100;
 
-export async function search(searchText: string, json: boolean = false, pageNumber: number = 1): Promise<any> {
+export async function search(searchText: string, json: boolean = false): Promise<any> {
 	const flags = [];
 	const api = getPublicGalleryAPI();
 	const results = await api.extensionQuery({

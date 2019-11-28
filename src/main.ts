@@ -7,12 +7,12 @@ import { show } from './show';
 import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, isCancelledError, log } from './util';
+import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 const pkg = require('../package.json');
 
-function fatal<T>(message: any, ...args: any[]): void {
+function fatal(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
 		message = message.message;
 

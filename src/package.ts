@@ -17,11 +17,6 @@ import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
 
-interface IReadFile {
-	(filePath: string): Promise<Buffer>;
-	(filePath: string, encoding?: string): Promise<string>;
-}
-
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const stat = denodeify(fs.stat);
@@ -472,7 +467,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			}
 		});
 
-		$('svg').each((_, svg) => {
+		$('svg').each(() => {
 			throw new Error(`SVG tags are not allowed in ${this.name}.`);
 		});
 
@@ -761,7 +756,7 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 
 }
 
-export function toVsixManifest(assets: IAsset[], vsix: any, options: IPackageOptions = {}): Promise<string> {
+export function toVsixManifest(vsix: any): Promise<string> {
 	return readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
@@ -853,7 +848,7 @@ function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: stri
 	});
 }
 
-export function processFiles(processors: IProcessor[], files: IFile[], options: IPackageOptions = {}): Promise<IFile[]> {
+export function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
 	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
 	return Promise.all(processedFiles).then(files => {
@@ -861,7 +856,7 @@ export function processFiles(processors: IProcessor[], files: IFile[], options: 
 			const assets = _.flatten(processors.map(p => p.assets));
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
-			return Promise.all([toVsixManifest(assets, vsix, options), toContentTypes(files)]).then(result => {
+			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
 				return [
 					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
 					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
@@ -895,7 +890,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	return collectFiles(cwd, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
-		return processFiles(processors, files, options);
+		return processFiles(processors, files);
 	});
 }
 
@@ -920,20 +915,16 @@ function getDefaultPackageName(manifest: Manifest): string {
 	return `${manifest.name}-${manifest.version}.vsix`;
 }
 
-function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<Manifest> {
+async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
-		return Promise.resolve(manifest);
+		return;
 	}
 
 	console.warn(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
-	return exec(`${useYarn ? 'yarn' : 'npm'} run vscode:prepublish`, { cwd, maxBuffer: 5000 * 1024 })
-		.then(({ stdout, stderr }) => {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-			return Promise.resolve(manifest);
-		})
-		.catch(err => Promise.reject(err.message));
+	const { stdout, stderr } = await exec(`${useYarn ? 'yarn' : 'npm'} run vscode:prepublish`, { cwd, maxBuffer: 5000 * 1024 });
+	process.stdout.write(stdout);
+	process.stderr.write(stderr);
 }
 
 async function getPackagePath(cwd: string, manifest: Manifest, options: IPackageOptions = {}): Promise<string> {
@@ -957,8 +948,8 @@ async function getPackagePath(cwd: string, manifest: Manifest, options: IPackage
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 
-	let manifest = await readManifest(cwd);
-	manifest = await prepublish(cwd, manifest, options.useYarn);
+	const manifest = await readManifest(cwd);
+	await prepublish(cwd, manifest, options.useYarn);
 
 	const files = await collect(manifest, options);
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
@@ -996,7 +987,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
  */
 export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<string[]> {
 	return readManifest(cwd)
-		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile));
+		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile));
 }
 
 /**
@@ -1005,6 +996,6 @@ export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependen
 export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<void> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest, useYarn))
-		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
+		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }
