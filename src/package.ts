@@ -897,10 +897,10 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	});
 }
 
-function writeVsix(files: IFile[], packagePath: string): Promise<string> {
+function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 	return unlink(packagePath)
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
-		.then(() => new Promise<string>((c, e) => {
+		.then(() => new Promise((c, e) => {
 			const zip = new yazl.ZipFile();
 			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? new Buffer(f.contents, 'utf8') : f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();
@@ -910,23 +910,12 @@ function writeVsix(files: IFile[], packagePath: string): Promise<string> {
 
 			zip.outputStream.once('error', e);
 			zipStream.once('error', e);
-			zipStream.once('finish', () => c(packagePath));
+			zipStream.once('finish', () => c());
 		}));
 }
 
-function defaultPackagePath(cwd: string, manifest: Manifest): string {
-	return path.join(cwd, `${manifest.name}-${manifest.version}.vsix`);
-}
-
-function getPackagePath(packagePath: string, cwd: string, manifest: Manifest): string {
-	if (packagePath) {
-		if (path.extname(packagePath) !== '') {
-			return packagePath;
-		} else {
-			cwd = packagePath;
-		}
-	}
-	return defaultPackagePath(cwd, manifest);
+function getDefaultPackageName(manifest: Manifest): string {
+	return `${manifest.name}-${manifest.version}.vsix`;
 }
 
 function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<Manifest> {
@@ -945,6 +934,24 @@ function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): 
 		.catch(err => Promise.reject(err.message));
 }
 
+async function getPackagePath(cwd: string, manifest: Manifest, options: IPackageOptions = {}): Promise<string> {
+	if (!options.packagePath) {
+		return path.join(cwd, getDefaultPackageName(manifest));
+	}
+
+	try {
+		const _stat = await stat(options.packagePath);
+
+		if (_stat.isDirectory()) {
+			return path.join(options.packagePath, getDefaultPackageName(manifest));
+		} else {
+			return options.packagePath;
+		}
+	} catch {
+		return options.packagePath;
+	}
+}
+
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 
@@ -958,10 +965,10 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 		console.log(`This extension consists of ${files.length} files, out of which ${jsFiles.length} are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension . You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore`);
 	}
 
-	const packagePath = await writeVsix(files, path.resolve(getPackagePath(options.packagePath, cwd, manifest)));
+	const packagePath = await getPackagePath(cwd, manifest, options);
+	await writeVsix(files, path.resolve(packagePath));
 
 	return { manifest, packagePath, files };
-
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
