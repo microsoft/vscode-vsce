@@ -63,7 +63,8 @@ module.exports = function (argv: string[]): void {
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
-		.action(({ yarn, packagedDependencies }) => main(ls(undefined, yarn, packagedDependencies)));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action(({ yarn, packagedDependencies, ignoreFile }) => main(ls(undefined, yarn, packagedDependencies, ignoreFile)));
 
 	program
 		.command('package')
@@ -72,7 +73,8 @@ module.exports = function (argv: string[]): void {
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm')
-		.action(({ out, baseContentUrl, baseImagesUrl, yarn }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action(({ out, baseContentUrl, baseImagesUrl, yarn, ignoreFile }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile })));
 
 	program
 		.command('publish [<version>]')
@@ -84,7 +86,8 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
 		.option('--noVerify')
-		.action((version, { pat, message, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify }) => main(publish({ pat, commitMessage: message, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action((version, { pat, message, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile }) => main(publish({ pat, commitMessage: message, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify, ignoreFile })));
 
 	program
 		.command('unpublish [<extensionid>]')

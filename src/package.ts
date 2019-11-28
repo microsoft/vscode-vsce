@@ -69,6 +69,7 @@ export interface IPackageOptions {
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	dependencyEntryPoints?: string[];
+	ignoreFile?: string;
 }
 
 export interface IProcessor {
@@ -827,12 +828,12 @@ function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: s
 	});
 }
 
-function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<string[]> {
 	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
-		return readFile(path.join(cwd, '.vscodeignore'), 'utf8')
-			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(''))
+		return readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
+			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve(''))
 
 			// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
 			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s).filter(i => !/^\s*#/.test(i)))
@@ -888,9 +889,10 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const cwd = options.cwd || process.cwd();
 	const useYarn = options.useYarn || false;
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
+	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn, packagedDependencies).then(fileNames => {
+	return collectFiles(cwd, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files, options);
@@ -992,17 +994,17 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 /**
  * Lists the files included in the extension's package. Does not run prepublish.
  */
-export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[]): Promise<string[]> {
+export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<string[]> {
 	return readManifest(cwd)
-		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies));
+		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile));
 }
 
 /**
  * Lists the files included in the extension's package. Runs prepublish.
  */
-export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[]): Promise<void> {
+export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<void> {
 	return readManifest(cwd)
 		.then(manifest => prepublish(cwd, manifest, useYarn))
-		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies))
+		.then(manifest => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }
