@@ -918,6 +918,17 @@ function defaultPackagePath(cwd: string, manifest: Manifest): string {
 	return path.join(cwd, `${manifest.name}-${manifest.version}.vsix`);
 }
 
+function getPackagePath(packagePath: string, cwd: string, manifest: Manifest): string {
+	if (packagePath) {
+		if (path.extname(packagePath) !== '') {
+			return packagePath;
+		} else {
+			cwd = packagePath;
+		}
+	}
+	return defaultPackagePath(cwd, manifest);
+}
+
 function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<Manifest> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return Promise.resolve(manifest);
@@ -947,9 +958,10 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 		console.log(`This extension consists of ${files.length} files, out of which ${jsFiles.length} are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension . You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore`);
 	}
 
-	const packagePath = await writeVsix(files, path.resolve(options.packagePath || defaultPackagePath(cwd, manifest)));
+	const packagePath = await writeVsix(files, path.resolve(getPackagePath(options.packagePath, cwd, manifest)));
 
 	return { manifest, packagePath, files };
+
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
