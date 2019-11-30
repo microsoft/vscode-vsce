@@ -92,6 +92,7 @@ export interface IPublishOptions {
 	commitMessage?: string;
 	cwd?: string;
 	pat?: string;
+	force?: boolean;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
@@ -187,14 +188,19 @@ export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	}
 
 	return promise.then(({ publisher, name }) => {
+		
 		const fullName = `${publisher}.${name}`;
 		const pat = options.pat
 			? Promise.resolve(options.pat)
 			: getPublisher(publisher).then(p => p.pat);
 
-		return read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
-			.then(() => pat)
+		const force = options.force;
+		
+		return (!force ? (
+			read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `)
+			.then(answer => /^y$/i.test(answer) ? pat : Promise.reject('Aborted'))
+			//.then(() => pat)
+		) : pat)
 			.then(getGalleryAPI)
 			.then(api => api.deleteExtension(publisher, name))
 			.then(() => log.done(`Deleted extension: ${fullName}!`));
