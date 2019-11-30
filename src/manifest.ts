@@ -42,6 +42,7 @@ export interface Manifest {
 	_testing?: string;
 	enableProposedApi?: boolean;
 	qna?: 'marketplace' | string | false;
+	extensionKind?: string[];
 
 	// optional (npm)
 	author?: string | Person;
