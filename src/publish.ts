@@ -92,7 +92,6 @@ export interface IPublishOptions {
 	commitMessage?: string;
 	cwd?: string;
 	pat?: string;
-	force?: boolean;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
@@ -175,34 +174,33 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 export interface IUnpublishOptions extends IPublishOptions {
 	id?: string;
+	force?: boolean;
 }
 
-export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
-	let promise: Promise<{ publisher: string; name: string; }>;
+export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+	let publisher: string, name: string;
 
 	if (options.id) {
-		const [publisher, name] = options.id.split('.');
-		promise = Promise.resolve(({ publisher, name }));
+		[publisher, name] = options.id.split('.');
 	} else {
-		promise = readManifest(options.cwd);
+		const manifest = await readManifest(options.cwd);
+		publisher = manifest.publisher;
+		name = manifest.name;
 	}
 
-	return promise.then(({ publisher, name }) => {
-		
-		const fullName = `${publisher}.${name}`;
-		const pat = options.pat
-			? Promise.resolve(options.pat)
-			: getPublisher(publisher).then(p => p.pat);
+	const fullName = `${publisher}.${name}`;
 
-		const force = options.force;
-		
-		return (!force ? (
-			read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? pat : Promise.reject('Aborted'))
-			//.then(() => pat)
-		) : pat)
-			.then(getGalleryAPI)
-			.then(api => api.deleteExtension(publisher, name))
-			.then(() => log.done(`Deleted extension: ${fullName}!`));
-	});
+	if (!options.force) {
+		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+
+		if (!/^y$/i.test(answer)) {
+			throw new Error('Aborted');
+		}
+	}
+
+	const pat = options.pat || (await getPublisher(publisher).then(p => p.pat));
+	const api = await getGalleryAPI(pat);
+
+	await api.deleteExtension(publisher, name);
+	log.done(`Deleted extension: ${fullName}!`);
 }
