@@ -477,7 +477,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		return {
 			path: file.path,
-			contents: new Buffer(contents)
+			contents: Buffer.from(contents, 'utf8')
 		};
 	}
 
@@ -862,8 +862,8 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
 				return [
-					{ path: 'extension.vsixmanifest', contents: new Buffer(result[0], 'utf8') },
-					{ path: '[Content_Types].xml', contents: new Buffer(result[1], 'utf8') },
+					{ path: 'extension.vsixmanifest', contents: Buffer.from(result[0], 'utf8') },
+					{ path: '[Content_Types].xml', contents: Buffer.from(result[1], 'utf8') },
 					...files
 				];
 			});
@@ -903,7 +903,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 		.catch(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null))
 		.then(() => new Promise((c, e) => {
 			const zip = new yazl.ZipFile();
-			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? new Buffer(f.contents, 'utf8') : f.contents, f.path) : zip.addFile(f.localPath, f.path));
+			files.forEach(f => f.contents ? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path) : zip.addFile(f.localPath, f.path));
 			zip.end();
 
 			const zipStream = fs.createWriteStream(packagePath);

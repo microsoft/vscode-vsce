@@ -359,7 +359,7 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/readme.md', contents: new Buffer('') }
+			{ path: 'extension/readme.md', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
@@ -381,7 +381,7 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/changelog.md', contents: new Buffer('') }
+			{ path: 'extension/changelog.md', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
@@ -1018,8 +1018,8 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/de.json', contents: new Buffer('') },
-			{ path: 'extension/translations/pt.json', contents: new Buffer('') }
+			{ path: 'extension/de.json', contents: Buffer.from('') },
+			{ path: 'extension/translations/pt.json', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
