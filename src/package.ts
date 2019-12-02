@@ -237,7 +237,7 @@ class ManifestProcessor extends BaseProcessor {
 
 	async onEnd(): Promise<void> {
 		if (typeof this.manifest.extensionKind === 'string') {
-			util.log.warn(`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://github.com/microsoft/vscode/issues/85819`);
+			util.log.warn(`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://aka.ms/vscode/api/incorrect-execution-location`);
 		}
 
 		if (this.manifest.publisher === 'vscode-samples') {
