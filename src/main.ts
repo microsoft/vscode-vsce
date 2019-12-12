@@ -93,7 +93,8 @@ module.exports = function (argv: string[]): void {
 		.command('unpublish [<extensionid>]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action((id, { pat }) => main(unpublish({ id, pat })));
+		.option('-f, --force', 'Forces Unpublished Extension')
+		.action((id, { pat, force }) => main(unpublish({ id, pat, force })));
 
 	program
 		.command('ls-publishers')

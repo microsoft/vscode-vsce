@@ -236,6 +236,10 @@ class ManifestProcessor extends BaseProcessor {
 	}
 
 	async onEnd(): Promise<void> {
+		if (typeof this.manifest.extensionKind === 'string') {
+			util.log.warn(`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://aka.ms/vscode/api/incorrect-execution-location`);
+		}
+
 		if (this.manifest.publisher === 'vscode-samples') {
 			throw new Error('It\'s not allowed to use the \'vscode-samples\' publisher. Learn more at: https://code.visualstudio.com/api/working-with-extensions/publishing-extension.');
 		}
@@ -473,7 +477,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		return {
 			path: file.path,
-			contents: Buffer.from(contents)
+			contents: Buffer.from(contents, 'utf8')
 		};
 	}
 
