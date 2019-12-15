@@ -10,7 +10,7 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
-const pkg = require('../package.json');
+const { name, version } = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
@@ -37,7 +37,7 @@ function main(task: Promise<any>): void {
 	const token = new CancellationToken();
 
 	if (isatty(1)) {
-		getLatestVersion(pkg.name, token)
+		getLatestVersion(name, token)
 			.then(version => latestVersion = version)
 			.catch(_ => { /* noop */ });
 	}
@@ -45,8 +45,8 @@ function main(task: Promise<any>): void {
 	task
 		.catch(fatal)
 		.then(() => {
-			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-				log.info(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
+			if (latestVersion && semver.gt(latestVersion, version)) {
+				log.info(`\nThe latest version of ${name} is ${latestVersion} and you have ${version}.\nUpdate it now: npm install -g ${name}`);
 			} else {
 				token.cancel();
 			}
@@ -55,7 +55,7 @@ function main(task: Promise<any>): void {
 
 module.exports = function (argv: string[]): void {
 	program
-		.version(pkg.version)
+		.version(version)
 		.usage('<command> [options]');
 
 	program
