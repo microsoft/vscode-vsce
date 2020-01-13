@@ -73,7 +73,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 
 			return promise
 				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few seconds for it to show up).`));
+				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few minutes for it to show up).`));
 		})
 		.catch(err => {
 			const message = err && err.message || '';
