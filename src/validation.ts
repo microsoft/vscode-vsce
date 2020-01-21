@@ -31,6 +31,10 @@ export function validateVersion(version: string): void {
 	if (!semver.valid(version)) {
 		throw new Error(`Invalid extension version '${version}'`);
 	}
+
+	if (semver.prerelease(version)) {
+		throw new Error(`Invalid extension version '${version}: semver prerelease field is not supported`);
+	}
 }
 
 export function validateEngineCompatibility(version: string): void {

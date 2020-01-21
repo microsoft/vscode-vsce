@@ -57,7 +57,6 @@ describe('validateVersion', () => {
 	it('should validate', () => {
 		validateVersion('1.0.0');
 		validateVersion('0.1.1');
-		validateVersion('0.1.1-pre');
 
 		assert.throws(() => validateVersion('.'));
 		assert.throws(() => validateVersion('..'));
@@ -66,6 +65,7 @@ describe('validateVersion', () => {
 		assert.throws(() => validateVersion('.0.1'));
 		assert.throws(() => validateVersion('0.1.'));
 		assert.throws(() => validateVersion('0.0.0.1'));
+		assert.throws(() => validateVersion('0.1.1-pre'));
 	});
 });
 
