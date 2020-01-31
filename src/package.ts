@@ -7,7 +7,6 @@ import { Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
-import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
 import * as markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
@@ -16,6 +15,7 @@ import { lookup } from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
+import ignore from 'ignore'
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -26,8 +26,6 @@ const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
-
-const MinimatchOptions: minimatch.IOptions = { dot: true };
 
 export interface IFile {
 	path: string;
@@ -834,21 +832,7 @@ function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: stri
 		return readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve(''))
 
-			// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
-			.then(rawIgnore => rawIgnore.split(/[\n\r]/).map(s => s.trim()).filter(s => !!s).filter(i => !/^\s*#/.test(i)))
-
-			// Add '/**' to possible folder names
-			.then(ignore => [...ignore, ...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => /\/$/.test(i) ? `${i}**` : `${i}/**`)])
-
-			// Combine with default ignore list
-			.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
-
-			// Split into ignore and negate list
-			.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
-			.then(r => ({ ignore: r[0], negate: r[1] }))
-
-			// Filter out files
-			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i, MinimatchOptions)) || negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))));
+			.then(rawIgnore => ignore().add(defaultIgnore).add(rawIgnore).filter(files))
 	});
 }
 
