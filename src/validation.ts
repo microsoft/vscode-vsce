@@ -31,10 +31,6 @@ export function validateVersion(version: string): void {
 	if (!semver.valid(version)) {
 		throw new Error(`Invalid extension version '${version}'`);
 	}
-
-	if (semver.prerelease(version)) {
-		throw new Error(`Invalid extension version '${version}: semver prerelease field is not supported`);
-	}
 }
 
 export function validateEngineCompatibility(version: string): void {
@@ -48,7 +44,7 @@ export function validateEngineCompatibility(version: string): void {
 }
 
 /**
- * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode 
+ * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode
  */
 export function validateVSCodeTypesCompatibility(engineVersion: string, typeVersion: string): void {
 	if (engineVersion === '*') {
