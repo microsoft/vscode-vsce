@@ -9,7 +9,10 @@
 			"problemMatcher": [
 				"$tsc-watch"
 			],
-			"group": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 			"isBackground": true
 		}
 	]
