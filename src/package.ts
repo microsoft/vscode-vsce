@@ -65,6 +65,7 @@ export interface IPackageOptions {
 	useYarn?: boolean;
 	dependencyEntryPoints?: string[];
 	ignoreFile?: string;
+	expandGitHubIssueLinks?: boolean;
 }
 
 export interface IProcessor {
@@ -356,6 +357,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseImagesUrl: string;
 	private isGitHub: boolean;
 	private repositoryUrl: string;
+	private expandGitHubIssueLinks: boolean;
 
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
@@ -366,6 +368,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 		this.repositoryUrl = (guess && guess.repository);
 		this.isGitHub = isGitHubRepository(this.repositoryUrl);
+		this.expandGitHubIssueLinks = typeof options.expandGitHubIssueLinks === 'boolean' ? options.expandGitHubIssueLinks : true;
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
@@ -424,17 +427,17 @@ export class MarkdownProcessor extends BaseProcessor {
 			return all.replace(link, urljoin(prefix, link));
 		});
 
-		const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g
-		const issueReplace = (all: string, prefix: string, ownerAndRepositoryName: string, issueNumber: string): string => {
-			let result = all;
-			let owner: string;
-			let repositoryName: string;
+		if (this.isGitHub && this.expandGitHubIssueLinks) {
+			const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g
+			const issueReplace = (all: string, prefix: string, ownerAndRepositoryName: string, issueNumber: string): string => {
+				let result = all;
+				let owner: string;
+				let repositoryName: string;
 
-			if (ownerAndRepositoryName) {
-				[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
-			}
+				if (ownerAndRepositoryName) {
+					[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
+				}
 
-			if (this.isGitHub) {
 				if (owner && repositoryName && issueNumber) {
 					// Issue in external repository
 					const issueUrl = urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber);
@@ -444,12 +447,12 @@ export class MarkdownProcessor extends BaseProcessor {
 					// Issue in own repository
 					result = prefix + `[#${issueNumber}](${urljoin(this.repositoryUrl, 'issues', issueNumber)})`;
 				}
-			}
 
-			return result;
+				return result;
+			}
+			// Replace Markdown issue references with urls
+			contents = contents.replace(markdownIssueRegex, issueReplace);
 		}
-		// Replace Markdown issue references with urls
-		contents = contents.replace(markdownIssueRegex, issueReplace);
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
