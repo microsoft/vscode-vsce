@@ -927,7 +927,7 @@ async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = fa
 		return;
 	}
 
-	console.warn(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
+	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
 	const { stdout, stderr } = await exec(`${useYarn ? 'yarn' : 'npm'} run vscode:prepublish`, { cwd, maxBuffer: 5000 * 1024 });
 	process.stdout.write(stdout);
