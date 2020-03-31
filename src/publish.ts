@@ -99,9 +99,15 @@ export interface IPublishOptions {
 	ignoreFile?: string;
 }
 
-function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
+async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
 	if (!version) {
 		return Promise.resolve(null);
+	}
+
+	const manifest = await readManifest(cwd);
+
+	if (manifest.version === version) {
+		return null;
 	}
 
 	switch (version) {
@@ -127,14 +133,15 @@ function versionBump(cwd: string = process.cwd(), version?: string, commitMessag
 		command = `${command} -m "${commitMessage}"`;
 	}
 
-	// call `npm version` to do our dirty work
-	return exec(command, { cwd })
-		.then(({ stdout, stderr }) => {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-			return Promise.resolve(null);
-		})
-		.catch(err => Promise.reject(err.message));
+	try {
+		// call `npm version` to do our dirty work
+		const { stdout, stderr } = await exec(command, { cwd });
+		process.stdout.write(stdout);
+		process.stderr.write(stderr);
+		return null;
+	} catch (err) {
+		throw err.message;
+	}
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
