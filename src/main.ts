@@ -138,9 +138,7 @@ module.exports = function (argv: string[]): void {
 		.command('*', '', { noHelp: true })
 		.action((cmd: string) => {
 			program.help(help => {
-				const suggestion = program.commands.map(c => c._name).find(c => {
-					return leven(c, cmd) < c.length * 0.4;
-				});
+				const suggestion = program.commands.map(c => c._name).find(c => leven(c, cmd) < c.length * 0.4);
 
 				help = `${help}
 Unknown command '${cmd}'`;
