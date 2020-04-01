@@ -40,7 +40,6 @@
     "cheerio": "^1.0.0-rc.1",
     "commander": "^2.8.1",
     "denodeify": "^1.2.1",
-    "didyoumean": "^1.2.1",
     "glob": "^7.0.6",
     "lodash": "^4.17.15",
     "markdown-it": "^8.3.1",
