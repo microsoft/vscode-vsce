@@ -180,6 +180,10 @@ function isGitHubRepository(repository: string): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
 }
 
+function isGitLabRepository(repository: string): boolean {
+	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository || '');
+}
+
 class ManifestProcessor extends BaseProcessor {
 
 	constructor(manifest: Manifest) {
@@ -193,6 +197,7 @@ class ManifestProcessor extends BaseProcessor {
 
 		const repository = getRepositoryUrl(manifest.repository);
 		const isGitHub = isGitHubRepository(repository);
+		const isGitLab = isGitLabRepository(repository);
 
 		let enableMarketplaceQnA: boolean | undefined;
 		let customerQnALink: string | undefined;
@@ -233,6 +238,10 @@ class ManifestProcessor extends BaseProcessor {
 
 		if (isGitHub) {
 			this.vsix.links.github = repository;
+		}
+
+		if (isGitLab) {
+			this.vsix.links.gitlab = repository;
 		}
 	}
 
@@ -356,18 +365,29 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 	private isGitHub: boolean;
+	private isGitLab: boolean;
 	private repositoryUrl: string;
 	private expandGitHubIssueLinks: boolean;
 
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
+		this.repositoryUrl = null;
+
+		if (typeof this.manifest.repository === 'string') {
+			this.repositoryUrl = this.manifest.repository;
+		} else if (this.manifest.repository && typeof this.manifest.repository['url'] === 'string') {
+			this.repositoryUrl = this.manifest.repository['url'];
+		}
+
+		this.isGitHub = isGitHubRepository(this.repositoryUrl);
+		this.isGitLab = isGitLabRepository(this.repositoryUrl);
+
 		const guess = this.guessBaseUrls();
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 		this.repositoryUrl = (guess && guess.repository);
-		this.isGitHub = isGitHubRepository(this.repositoryUrl);
 		this.expandGitHubIssueLinks = typeof options.expandGitHubIssueLinks === 'boolean' ? options.expandGitHubIssueLinks : true;
 	}
 
@@ -486,20 +506,23 @@ export class MarkdownProcessor extends BaseProcessor {
 
 	// GitHub heuristics
 	private guessBaseUrls(): { content: string; images: string; repository: string } {
-		let repository = null;
-
-		if (typeof this.manifest.repository === 'string') {
-			repository = this.manifest.repository;
-		} else if (this.manifest.repository && typeof this.manifest.repository['url'] === 'string') {
-			repository = this.manifest.repository['url'];
-		}
-
-		if (!repository) {
+		if (!this.repositoryUrl) {
 			return null;
 		}
 
-		const regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
-		const match = regex.exec(repository);
+		let regex = null;
+
+		if (this.isGitHub) {
+			regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
+		} else if (this.isGitLab) {
+			regex = /gitlab\.com\/([^/]+)\/([^/]+)(\/|$)/;
+		}
+
+		if (!regex) {
+			return null;
+		}
+
+		const match = regex.exec(this.repositoryUrl);
 
 		if (!match) {
 			return null;
@@ -508,11 +531,19 @@ export class MarkdownProcessor extends BaseProcessor {
 		const account = match[1];
 		const repositoryName = match[2].replace(/\.git$/i, '');
 
-		return {
-			content: `https://github.com/${account}/${repositoryName}/blob/master`,
-			images: `https://github.com/${account}/${repositoryName}/raw/master`,
-			repository: `https://github.com/${account}/${repositoryName}`
-		};
+		if (this.isGitHub) {
+			return {
+				content: `https://github.com/${account}/${repositoryName}/blob/master`,
+				images: `https://github.com/${account}/${repositoryName}/raw/master`,
+				repository: `https://github.com/${account}/${repositoryName}`
+			};
+		} else if (this.isGitLab) {
+			return {
+				content: `https://gitlab.com/${account}/${repositoryName}/-/blob/master`,
+				images: `https://gitlab.com/${account}/${repositoryName}/-/raw/master`,
+				repository: `https://gitlab.com/${account}/${repositoryName}`
+			};
+		}
 	}
 }
 

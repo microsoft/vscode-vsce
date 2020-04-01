@@ -1493,7 +1493,61 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
-	it('should replace img urls with baseImagesUrl', () => {
+	it('should infer baseContentUrl if its a gitlab repo', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository'
+		};
+
+		const root = fixture('readmeGitlab');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo (.git)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git'
+		};
+
+		const root = fixture('readmeGitlab');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it('should replace img urls with baseImagesUrl on a github repository', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1508,6 +1562,37 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, options);
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it('should replace img urls with baseImagesUrl on a gitlab repository', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git'
+		};
+
+		const options = {
+			baseImagesUrl: 'https://gitlab.com/username/repository/path/to'
+		};
+
+		const root = fixture('readmeGitlab');
 		const processor = new ReadmeProcessor(manifest, options);
 		const readme = {
 			path: 'extension/readme.md',
