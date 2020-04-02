@@ -64,16 +64,22 @@
     "@types/markdown-it": "0.0.2",
     "@types/mime": "^1",
     "@types/minimatch": "^3.0.3",
-    "@types/mocha": "^5.2.6",
+    "@types/mocha": "^7.0.2",
     "@types/node": "^8",
     "@types/read": "^0.0.28",
     "@types/semver": "^6.0.0",
     "@types/tmp": "^0.1.0",
     "@types/xml2js": "^0.4.4",
     "concurrently": "^5.1.0",
-    "mocha": "^5.2.0",
+    "mocha": "^7.1.1",
     "source-map-support": "^0.4.2",
     "typescript": "^3.4.3",
     "xml2js": "^0.4.12"
+  },
+  "mocha": {
+    "require": [
+      "source-map-support/register"
+    ],
+    "spec": "out/test"
   }
 }
