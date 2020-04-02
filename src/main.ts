@@ -1,5 +1,5 @@
 import * as program from 'commander';
-import * as didYouMean from 'didyoumean';
+import * as leven from 'leven';
 
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
@@ -138,7 +138,8 @@ module.exports = function (argv: string[]): void {
 		.command('*', '', { noHelp: true })
 		.action((cmd: string) => {
 			program.help(help => {
-				const suggestion = didYouMean(cmd, program.commands.map(c => c._name));
+				const availableCommands = program.commands.map(c => c._name);
+				const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
 				help = `${help}
 Unknown command '${cmd}'`;
