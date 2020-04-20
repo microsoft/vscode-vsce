@@ -20,7 +20,6 @@ import { getDependencies } from './npm';
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const stat = denodeify(fs.stat);
-const exec = denodeify<string, { cwd?: string; env?: any; maxBuffer?: number; }, { stdout: string; stderr: string; error: any }>(cp.exec as any, (error, stdout, stderr) => [undefined, { stdout, stderr, error }]);
 const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
@@ -929,11 +928,12 @@ async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = fa
 
 	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
-	const { stdout, stderr, error } = await exec(`${useYarn ? 'yarn' : 'npm'} run vscode:prepublish`, { cwd, maxBuffer: 5000 * 1024 });
-	process.stdout.write(stdout);
-	// in case of error, stderr gets written by a top-level exception handler
-	if (error !== undefined) throw error;
-	process.stderr.write(stderr);
+	await new Promise((c, e) => {
+		const tool = useYarn ? 'yarn' : 'npm';
+		const child = cp.spawn(tool, ['run', 'vscode:prepublish'], { cwd, shell: true, stdio: 'inherit' });
+		child.on('exit', code => code === 0 ? c() : e(`${tool} failed with exit code ${code}`));
+		child.on('error', e);
+	});
 }
 
 async function getPackagePath(cwd: string, manifest: Manifest, options: IPackageOptions = {}): Promise<string> {
