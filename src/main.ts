@@ -80,7 +80,7 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
-		.option('-p, --pat <token>', 'Personal Access Token')
+		.option('-p, --pat <token>', 'Personal Access Token', process.env['VSCE_PAT'])
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
