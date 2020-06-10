@@ -109,6 +109,7 @@ describe('validateVSCodeTypesCompatibility', () => {
 
 		validateVSCodeTypesCompatibility('1.30.0', '1.30.0');
 		validateVSCodeTypesCompatibility('1.30.0', '1.20.0');
+		validateVSCodeTypesCompatibility('1.46.0', '1.45.1');
 
 		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'));
 		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '^1.40.0'));
