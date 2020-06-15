@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
-import { CancellationToken, log } from './util';
+import { CancellationToken } from './util';
 
 interface IOptions {
 	cwd?: string;
@@ -54,7 +54,7 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 
 function getNpmDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
-		.then(() => exec('npm list --production --parseable --depth=99999', { cwd, maxBuffer: 5000 * 1024 }))
+		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 }))
 		.then(({ stdout }) => stdout
 			.split(/[\r\n]/)
 			.filter(dir => path.isAbsolute(dir)));

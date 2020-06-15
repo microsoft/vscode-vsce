@@ -6,7 +6,7 @@ import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
-const writeFile = denodeify<string, string, void>(fs.writeFile as any);
+const writeFile = denodeify<string, string, object, void>(fs.writeFile as any);
 const storePath = path.join(home(), '.vsce');
 
 export interface IPublisher {
@@ -40,7 +40,7 @@ function load(): Promise<IStore> {
 }
 
 function save(store: IStore): Promise<IStore> {
-	return writeFile(storePath, JSON.stringify(store))
+	return writeFile(storePath, JSON.stringify(store), {mode: '0600'})
 		.then(() => store);
 }
 

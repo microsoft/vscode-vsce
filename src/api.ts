@@ -90,6 +90,13 @@ export interface IListFilesOptions {
 	 * no dependencies will be included.
 	 */
 	packagedDependencies?: string[];
+
+	/**
+	 * The location of an alternative .vscodeignore file to be used.
+	 * The `.vscodeignore` file located at the root of the project will be taken
+	 * instead, if none is specified.
+	 */
+	ignoreFile?: string;
 }
 
 export interface IPublishVSIXOptions {
@@ -135,7 +142,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn, options.packagedDependencies);
+	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn, options.packagedDependencies, options.ignoreFile);
 }
 
 /**

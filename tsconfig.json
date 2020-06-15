@@ -3,7 +3,9 @@
 		"target": "es2015",
 		"module": "commonjs",
 		"declaration": true,
-		"outDir": "out"
+		"outDir": "out",
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	},
 	"include": [
 		"src"

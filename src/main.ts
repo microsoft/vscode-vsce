@@ -1,5 +1,5 @@
 import * as program from 'commander';
-import * as didYouMean from 'didyoumean';
+import * as leven from 'leven';
 
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
@@ -7,12 +7,12 @@ import { show } from './show';
 import { search } from './search';
 import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, isCancelledError, log } from './util';
+import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 const pkg = require('../package.json');
 
-function fatal<T>(message: any, ...args: any[]): void {
+function fatal(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
 		message = message.message;
 
@@ -63,7 +63,8 @@ module.exports = function (argv: string[]): void {
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
-		.action(({ yarn, packagedDependencies }) => main(ls(undefined, yarn, packagedDependencies)));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action(({ yarn, packagedDependencies, ignoreFile }) => main(ls(undefined, yarn, packagedDependencies, ignoreFile)));
 
 	program
 		.command('package')
@@ -72,25 +73,29 @@ module.exports = function (argv: string[]): void {
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm')
-		.action(({ out, baseContentUrl, baseImagesUrl, yarn }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
+		.action(({ out, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile, expandGitHubIssueLinks: noGitHubIssueLinking })));
 
 	program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
-		.option('-p, --pat <token>', 'Personal Access Token')
+		.option('-p, --pat <token>', 'Personal Access Token', process.env['VSCE_PAT'])
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
 		.option('--noVerify')
-		.action((version, { pat, message, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify }) => main(publish({ pat, commitMessage: message, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify })));
+		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.action((version, { pat, message, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile }) => main(publish({ pat, commitMessage: message, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify, ignoreFile })));
 
 	program
 		.command('unpublish [<extensionid>]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.action((id, { pat }) => main(unpublish({ id, pat })));
+		.option('-f, --force', 'Forces Unpublished Extension')
+		.action((id, { pat, force }) => main(unpublish({ id, pat, force })));
 
 	program
 		.command('ls-publishers')
@@ -133,7 +138,8 @@ module.exports = function (argv: string[]): void {
 		.command('*', '', { noHelp: true })
 		.action((cmd: string) => {
 			program.help(help => {
-				const suggestion = didYouMean(cmd, program.commands.map(c => c._name));
+				const availableCommands = program.commands.map(c => c._name);
+				const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
 				help = `${help}
 Unknown command '${cmd}'`;

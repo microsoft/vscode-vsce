@@ -1,10 +1,9 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension, ExtensionQueryFilterType, PagingDirection, SortByType, SortOrderType } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log } from './util';
-import { validatePublisher } from './validation';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
@@ -74,7 +73,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 
 			return promise
 				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few seconds for it to show up).`));
+				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few minutes for it to show up).`));
 		})
 		.catch(err => {
 			const message = err && err.message || '';
@@ -97,11 +96,18 @@ export interface IPublishOptions {
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	noVerify?: boolean;
+	ignoreFile?: string;
 }
 
-function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
+async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
 	if (!version) {
 		return Promise.resolve(null);
+	}
+
+	const manifest = await readManifest(cwd);
+
+	if (manifest.version === version) {
+		return null;
 	}
 
 	switch (version) {
@@ -127,14 +133,15 @@ function versionBump(cwd: string = process.cwd(), version?: string, commitMessag
 		command = `${command} -m "${commitMessage}"`;
 	}
 
-	// call `npm version` to do our dirty work
-	return exec(command, { cwd })
-		.then(({ stdout, stderr }) => {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-			return Promise.resolve(null);
-		})
-		.catch(err => Promise.reject(err.message));
+	try {
+		// call `npm version` to do our dirty work
+		const { stdout, stderr } = await exec(command, { cwd });
+		process.stdout.write(stdout);
+		process.stderr.write(stderr);
+		return null;
+	} catch (err) {
+		throw err.message;
+	}
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
@@ -152,10 +159,11 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseContentUrl = options.baseContentUrl;
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
+		const ignoreFile = options.ignoreFile;
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn }));
+			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
 	}
 
 	return promise.then(({ manifest, packagePath }) => {
@@ -173,29 +181,33 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 export interface IUnpublishOptions extends IPublishOptions {
 	id?: string;
+	force?: boolean;
 }
 
-export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
-	let promise: Promise<{ publisher: string; name: string; }>;
+export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+	let publisher: string, name: string;
 
 	if (options.id) {
-		const [publisher, name] = options.id.split('.');
-		promise = Promise.resolve(({ publisher, name }));
+		[publisher, name] = options.id.split('.');
 	} else {
-		promise = readManifest(options.cwd);
+		const manifest = await readManifest(options.cwd);
+		publisher = manifest.publisher;
+		name = manifest.name;
 	}
 
-	return promise.then(({ publisher, name }) => {
-		const fullName = `${publisher}.${name}`;
-		const pat = options.pat
-			? Promise.resolve(options.pat)
-			: getPublisher(publisher).then(p => p.pat);
+	const fullName = `${publisher}.${name}`;
 
-		return read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
-			.then(() => pat)
-			.then(getGalleryAPI)
-			.then(api => api.deleteExtension(publisher, name))
-			.then(() => log.done(`Deleted extension: ${fullName}!`));
-	});
+	if (!options.force) {
+		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+
+		if (!/^y$/i.test(answer)) {
+			throw new Error('Aborted');
+		}
+	}
+
+	const pat = options.pat || (await getPublisher(publisher).then(p => p.pat));
+	const api = await getGalleryAPI(pat);
+
+	await api.deleteExtension(publisher, name);
+	log.done(`Deleted extension: ${fullName}!`);
 }

@@ -13,16 +13,9 @@ const columns = process.stdout.columns ? process.stdout.columns : 80;
 // unicode charset. For now we use fallback icons when on windows.
 const useFallbackIcons = process.platform === 'win32';
 
-export const icons = useFallbackIcons?
-{
-	download: '\u{2193}',
-	star: '\u{2665}',
-	emptyStar: '\u{2022}',
-} : {
-	download: '\u{2913}',
-	star: '\u{2605}',
-	emptyStar: '\u{2606}',
-};
+export const icons = useFallbackIcons
+	? { download: '\u{2193}', star: '\u{2665}', emptyStar: '\u{2022}', }
+	: { download: '\u{2913}', star: '\u{2605}', emptyStar: '\u{2606}', };
 
 export function formatDate(date) { return date.toLocaleString(fixedLocale, format.date); }
 export function formatTime(date) { return date.toLocaleString(fixedLocale, format.time); }
@@ -53,11 +46,11 @@ export function wordWrap(text: string, width: number = columns): string {
 	return text
 		.replace(/^\s+/, '')
 		.split('')
-		.reduce(([out, buffer, pos], ch, i) => {
+		.reduce(([out, buffer, pos], ch) => {
 			const nl = pos === maxWidth ? `\n${indent}` : '';
 			const newPos: number = nl ? 0 : +pos + 1;
 			return / |-|,|\./.test(ch) ?
-				[`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer+ch, newPos];
+				[`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer + ch, newPos];
 		}, [indent, '', 0])
 		.slice(0, 2)
 		.join('');

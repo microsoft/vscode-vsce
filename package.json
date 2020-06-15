@@ -1,6 +1,6 @@
 {
   "name": "vsce",
-  "version": "1.68.0",
+  "version": "1.76.1",
   "description": "VSCode Extension Manager",
   "repository": {
     "type": "git",
@@ -40,10 +40,10 @@
     "cheerio": "^1.0.0-rc.1",
     "commander": "^2.8.1",
     "denodeify": "^1.2.1",
-    "didyoumean": "^1.2.1",
     "glob": "^7.0.6",
-    "lodash": "^4.17.10",
-    "markdown-it": "^8.3.1",
+    "leven": "^3.1.0",
+    "lodash": "^4.17.15",
+    "markdown-it": "^10.0.0",
     "mime": "^1.3.4",
     "minimatch": "^3.0.3",
     "osenv": "^0.1.3",
@@ -59,22 +59,27 @@
   "devDependencies": {
     "@types/cheerio": "^0.22.1",
     "@types/denodeify": "^1.2.31",
-    "@types/didyoumean": "^1.2.0",
     "@types/glob": "^7.1.1",
     "@types/lodash": "^4.14.123",
     "@types/markdown-it": "0.0.2",
     "@types/mime": "^1",
     "@types/minimatch": "^3.0.3",
-    "@types/mocha": "^5.2.6",
+    "@types/mocha": "^7.0.2",
     "@types/node": "^8",
     "@types/read": "^0.0.28",
     "@types/semver": "^6.0.0",
     "@types/tmp": "^0.1.0",
     "@types/xml2js": "^0.4.4",
-    "concurrently": "^4.1.0",
-    "mocha": "^5.2.0",
+    "concurrently": "^5.1.0",
+    "mocha": "^7.1.1",
     "source-map-support": "^0.4.2",
     "typescript": "^3.4.3",
     "xml2js": "^0.4.12"
+  },
+  "mocha": {
+    "require": [
+      "source-map-support/register"
+    ],
+    "spec": "out/test"
   }
 }

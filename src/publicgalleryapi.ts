@@ -1,19 +1,14 @@
 import { HttpClient, HttpClientResponse } from 'typed-rest-client/HttpClient';
-import {
-	PublishedExtension, ExtensionQueryFlags, FilterCriteria, SortOrderType,
-	SortByType, ExtensionQueryFilterType, TypeInfo
-} from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { PublishedExtension, ExtensionQueryFlags, FilterCriteria, ExtensionQueryFilterType, TypeInfo } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { IHeaders } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
 import { ContractSerializer } from 'azure-devops-node-api/Serialization';
 
 export interface ExtensionQuery {
-	pageNumber?: number;
-	pageSize?: number;
-	sortBy?: SortByType;
-	sortOrder?: SortOrderType;
-	flags?: ExtensionQueryFlags[];
-	criteria?: FilterCriteria[];
-	assetTypes?: string[];
+	readonly pageNumber?: number;
+	readonly pageSize?: number;
+	readonly flags?: ExtensionQueryFlags[];
+	readonly criteria?: FilterCriteria[];
+	readonly assetTypes?: string[];
 }
 
 export class PublicGalleryAPI {
@@ -29,8 +24,6 @@ export class PublicGalleryAPI {
 	async extensionQuery({
 		pageNumber = 1,
 		pageSize = 1,
-		sortBy = SortByType.Relevance,
-		sortOrder = SortOrderType.Default,
 		flags = [],
 		criteria = [],
 		assetTypes = [],

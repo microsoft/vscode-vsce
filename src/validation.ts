@@ -91,13 +91,13 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 
 	const error = new Error(`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`);
 
-	if (typeof typeMajor === 'number' && typeof engineMajor === 'number' && typeMajor > engineMajor) {
+	if (typeMajor > engineMajor) {
 		throw error;
 	}
-	if (typeof typeMinor === 'number' && typeof engineMinor === 'number' && typeMinor > engineMinor) {
+	if (typeMajor === engineMajor && typeMinor > engineMinor) {
 		throw error;
 	}
-	if (typeof typePatch === 'number' && typeof enginePatch === 'number' && typePatch > enginePatch) {
+	if (typeMajor === engineMajor && typeMinor === engineMinor && typePatch > enginePatch) {
 		throw error;
 	}
 }

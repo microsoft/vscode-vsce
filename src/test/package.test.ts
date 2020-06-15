@@ -71,7 +71,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
-		return toVsixManifest(assets, vsix);
+		return toVsixManifest(vsix);
 	});
 }
 
@@ -359,7 +359,7 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/readme.md', contents: new Buffer('') }
+			{ path: 'extension/readme.md', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
@@ -381,7 +381,7 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/changelog.md', contents: new Buffer('') }
+			{ path: 'extension/changelog.md', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
@@ -1018,8 +1018,8 @@ describe('toVsixManifest', () => {
 		};
 
 		const files = [
-			{ path: 'extension/de.json', contents: new Buffer('') },
-			{ path: 'extension/translations/pt.json', contents: new Buffer('') }
+			{ path: 'extension/de.json', contents: Buffer.from('') },
+			{ path: 'extension/translations/pt.json', contents: Buffer.from('') }
 		];
 
 		return _toVsixManifest(manifest, files)
@@ -1545,6 +1545,33 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it('should not replace issue links with urls if its a github repo but issue link expansion is disabled.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository.git'
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, { expandGitHubIssueLinks: false });
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.github.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.github.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
 					});
