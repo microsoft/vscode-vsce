@@ -1642,7 +1642,7 @@ describe('MarkdownProcessor', () => {
 		assert(file);
 	});
 
-	it('should allow SVG from GitHub actions in image tag', async() => {
+	it('should allow SVG from GitHub actions in image tag', async () => {
 		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
 		const contents = `![title](https://github.com/fakeuser/fakerepo/workflows/fakeworkflowname/badge.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
@@ -1652,7 +1652,7 @@ describe('MarkdownProcessor', () => {
 		assert(file);
 	});
 
-	it('should prevent SVG from a GitHub repo in image tag', async() => {
+	it('should prevent SVG from a GitHub repo in image tag', async () => {
 		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
 		const contents = `![title](https://github.com/eviluser/evilrepo/blob/master/malicious.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});

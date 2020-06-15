@@ -171,16 +171,16 @@ const TrustedSVGSources = [
 	'www.versioneye.com'
 ];
 
-function isHostTrusted(host: string): boolean {
-	return TrustedSVGSources.indexOf(host.toLowerCase()) > -1;
-}
-
 function isGitHubRepository(repository: string): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
 }
 
 function isGitHubBadge(href: string): boolean {
-	return isGitHubRepository(href) && /[A-Za-z0-9_-]{1,100}\/workflows\/[^<>:;,?"*|/]+\/badge\.svg$/.test(href || '');
+	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/workflows\/.*badge\.svg/.test(href || '');
+}
+
+function isHostTrusted(url: url.UrlWithStringQuery): boolean {
+	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
 }
 
 class ManifestProcessor extends BaseProcessor {
@@ -472,7 +472,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				throw new Error(`Images in ${this.name} must come from an HTTPS source: ${src}`);
 			}
 
-			if (/\.svg$/i.test(srcUrl.pathname) && (!isHostTrusted(srcUrl.host) && !isGitHubBadge(srcUrl.href))) {
+			if (/\.svg$/i.test(srcUrl.pathname) && (!isHostTrusted(srcUrl))) {
 				throw new Error(`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`);
 			}
 		});
@@ -717,7 +717,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);
 		}
 
-		if (/\.svg$/i.test(srcUrl.pathname) && (!isHostTrusted(srcUrl.host) && !isGitHubBadge(srcUrl.href))) {
+		if (/\.svg$/i.test(srcUrl.pathname) && (!isHostTrusted(srcUrl))) {
 			throw new Error(`Badge SVGs are restricted. Please use other file image formats, such as PNG: ${badge.url}`);
 		}
 	});
