@@ -6,13 +6,31 @@
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `8.x.x`
+- [Node.js](https://nodejs.org/en/) at least `8.x.x` or
+- [Docker](https://docker.com/)
 
 ## Usage
 
 `vsce` is meant to be mainly used as a command line tool. It can also be used a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/master/src/api.ts).
 
 > **Warning:** When using vsce as a library be sure to sanitize any user input used in API calls, as a security measurement.
+
+### via Node.js
+
+To install vsce globally, you can use the following command:
+
+```sh
+npm install -g vsce
+```
+
+### via Docker
+
+To build your own Docker image, first clone this repository and then run the following commands:
+
+```sh
+docker build -t vsce .
+docker run -it -v /host/path/extension:/usr/share/vsce vsce # change /host/path/extension to your actual vsce extension path
+```
 
 ## Development
 
