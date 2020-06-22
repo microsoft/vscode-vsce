@@ -1,9 +1,11 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
+import * as findWorkspaceRoot from 'find-yarn-workspace-root';
 import { CancellationToken } from './util';
+import { Manifest } from './manifest';
+import { readNodeManifest } from './package';
 
 interface IOptions {
 	cwd?: string;
@@ -52,51 +54,58 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 	});
 }
 
-function getNpmDependencies(cwd: string): Promise<string[]> {
+function getNpmDependencies(cwd: string): Promise<DependencyPath[]> {
 	return checkNPM()
 		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 }))
 		.then(({ stdout }) => stdout
 			.split(/[\r\n]/)
-			.filter(dir => path.isAbsolute(dir)));
-}
-
-interface YarnTreeNode {
-	name: string;
-	children: YarnTreeNode[];
+			.filter(dir => path.isAbsolute(dir))
+			.map(dir => {
+				return { 
+					src: dir, 
+					dest: path.relative(cwd, dir) 
+				}
+			}));
 }
 
 export interface YarnDependency {
 	name: string;
-	path: string;
+	path: DependencyPath;
 	children: YarnDependency[];
 }
 
-function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): YarnDependency | null {
-	if (prune && /@[\^~]/.test(tree.name)) {
-		return null;
-	}
+export interface DependencyPath {
+	src: string;
+	dest: string;
+}
 
-	let name: string;
-
-	try {
-		const parseResult = parseSemver(tree.name);
-		name = parseResult.name;
-	} catch (err) {
-		name = tree.name.replace(/^([^@+])@.*$/, '$1');
-	}
-
-	const dependencyPath = path.join(prefix, name);
-	const children: YarnDependency[] = [];
-
-	for (const child of (tree.children || [])) {
-		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child, prune);
-
-		if (dep) {
-			children.push(dep);
-		}
-	}
-
-	return { name, path: dependencyPath, children };
+async function asYarnDependencies(root: string, rootDependencies: string[]): Promise<YarnDependency[]> {
+	const resolve = async (prefix: string, dependencies: string[]): Promise<YarnDependency[]> => await Promise.all(dependencies
+		.map(async (name: string) => {
+			let depPath = null, depManifest = null;
+			while (!depManifest && root.length <= prefix.length) {
+				depPath = path.join(prefix, 'node_modules', name);
+				try {
+					depManifest = await readNodeManifest(depPath);
+				}
+				catch (err) {
+					prefix = path.join(prefix, '..');
+					if (prefix.length < root.length) {
+						throw err;
+					}
+				}
+			}
+			const children = await resolve(depPath, Object.keys(depManifest.dependencies || {}));
+			return { 
+				name, 
+				path: {
+					src: depPath, 
+					dest: path.relative(root, depPath),
+				},
+				children,
+			};
+		}));
+	return resolve(root, rootDependencies);
 }
 
 function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: string[]): YarnDependency[] {
@@ -145,20 +154,10 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 	return reached.values;
 }
 
-async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) => cp.exec('yarn list --prod --json', { cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 }, (err, stdout) => err ? e(err) : c(stdout)));
-	const match = /^{"type":"tree".*$/m.exec(raw);
-
-	if (!match || match.length !== 1) {
-		throw new Error('Could not parse result of `yarn list --json`');
-	}
-
+async function getYarnProductionDependencies(root: string, manifest: Manifest, packagedDependencies?: string[]): Promise<YarnDependency[]> {
 	const usingPackagedDependencies = Array.isArray(packagedDependencies);
-	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
 
-	let result = trees
-		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
-		.filter(dep => !!dep);
+	let result = await asYarnDependencies(root, Object.keys(manifest.dependencies || {}));
 
 	if (usingPackagedDependencies) {
 		result = selectYarnDependencies(result, packagedDependencies);
@@ -167,20 +166,24 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 	return result;
 }
 
-async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
-	const result: string[] = [cwd];
+async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDependencies?: string[]): Promise<DependencyPath[]> {
+	const root = findWorkspaceRoot(cwd) || cwd;
+	const result: DependencyPath[] = [{ 
+		src: cwd, 
+		dest: ''
+	}];
 
-	if (await new Promise(c => fs.exists(path.join(cwd, 'yarn.lock'), c))) {
-		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
+	if (await new Promise(c => fs.exists(path.join(root, 'yarn.lock'), c))) {
+		const deps = await getYarnProductionDependencies(root, manifest, packagedDependencies);
 		const flatten = (dep: YarnDependency) => { result.push(dep.path); dep.children.forEach(flatten); };
 		deps.forEach(flatten);
 	}
 
-	return _.uniq(result);
+	return _.uniqBy(result, 'src');
 }
 
-export function getDependencies(cwd: string, useYarn = false, packagedDependencies?: string[]): Promise<string[]> {
-	return useYarn ? getYarnDependencies(cwd, packagedDependencies) : getNpmDependencies(cwd);
+export function getDependencies(cwd: string, manifest: Manifest, useYarn = false, packagedDependencies?: string[]): Promise<DependencyPath[]> {
+	return useYarn ? getYarnDependencies(cwd, manifest, packagedDependencies) : getNpmDependencies(cwd);
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {

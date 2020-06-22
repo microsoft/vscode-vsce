@@ -731,10 +731,8 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+export function readNodeManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
-	const manifestNLSPath = path.join(cwd, 'package.nls.json');
-
 	const manifest = readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
 		.then<Manifest>(manifestStr => {
@@ -743,13 +741,19 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 			} catch (e) {
 				return Promise.reject(`Error parsing 'package.json' manifest file: not a valid JSON file.`);
 			}
-		})
-		.then(validateManifest);
+		});
+	return manifest;
+}
 
+export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+	const manifest = readNodeManifest(cwd)
+		.then(validateManifest);
+	
 	if (!nls) {
 		return manifest;
 	}
-
+	
+	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 	const manifestNLS = readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
 		.then<ITranslations>(raw => {
@@ -820,12 +824,12 @@ const defaultIgnore = [
 	'**/.vscode-test/**'
 ];
 
-function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
-	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
+function collectAllFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+	return getDependencies(cwd, manifest, useYarn, dependencyEntryPoints).then(deps => {
 		const promises: Promise<string[]>[] = deps.map(dep => {
-			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' })
+			return glob('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' })
 				.then(files => files
-					.map(f => path.relative(cwd, path.join(dep, f)))
+					.map(f => path.join(dep.dest, f))
 					.map(f => f.replace(/\\/g, '/')));
 		});
 
@@ -833,8 +837,8 @@ function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: s
 	});
 }
 
-function collectFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<string[]> {
-	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
+function collectFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<string[]> {
+	return collectAllFiles(cwd, manifest, useYarn, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
@@ -897,7 +901,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1000,7 +1004,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
  */
 export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<string[]> {
 	return readManifest(cwd)
-		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile));
+		.then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile));
 }
 
 /**
@@ -1008,7 +1012,7 @@ export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependen
  */
 export function ls(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<void> {
 	return readManifest(cwd)
-		.then(manifest => prepublish(cwd, manifest, useYarn))
-		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
+		.then(manifest => prepublish(cwd, manifest, useYarn).then(() => manifest))
+		.then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }

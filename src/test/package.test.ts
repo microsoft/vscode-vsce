@@ -220,6 +220,39 @@ describe('collect', function () {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});
 	});
+
+	it('should collect the right files when using yarn workspaces', async () => {
+		// PackageB will act as the extension here
+		const cwd = path.join(fixture('yarnWorkspaces'), 'packageB');
+		const manifest = await readManifest(cwd);
+
+		assert.equal(manifest.name, 'package-b');
+
+		const files = await collect(manifest, { cwd, useYarn: true });
+		
+		[
+			{
+				path: 'extension/main.js',
+			},
+			{
+				path: 'extension/package.json',
+			},
+			{
+				path: 'extension/node_modules/package-a/main.js',
+			},
+			{
+				path: 'extension/node_modules/package-a/package.json',
+			},
+			{
+				path: 'extension/node_modules/curry/curry.js',
+			},
+			{
+				path: 'extension/node_modules/curry/package.json',
+			}
+		].forEach(file => {
+			assert.ok(files.some(f => f.path === file.path), file.path);
+		})
+	})
 });
 
 describe('readManifest', () => {
