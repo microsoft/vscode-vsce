@@ -82,15 +82,17 @@ export interface DependencyPath {
 async function asYarnDependencies(root: string, rootDependencies: string[]): Promise<YarnDependency[]> {
 	const resolve = async (prefix: string, dependencies: string[]): Promise<YarnDependency[]> => await Promise.all(dependencies
 		.map(async (name: string) => {
-			let depPath = null, depManifest = null;
-			while (!depManifest && root.length <= prefix.length) {
-				depPath = path.join(prefix, 'node_modules', name);
+			let newPrefix = prefix, depPath = null, depManifest = null;
+			while (!depManifest && root.length <= newPrefix.length) {
+        depPath = path.join(newPrefix, 'node_modules', name);
+        console.log(depPath);
 				try {
 					depManifest = await readNodeManifest(depPath);
 				}
 				catch (err) {
-					prefix = path.join(prefix, '..');
-					if (prefix.length < root.length) {
+          newPrefix = path.join(newPrefix, '..');
+					if (newPrefix.length < root.length) {
+            console.log(newPrefix, root)
 						throw err;
 					}
 				}
