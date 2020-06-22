@@ -85,14 +85,12 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 			let newPrefix = prefix, depPath = null, depManifest = null;
 			while (!depManifest && root.length <= newPrefix.length) {
         depPath = path.join(newPrefix, 'node_modules', name);
-        console.log(depPath);
 				try {
 					depManifest = await readNodeManifest(depPath);
 				}
 				catch (err) {
           newPrefix = path.join(newPrefix, '..');
 					if (newPrefix.length < root.length) {
-            console.log(newPrefix, root)
 						throw err;
 					}
 				}
