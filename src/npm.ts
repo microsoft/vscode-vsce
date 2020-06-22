@@ -54,7 +54,7 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 	});
 }
 
-function getNpmDependencies(cwd: string): Promise<DependencyPath[]> {
+function getNpmDependencies(cwd: string): Promise<SourceAndDestination[]> {
 	return checkNPM()
 		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 }))
 		.then(({ stdout }) => stdout
@@ -70,11 +70,11 @@ function getNpmDependencies(cwd: string): Promise<DependencyPath[]> {
 
 export interface YarnDependency {
 	name: string;
-	path: DependencyPath;
+	path: SourceAndDestination;
 	children: YarnDependency[];
 }
 
-export interface DependencyPath {
+export interface SourceAndDestination {
 	src: string;
 	dest: string;
 }
@@ -166,9 +166,9 @@ async function getYarnProductionDependencies(root: string, manifest: Manifest, p
 	return result;
 }
 
-async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDependencies?: string[]): Promise<DependencyPath[]> {
+async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
 	const root = findWorkspaceRoot(cwd) || cwd;
-	const result: DependencyPath[] = [{ 
+	const result: SourceAndDestination[] = [{ 
 		src: cwd, 
 		dest: ''
 	}];
@@ -182,7 +182,7 @@ async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDepe
 	return _.uniqBy(result, 'src');
 }
 
-export function getDependencies(cwd: string, manifest: Manifest, useYarn = false, packagedDependencies?: string[]): Promise<DependencyPath[]> {
+export function getDependencies(cwd: string, manifest: Manifest, useYarn = false, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
 	return useYarn ? getYarnDependencies(cwd, manifest, packagedDependencies) : getNpmDependencies(cwd);
 }
 

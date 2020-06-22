@@ -15,7 +15,7 @@ import * as url from 'url';
 import { lookup } from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
-import { getDependencies } from './npm';
+import { getDependencies, SourceAndDestination } from './npm';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -824,22 +824,26 @@ const defaultIgnore = [
 	'**/.vscode-test/**'
 ];
 
-function collectAllFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+function collectAllFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[]): Promise<SourceAndDestination[]> {
 	return getDependencies(cwd, manifest, useYarn, dependencyEntryPoints).then(deps => {
-		const promises: Promise<string[]>[] = deps.map(dep => {
+		const promises: Promise<SourceAndDestination[]>[] = deps.map(dep => {
 			return glob('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' })
 				.then(files => files
-					.map(f => path.join(dep.dest, f))
-					.map(f => f.replace(/\\/g, '/')));
+					.map(f => { 
+						return {
+							src: path.relative(cwd, path.join(dep.src, f.replace(/\\/g, '/'))),
+							dest: path.join(dep.dest, f).replace(/\\/g, '/')
+						}
+					}))
 		});
 
 		return Promise.all(promises).then(util.flatten);
 	});
 }
 
-function collectFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<string[]> {
+function collectFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<SourceAndDestination[]> {
 	return collectAllFiles(cwd, manifest, useYarn, dependencyEntryPoints).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+		files = files.filter(f => !/\r$/m.test(f.src));
 
 		return readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
 			.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve(''))
@@ -858,7 +862,7 @@ function collectFiles(cwd: string, manifest: Manifest, useYarn = false, dependen
 			.then(r => ({ ignore: r[0], negate: r[1] }))
 
 			// Filter out files
-			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f, i, MinimatchOptions)) || negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))));
+			.then(({ ignore, negate }) => files.filter(f => !ignore.some(i => minimatch(f.src, i, MinimatchOptions)) || negate.some(i => minimatch(f.src, i.substr(1), MinimatchOptions))));
 	});
 }
 
@@ -902,7 +906,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
+		const files = fileNames.map(f => ({ path: `extension/${f.dest}`, localPath: path.join(cwd, f.src) }));
 
 		return processFiles(processors, files);
 	});
@@ -1004,7 +1008,8 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
  */
 export function listFiles(cwd = process.cwd(), useYarn = false, packagedDependencies?: string[], ignoreFile?: string): Promise<string[]> {
 	return readManifest(cwd)
-		.then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile));
+		.then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile))
+		.then(files => files.map(f => f.src));
 }
 
 /**

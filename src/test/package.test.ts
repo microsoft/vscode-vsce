@@ -223,7 +223,8 @@ describe('collect', function () {
 
 	it('should collect the right files when using yarn workspaces', async () => {
 		// PackageB will act as the extension here
-		const cwd = path.join(fixture('yarnWorkspaces'), 'packageB');
+		const root = fixture('yarnWorkspaces');
+		const cwd = path.join(root, 'packageB');
 		const manifest = await readManifest(cwd);
 
 		assert.equal(manifest.name, 'package-b');
@@ -233,25 +234,37 @@ describe('collect', function () {
 		[
 			{
 				path: 'extension/main.js',
+				localPath: path.resolve(cwd, 'main.js')
 			},
 			{
 				path: 'extension/package.json',
+				localPath: path.resolve(cwd, 'package.json')
 			},
 			{
 				path: 'extension/node_modules/package-a/main.js',
+				localPath: path.resolve(root, 'node_modules/package-a/main.js')
 			},
 			{
 				path: 'extension/node_modules/package-a/package.json',
+				localPath: path.resolve(root, 'node_modules/package-a/package.json')
 			},
 			{
 				path: 'extension/node_modules/curry/curry.js',
+				localPath: path.resolve(root, 'node_modules/curry/curry.js')
 			},
 			{
 				path: 'extension/node_modules/curry/package.json',
+				localPath: path.resolve(root, 'node_modules/curry/package.json')
 			}
-		].forEach(file => {
-			assert.ok(files.some(f => f.path === file.path), file.path);
+		].forEach(expected => {
+			const found = files.find(f => f.path === expected.path || f.localPath === expected.localPath);
+			if (found) {
+				assert.equal(found.path, expected.path, 'path');
+				assert.equal(found.localPath, expected.localPath, 'localPath');
+			}
 		})
+		const ignore = files.find(f => f.path === 'extension/node_modules/package-a/output.log');
+		assert.ok(!ignore, 'should ignore ' + ignore.path)
 	})
 });
 
