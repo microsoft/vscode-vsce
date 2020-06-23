@@ -263,8 +263,6 @@ describe('collect', function () {
 				assert.equal(found.localPath, expected.localPath, 'localPath');
 			}
 		})
-		const ignore = files.find(f => f.path === 'extension/node_modules/package-a/output.log');
-		assert.ok(!ignore, 'should ignore ' + ignore.path)
 	})
 });
 
