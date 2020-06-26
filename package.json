@@ -24,11 +24,12 @@
     "vsce": "out/vsce"
   },
   "scripts": {
-    "compile": "tsc && cp src/vsce out/vsce",
-    "watch": "cp src/vsce out/vsce && tsc --watch",
-    "watch-test": "cp src/vsce out/vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
+    "copy-vsce": "mkdir -p out && cp src/vsce out/vsce",
+    "compile": "tsc && yarn copy-vsce",
+    "watch": "yarn copy-vsce && tsc --watch",
+    "watch-test": "yarn copy-vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
     "test": "mocha",
-    "prepublishOnly": "tsc && cp src/vsce out/vsce && mocha",
+    "prepublishOnly": "tsc && yarn copy-vsce && mocha",
     "vsce": "out/vsce"
   },
   "engines": {
