@@ -12,7 +12,7 @@
 
 `vsce` is meant to be mainly used as a command line tool. It can also be used a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/master/src/api.ts).
 
-> **Warning:** When using vsce as a library be sure to sanitize any user input used in API calls, as a security measurement.
+> **Warning:** When using vsce as a library be sure to sanitize any user input used in API calls, as a security measure.
 
 ## Development
 
