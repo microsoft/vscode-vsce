@@ -390,7 +390,11 @@ export class MarkdownProcessor extends BaseProcessor {
 		}
 
 		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
-		const urlReplace = (_, isImage, title, link) => {
+		const urlReplace = (_, isImage, title, link: string) => {
+			if (/^mailto:/i.test(link)) {
+				return `${isImage}[${title}](${link})`;
+			}
+
 			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
 			if (!this.baseContentUrl && !this.baseImagesUrl) {
