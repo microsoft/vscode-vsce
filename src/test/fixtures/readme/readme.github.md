@@ -12,3 +12,4 @@
  * foo/$234/#7
  * [#7](http://shouldnottouchthis/)
  * [other/repositoryName#8](http://shouldnottouchthis/)
+ * [Email me](MAILTO:example@example.com)
