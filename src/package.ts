@@ -59,6 +59,7 @@ export interface IAsset {
 export interface IPackageOptions {
 	cwd?: string;
 	packagePath?: string;
+	githubBranch?: string;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
@@ -365,7 +366,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	constructor(manifest: Manifest, private name: string, private regexp: RegExp, private assetType: string, options: IPackageOptions = {}) {
 		super(manifest);
 
-		const guess = this.guessBaseUrls();
+		const guess = this.guessBaseUrls(options.githubBranch);
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
@@ -492,7 +493,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	// GitHub heuristics
-	private guessBaseUrls(): { content: string; images: string; repository: string } {
+	private guessBaseUrls(githubBranch: string | undefined): { content: string; images: string; repository: string } {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -514,10 +515,11 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		const account = match[1];
 		const repositoryName = match[2].replace(/\.git$/i, '');
+		const branchName = githubBranch ? githubBranch : 'master';
 
 		return {
-			content: `https://github.com/${account}/${repositoryName}/blob/master`,
-			images: `https://github.com/${account}/${repositoryName}/raw/master`,
+			content: `https://github.com/${account}/${repositoryName}/blob/${branchName}`,
+			images: `https://github.com/${account}/${repositoryName}/raw/${branchName}`,
 			repository: `https://github.com/${account}/${repositoryName}`
 		};
 	}
