@@ -1466,6 +1466,37 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should respect specified GitHub branch and can be overriden', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository'
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			githubBranch: 'main',
+			// Override image relative links to point to different base URL
+			baseImagesUrl: 'https://github.com/username/repository/raw/master'
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.branch.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
 	it('should infer baseContentUrl if its a github repo (.git)', () => {
 		const manifest = {
 			name: 'test',
