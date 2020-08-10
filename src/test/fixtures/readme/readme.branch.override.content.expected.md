@@ -14,22 +14,22 @@ This README covers off:
 
 Load up a Markdown file and get highlights and hovers for existing issues.  Checking will occur as you type in the document.
 
-![Underscores and hovers](https://github.com/username/repository/raw/master/images/SpellMDDemo1.gif)
+![Underscores and hovers](https://github.com/base/images/SpellMDDemo1.gif)
 
 The status bar lets you quickly navigate to any issue and you can see all positions in the gutter.
 
-[![Jump to issues](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
-[![Jump to issues](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)](https://github.com/username/repository/blob/main/monkey)
-![](https://github.com/username/repository/raw/master/images/SpellMDDemo2.gif)
-<img src="https://github.com/username/repository/raw/master/images/myImage.gif">
+[![Jump to issues](https://github.com/base/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
+[![Jump to issues](https://github.com/base/images/SpellMDDemo2.gif)](https://github.com/base/monkey)
+![](https://github.com/base/images/SpellMDDemo2.gif)
+<img src="https://github.com/base/images/myImage.gif">
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.
 
-![Add to dictionary](https://github.com/username/repository/raw/master/images/SpellMDDemo3.gif)
+![Add to dictionary](https://github.com/base/images/SpellMDDemo3.gif)
 
-![issue](https://github.com/username/repository/raw/master/issue)
+![issue](https://github.com/base/issue)
 
-[mono](https://github.com/username/repository/blob/main/monkey)
+[mono](https://github.com/base/monkey)
 [not](http://shouldnottouchthis/)
 [Email me](mailto:example@example.com)
 
