@@ -92,6 +92,7 @@ export interface IPublishOptions {
 	commitMessage?: string;
 	cwd?: string;
 	pat?: string;
+	githubBranch?: string;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
@@ -156,6 +157,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			.then(manifest => ({ manifest, packagePath: options.packagePath }));
 	} else {
 		const cwd = options.cwd;
+		const githubBranch = options.githubBranch;
 		const baseContentUrl = options.baseContentUrl;
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
@@ -163,7 +165,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
+			.then(packagePath => pack({ packagePath, cwd, githubBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
 	}
 
 	return promise.then(({ manifest, packagePath }) => {

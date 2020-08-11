@@ -1466,6 +1466,102 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should replace relative links with GitHub URLs while respecting githubBranch', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository'
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			githubBranch: 'main'
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md')
+		};
+
+		return processor.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
+			});
+	});
+
+	it("should override image URLs with baseImagesUrl while also respecting githubBranch", () => {
+		const manifest = {
+			name: "test",
+			publisher: "mocha",
+			version: "0.0.1",
+			description: "test extension",
+			engines: Object.create(null),
+			repository: "https://github.com/username/repository",
+		};
+
+		const root = fixture("readme");
+		const processor = new ReadmeProcessor(manifest, {
+			githubBranch: "main",
+			// Override image relative links to point to different base URL
+			baseImagesUrl: "https://github.com/base",
+		});
+		const readme = {
+			path: "extension/readme.md",
+			localPath: path.join(root, "readme.md"),
+		};
+
+		return processor
+			.onFile(readme)
+			.then((file) => read(file))
+			.then((actual) => {
+				return readFile(
+				path.join(root, "readme.branch.override.images.expected.md"),
+				"utf8"
+				).then((expected) => {
+				assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it("should override githubBranch setting with baseContentUrl", () => {
+		const manifest = {
+			name: "test",
+			publisher: "mocha",
+			version: "0.0.1",
+			description: "test extension",
+			engines: Object.create(null),
+			repository: "https://github.com/username/repository",
+		};
+
+		const root = fixture("readme");
+		const processor = new ReadmeProcessor(manifest, {
+			githubBranch: "main",
+			baseContentUrl: "https://github.com/base",
+		});
+		const readme = {
+			path: "extension/readme.md",
+			localPath: path.join(root, "readme.md"),
+		};
+
+		return processor
+			.onFile(readme)
+			.then((file) => read(file))
+			.then((actual) => {
+			return readFile(
+				path.join(root, "readme.branch.override.content.expected.md"),
+				"utf8"
+			).then((expected) => {
+				assert.equal(actual, expected);
+			});
+		});
+	});
+  
 	it('should infer baseContentUrl if its a github repo (.git)', () => {
 		const manifest = {
 			name: 'test',
@@ -1489,8 +1585,8 @@ describe('MarkdownProcessor', () => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-					});
-			});
+				});
+		});
 	});
 
 	it('should replace img urls with baseImagesUrl', () => {
