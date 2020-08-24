@@ -17,7 +17,6 @@ import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
-import { getPublicGalleryAPI } from './util';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -1060,13 +1059,6 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	const cwd = options.cwd || process.cwd();
 
 	const manifest = await readManifest(cwd);
-
-	if (options.web && isWebKind(manifest)) {
-		const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
-		if (!isSupportedWebExtension(manifest, extensionsReport)) {
-			throw new Error(`This extension can\'t be packed as web extension because it is not supported`);
-		}
-	}
 
 	await prepublish(cwd, manifest, options.useYarn);
 
