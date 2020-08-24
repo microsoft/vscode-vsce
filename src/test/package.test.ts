@@ -1,7 +1,7 @@
 import {
 	readManifest, collect, toContentTypes, ReadmeProcessor,
 	read, processFiles, createDefaultProcessors,
-	toVsixManifest, IFile, validateManifest, isSupportedWebExtension, WebExtensionProcessor, IAsset
+	toVsixManifest, IFile, validateManifest, isSupportedWebExtension, WebExtensionProcessor, IAsset, IPackageOptions
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -66,8 +66,8 @@ type ContentTypes = {
 const parseXmlManifest = createXMLParser<XMLManifest>();
 const parseContentTypes = createXMLParser<ContentTypes>();
 
-function _toVsixManifest(manifest: Manifest, files: IFile[]): Promise<string> {
-	const processors = createDefaultProcessors(manifest);
+function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
+	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
 		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
@@ -1267,84 +1267,191 @@ describe('toVsixManifest', () => {
 		throw new Error('Should not reach here');
 	});
 
-	describe('qna', () => {
-		it('should use marketplace qna by default', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null)
-			});
+	it('should expose web extension assets and properties', async () => {
+		const manifest = createManifest({
+			browser: 'browser.js',
+			extensionKind: ['web'],
+		});
+		const files = [
+			{ path: 'extension/browser.js', contents: Buffer.from('') },
+		];
 
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const result = await parseXmlManifest(vsixManifest);
+		const assets = result.PackageManifest.Assets[0].Asset;
+		assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' && asset.$.Path === 'extension/browser.js'));
+
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
+		assert.equal(webExtensionProps.length, 1);
+		assert.equal(webExtensionProps[0].$.Value, 'true');
+	});
+
+	it('should expose web extension assets and properties when extension kind is not provided', async () => {
+		const manifest = createManifest({
+			browser: 'browser.js',
+		});
+		const files = [
+			{ path: 'extension/browser.js', contents: Buffer.from('') },
+		];
+
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const result = await parseXmlManifest(vsixManifest);
+		const assets = result.PackageManifest.Assets[0].Asset;
+		assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' && asset.$.Path === 'extension/browser.js'));
+
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
+		assert.equal(webExtensionProps.length, 1);
+		assert.equal(webExtensionProps[0].$.Value, 'true');
+	});
+
+	it('should not expose web extension assets and properties for web extension when not asked for', async () => {
+		const manifest = createManifest({
+			browser: 'browser.js',
+			extensionKind: ['web'],
+		});
+		const files = [
+			{ path: 'extension/browser.js', contents: Buffer.from('') },
+		];
+
+		const vsixManifest = await _toVsixManifest(manifest, files)
+		const result = await parseXmlManifest(vsixManifest);
+		const assets = result.PackageManifest.Assets[0].Asset;
+		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
+
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
+		assert.equal(webExtensionProps.length, 0);
+	});
+
+	it('should not expose web extension assets and properties for non web extension', async () => {
+		const manifest = createManifest({
+			main: 'main.js',
+		});
+		const files = [
+			{ path: 'extension/main.js', contents: Buffer.from('') },
+		];
+
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const result = await parseXmlManifest(vsixManifest);
+		const assets = result.PackageManifest.Assets[0].Asset;
+		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
+
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
+		assert.equal(webExtensionProps.length, 0);
+	});
+
+	it('should expose extension kind properties when providedd', async () => {
+		const manifest = createManifest({
+			extensionKind: ['ui', 'workspace', 'web'],
+		});
+		const files = [
+			{ path: 'extension/main.js', contents: Buffer.from('') },
+		];
+
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const result = await parseXmlManifest(vsixManifest);
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
+		assert.equal(extensionKindProps[0].$.Value, ['ui', 'workspace', 'web'].join(','));
+	});
+
+	it('should expose extension kind properties when derived', async () => {
+		const manifest = createManifest({
+			main: 'main.js',
+		});
+		const files = [
+			{ path: 'extension/main.js', contents: Buffer.from('') },
+		];
+
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const result = await parseXmlManifest(vsixManifest);
+		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
+		assert.equal(extensionKindProps[0].$.Value, 'workspace');
+	});
+
+});
+
+describe('qna', () => {
+	it('should use marketplace qna by default', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null)
 		});
 
-		it('should not use marketplace in a github repo, without specifying it', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null),
-				repository: 'https://github.com/username/repository'
-			});
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
 
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	it('should not use marketplace in a github repo, without specifying it', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository'
 		});
 
-		it('should use marketplace in a github repo, when specifying it', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null),
-				repository: 'https://github.com/username/repository',
-				qna: 'marketplace'
-			});
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
 
-			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	it('should use marketplace in a github repo, when specifying it', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+			qna: 'marketplace'
 		});
 
-		it('should handle qna=marketplace', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null),
-				qna: 'marketplace'
-			});
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
 
-			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	it('should handle qna=marketplace', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			qna: 'marketplace'
 		});
 
-		it('should handle qna=false', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null),
-				qna: false
-			});
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
 
-			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	it('should handle qna=false', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			qna: false
 		});
 
-		it('should handle custom qna', async () => {
-			const xmlManifest = await toXMLManifest({
-				name: 'test',
-				publisher: 'mocha',
-				version: '0.0.1',
-				engines: Object.create(null),
-				qna: 'http://myqna'
-			});
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink');
+	});
 
-			assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
-			assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
+	it('should handle custom qna', async () => {
+		const xmlManifest = await toXMLManifest({
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			qna: 'http://myqna'
 		});
+
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.CustomerQnALink', 'http://myqna');
 	});
 });
 
@@ -1522,10 +1629,10 @@ describe('MarkdownProcessor', () => {
 			.then((file) => read(file))
 			.then((actual) => {
 				return readFile(
-				path.join(root, "readme.branch.override.images.expected.md"),
-				"utf8"
+					path.join(root, "readme.branch.override.images.expected.md"),
+					"utf8"
 				).then((expected) => {
-				assert.equal(actual, expected);
+					assert.equal(actual, expected);
 				});
 			});
 	});
@@ -1554,15 +1661,15 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then((file) => read(file))
 			.then((actual) => {
-			return readFile(
-				path.join(root, "readme.branch.override.content.expected.md"),
-				"utf8"
-			).then((expected) => {
-				assert.equal(actual, expected);
+				return readFile(
+					path.join(root, "readme.branch.override.content.expected.md"),
+					"utf8"
+				).then((expected) => {
+					assert.equal(actual, expected);
+				});
 			});
-		});
 	});
-  
+
 	it('should infer baseContentUrl if its a github repo (.git)', () => {
 		const manifest = {
 			name: 'test',
@@ -1586,8 +1693,8 @@ describe('MarkdownProcessor', () => {
 				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
 					.then(expected => {
 						assert.equal(actual, expected);
-				});
-		});
+					});
+			});
 	});
 
 	it('should replace img urls with baseImagesUrl', () => {
@@ -1829,56 +1936,145 @@ describe('isSupportedWebExtension', () => {
 
 describe('WebExtensionProcessor', () => {
 
-	it('should include browser file', () => {
+	it('should include file', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 		const file = { path: 'extension/browser.js', contents: '' };
 
-		processor.onFile(file);
+		await processor.onFile(file);
+		await processor.onEnd();
 
 		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
 		assert.deepEqual(processor.assets, expected);
 	});
 
-	it('should exclude manifest', () => {
+	it('should include file when extension kind is not specified', async () => {
+		const manifest = createManifest({ browser: 'browser.js' });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const file = { path: 'extension/browser.js', contents: '' };
+
+		await processor.onFile(file);
+		await processor.onEnd();
+
+		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
+		assert.deepEqual(processor.assets, expected);
+	});
+
+	it('should not include file when not asked for', async () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: false });
+		const file = { path: 'extension/browser.js', contents: '' };
+
+		await processor.onFile(file);
+		await processor.onEnd();
+
+		assert.deepEqual(processor.assets, []);
+	});
+
+	it('should not include file for non web extension', async () => {
+		const manifest = createManifest({ extensionKind: ['ui'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const file = { path: 'extension/browser.js', contents: '' };
+
+		await processor.onFile(file);
+		await processor.onEnd();
+
+		assert.deepEqual(processor.assets, []);
+	});
+
+	it('should include manifest', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 		const manifestFile = { path: 'extension/package.json', contents: JSON.stringify(manifest) };
 
-		processor.onFile(manifestFile);
+		await processor.onFile(manifestFile);
+		await processor.onEnd();
 
-		assert.deepEqual(processor.assets, []);
+		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${manifestFile.path}`, path: manifestFile.path }];
+		assert.deepEqual(processor.assets, expected);
 	});
 
-	it('should exclude changelog', () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const changelogFile = { path: 'extension/changelog.md', contents: '' };
-
-		processor.onFile(changelogFile);
-
-		assert.deepEqual(processor.assets, []);
-	});
-
-	it('should exclude readme', () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const readMeFile = { path: 'extension/readme.md', contents: '' };
-
-		processor.onFile(readMeFile);
-
-		assert.deepEqual(processor.assets, []);
-	});
-
-	it('should exclude files from node_modules', () => {
+	it('should fail for svg file', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 
-		processor.onFile({ path: 'extension/node_modules/sample.t.ds', contents: '' });
-		processor.onFile({ path: 'extension/node_modules/a/sample.js', contents: '' });
-		processor.onFile({ path: 'extension/node_modules/a/b/c/sample.js', contents: '' });
+		try {
+			await processor.onFile({ path: 'extension/sample.svg', contents: '' });
+		} catch (error) {
+			return; // expected
+		}
 
-		assert.deepEqual(processor.assets, []);
+		assert.fail('Should fail');
 	});
+
+	it('should include max 25 files', async () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		const expected: IAsset[] = [];
+		for (let i = 1; i <= 25; i++) {
+			const file = { path: `extension/${i}.json`, contents: `${i}` };
+			await processor.onFile(file);
+			expected.push({ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path });
+		}
+
+		await processor.onEnd();
+
+		assert.deepEqual(processor.assets.length, 25);
+		assert.deepEqual(processor.assets, expected);
+	});
+
+	it('should throw an error if there are more than 25 files', async () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		for (let i = 1; i <= 26; i++) {
+			await processor.onFile({ path: `extension/${i}.json`, contents: `${i}` });
+		}
+
+		try {
+			await processor.onEnd();
+		} catch (error) {
+			return; // expected error
+		}
+		assert.fail('Should fail');
+	});
+
+	it('should include web extension property', async () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		await processor.onEnd();
+
+		assert.equal(processor.vsix.webExtension, true);
+	});
+
+	it('should include web extension property when extension kind is not provided', async () => {
+		const manifest = createManifest({ browser: 'browser.js' });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		await processor.onEnd();
+
+		assert.equal(processor.vsix.webExtension, true);
+	});
+
+	it('should not include web extension property when not asked for', async () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: false });
+
+		await processor.onEnd();
+
+		assert.equal(processor.vsix.webExtension, undefined);
+	});
+
+	it('should not include web extension property for non web extension', async () => {
+		const manifest = createManifest({ extensionKind: ['ui'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		await processor.onEnd();
+
+		assert.equal(processor.vsix.webExtension, undefined);
+	});
+
 
 });

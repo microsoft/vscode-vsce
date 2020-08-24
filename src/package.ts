@@ -211,6 +211,8 @@ class ManifestProcessor extends BaseProcessor {
 			enableMarketplaceQnA = false;
 		}
 
+		const extensionKind = getExtensionKind(manifest);
+
 		this.vsix = {
 			...this.vsix,
 			id: manifest.name,
@@ -233,6 +235,7 @@ class ManifestProcessor extends BaseProcessor {
 			customerQnALink,
 			extensionDependencies: _(manifest.extensionDependencies || []).uniq().join(','),
 			extensionPack: _(manifest.extensionPack || []).uniq().join(','),
+			extensionKind: extensionKind.join(','),
 			localizedLanguages: (manifest.contributes && manifest.contributes.localizations) ?
 				manifest.contributes.localizations.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId).join(',') : ''
 		};
@@ -665,31 +668,33 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 export class WebExtensionProcessor extends BaseProcessor {
 
 	private readonly isWebKind: boolean = false;
-	private readonly licenseProcessor: LicenseProcessor;
 
 	constructor(manifest: Manifest, options: IPackageOptions) {
 		super(manifest);
 		this.isWebKind = options.web && isWebKind(manifest);
-		this.licenseProcessor = new LicenseProcessor(manifest);
+		if (this.isWebKind) {
+			this.vsix = {
+				...this.vsix,
+				webExtension: true
+			}
+		}
 	}
 
 	onFile(file: IFile): Promise<IFile> {
 		if (this.isWebKind) {
 			const path = util.normalize(file.path);
 			if (/\.svg$/i.test(path)) {
-				throw new Error(`SVGs can't be used in web extensions: ${path}`);
+				throw new Error(`SVGs can't be used in a web extension: ${path}`);
 			}
-			if (
-				!/^extension\/readme.md$/i.test(path) // exclude read me
-				&& !/^extension\/changelog.md$/i.test(path) // exclude changelog
-				&& !/^extension\/package.json$/i.test(path) // exclude package.json
-				&& !this.licenseProcessor.filter(path) // exclude licenses
-				&& !/^extension\/*node_modules\/*/i.test(path) // exclude node_modules
-			) {
-				this.assets.push({ type: `Microsoft.VisualStudio.Code.WebResources/${path}`, path });
-			}
+			this.assets.push({ type: `Microsoft.VisualStudio.Code.WebResources/${path}`, path });
 		}
 		return Promise.resolve(file);
+	}
+
+	async onEnd(): Promise<void> {
+		if (this.assets.length > 25) {
+			throw new Error('Cannot pack more than 25 files in a web extension. Use `vsce -ls` to see all the files that will be packed and exclude those which are not needed in .vscodeignore.');
+		}
 	}
 
 }
@@ -955,11 +960,6 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 	return Promise.all(processedFiles).then(files => {
 		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
-
-			if (assets.length >= 50) {
-				throw new Error('Cannot have more than 50 assets');
-			}
-
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
