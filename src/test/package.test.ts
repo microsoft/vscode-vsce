@@ -1,7 +1,7 @@
 import {
 	readManifest, collect, toContentTypes, ReadmeProcessor,
 	read, processFiles, createDefaultProcessors,
-	toVsixManifest, IFile, validateManifest
+	toVsixManifest, IFile, validateManifest, isSupportedWebExtension, WebExtensionProcessor, IAsset
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -10,6 +10,7 @@ import * as assert from 'assert';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
+import { IExtensionsReport } from '../publicgalleryapi';
 
 // don't warn in tests
 console.warn = () => null;
@@ -1802,4 +1803,82 @@ describe('MarkdownProcessor', () => {
 
 		await throws(() => processor.onFile(readme));
 	})
+});
+
+describe('isSupportedWebExtension', () => {
+
+	it('should return true if extension report has extension', () => {
+		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
+		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: ['mocha.test'], publishers: [] } };
+		assert.ok(isSupportedWebExtension(manifest, extensionReport));
+	});
+
+	it('should return true if extension report has publisher', () => {
+		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
+		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: ['mocha'] } };
+		assert.ok(isSupportedWebExtension(manifest, extensionReport));
+	});
+
+	it('should return  false if extension report does not has extension', () => {
+		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
+		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: [] } };
+		assert.ok(!isSupportedWebExtension(manifest, extensionReport));
+	});
+
+});
+
+describe('WebExtensionProcessor', () => {
+
+	it('should include browser file', () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const file = { path: 'extension/browser.js', contents: '' };
+
+		processor.onFile(file);
+
+		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
+		assert.deepEqual(processor.assets, expected);
+	});
+
+	it('should exclude manifest', () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const manifestFile = { path: 'extension/package.json', contents: JSON.stringify(manifest) };
+
+		processor.onFile(manifestFile);
+
+		assert.deepEqual(processor.assets, []);
+	});
+
+	it('should exclude changelog', () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const changelogFile = { path: 'extension/changelog.md', contents: '' };
+
+		processor.onFile(changelogFile);
+
+		assert.deepEqual(processor.assets, []);
+	});
+
+	it('should exclude readme', () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+		const readMeFile = { path: 'extension/readme.md', contents: '' };
+
+		processor.onFile(readMeFile);
+
+		assert.deepEqual(processor.assets, []);
+	});
+
+	it('should exclude files from node_modules', () => {
+		const manifest = createManifest({ extensionKind: ['web'] });
+		const processor = new WebExtensionProcessor(manifest, { web: true });
+
+		processor.onFile({ path: 'extension/node_modules/sample.t.ds', contents: '' });
+		processor.onFile({ path: 'extension/node_modules/a/sample.js', contents: '' });
+		processor.onFile({ path: 'extension/node_modules/a/b/c/sample.js', contents: '' });
+
+		assert.deepEqual(processor.assets, []);
+	});
+
 });

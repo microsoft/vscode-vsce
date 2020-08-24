@@ -21,6 +21,8 @@ export interface Contributions {
 	[contributionType: string]: any;
 }
 
+export type ExtensionKind = 'ui' | 'workspace' | 'web';
+
 export interface Manifest {
 	// mandatory (npm)
 	name: string;
@@ -42,7 +44,7 @@ export interface Manifest {
 	_testing?: string;
 	enableProposedApi?: boolean;
 	qna?: 'marketplace' | string | false;
-	extensionKind?: string[];
+	extensionKind?: ExtensionKind | ExtensionKind[];
 
 	// optional (npm)
 	author?: string | Person;
@@ -55,6 +57,7 @@ export interface Manifest {
 	license?: string;
 	contributors?: string | Person[];
 	main?: string;
+	browser?: string;
 	repository?: string | { type?: string; url?: string; };
 	scripts?: { [name: string]: string; };
 	dependencies?: { [name: string]: string; };

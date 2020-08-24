@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
-import { Manifest } from './manifest';
+import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
@@ -16,6 +16,7 @@ import { lookup } from 'mime';
 import * as urljoin from 'url-join';
 import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
+import { IExtensionsReport } from './publicgalleryapi';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -66,6 +67,7 @@ export interface IPackageOptions {
 	dependencyEntryPoints?: string[];
 	ignoreFile?: string;
 	expandGitHubIssueLinks?: boolean;
+	web?: boolean;
 }
 
 export interface IProcessor {
@@ -541,7 +543,7 @@ export class ChangelogProcessor extends MarkdownProcessor {
 class LicenseProcessor extends BaseProcessor {
 
 	private didFindLicense = false;
-	private filter: (name: string) => boolean;
+	filter: (name: string) => boolean;
 
 	constructor(manifest: Manifest) {
 		super(manifest);
@@ -607,6 +609,89 @@ class IconProcessor extends BaseProcessor {
 
 		return Promise.resolve(null);
 	}
+}
+
+export function isSupportedWebExtension(manifest: Manifest, extensionsReport: IExtensionsReport): boolean {
+	const id = `${manifest.publisher}.${manifest.name}`;
+	return extensionsReport.web.publishers.some(publisher => manifest.publisher === publisher)
+		|| extensionsReport.web.extensions.some(extension => extension === id);
+}
+
+export function isWebKind(manifest: Manifest): boolean {
+	const extensionKind = getExtensionKind(manifest);
+	return extensionKind.some(kind => kind === 'web');
+}
+
+const workspaceExtensionPoints: string[] = ['terminal', 'debuggers', 'jsonValidation'];
+
+function getExtensionKind(manifest: Manifest): ExtensionKind[] {
+	// check the manifest
+	if (manifest.extensionKind) {
+		return Array.isArray(manifest.extensionKind)
+			? manifest.extensionKind
+			: manifest.extensionKind === 'ui' ? ['ui', 'workspace'] : [manifest.extensionKind]
+	}
+
+	// Not an UI extension if it has main
+	if (manifest.main) {
+		if (manifest.browser) {
+			return ['workspace', 'web'];
+		}
+		return ['workspace'];
+	}
+
+	if (manifest.browser) {
+		return ['web'];
+	}
+
+	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
+	// Not an UI nor web extension if it has dependencies or an extension pack
+	if (isNonEmptyArray(manifest.extensionDependencies) || isNonEmptyArray(manifest.extensionPack)) {
+		return ['workspace'];
+	}
+
+	if (manifest.contributes) {
+		// Not an UI nor web extension if it has workspace contributions
+		for (const contribution of Object.keys(manifest.contributes)) {
+			if (workspaceExtensionPoints.indexOf(contribution) !== -1) {
+				return ['workspace'];
+			}
+		}
+	}
+
+	return ['ui', 'workspace', 'web'];
+}
+
+export class WebExtensionProcessor extends BaseProcessor {
+
+	private readonly isWebKind: boolean = false;
+	private readonly licenseProcessor: LicenseProcessor;
+
+	constructor(manifest: Manifest, options: IPackageOptions) {
+		super(manifest);
+		this.isWebKind = options.web && isWebKind(manifest);
+		this.licenseProcessor = new LicenseProcessor(manifest);
+	}
+
+	onFile(file: IFile): Promise<IFile> {
+		if (this.isWebKind) {
+			const path = util.normalize(file.path);
+			if (/\.svg$/i.test(path)) {
+				throw new Error(`SVGs can't be used in web extensions: ${path}`);
+			}
+			if (
+				!/^extension\/readme.md$/i.test(path) // exclude read me
+				&& !/^extension\/changelog.md$/i.test(path) // exclude changelog
+				&& !/^extension\/package.json$/i.test(path) // exclude package.json
+				&& !this.licenseProcessor.filter(path) // exclude licenses
+				&& !/^extension\/*node_modules\/*/i.test(path) // exclude node_modules
+			) {
+				this.assets.push({ type: `Microsoft.VisualStudio.Code.WebResources/${path}`, path });
+			}
+		}
+		return Promise.resolve(file);
+	}
+
 }
 
 export class NLSProcessor extends BaseProcessor {
@@ -870,6 +955,11 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 	return Promise.all(processedFiles).then(files => {
 		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
+
+			if (assets.length >= 50) {
+				throw new Error('Cannot have more than 50 assets');
+			}
+
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
@@ -892,6 +982,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),
+		new WebExtensionProcessor(manifest, options),
 		new ValidationProcessor(manifest)
 	];
 }
@@ -968,6 +1059,14 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	const cwd = options.cwd || process.cwd();
 
 	const manifest = await readManifest(cwd);
+
+	if (options.web && isWebKind(manifest)) {
+		const extensionsReport = await util.getPublicGalleryAPI().getExtensionsReport();
+		if (!isSupportedWebExtension(manifest, extensionsReport)) {
+			throw new Error(`Cannot pack as web extension as it is not supported`);
+		}
+	}
+
 	await prepublish(cwd, manifest, options.useYarn);
 
 	const files = await collect(manifest, options);

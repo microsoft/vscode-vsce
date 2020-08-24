@@ -98,6 +98,7 @@ export interface IPublishOptions {
 	useYarn?: boolean;
 	noVerify?: boolean;
 	ignoreFile?: string;
+	web?: boolean;
 }
 
 async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
@@ -162,10 +163,11 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
 		const ignoreFile = options.ignoreFile;
+		const web = options.web;
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, githubBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
+			.then(packagePath => pack({ packagePath, cwd, githubBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web }));
 	}
 
 	return promise.then(({ manifest, packagePath }) => {
