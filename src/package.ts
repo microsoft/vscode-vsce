@@ -1063,7 +1063,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	if (options.web && isWebKind(manifest)) {
 		const extensionsReport = await util.getPublicGalleryAPI().getExtensionsReport();
 		if (!isSupportedWebExtension(manifest, extensionsReport)) {
-			throw new Error(`Cannot pack as web extension as it is not supported`);
+			throw new Error(`This extension cannot be packed as a web extension because it is not supported.`);
 		}
 	}
 
