@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension } from './package';
+import { pack, readManifest, IPackage } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
@@ -173,13 +173,6 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 	return promise.then(async ({ manifest, packagePath }) => {
 		if (!options.noVerify && manifest.enableProposedApi) {
 			throw new Error('Extensions using proposed API (enableProposedApi: true) can\'t be published to the Marketplace');
-		}
-
-		if (options.web && isWebKind(manifest)) {
-			const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
-			if (!isSupportedWebExtension(manifest, extensionsReport)) {
-				throw new Error(`Unsupported web extensions can\'t be published to the Marketplace`);
-			}
 		}
 
 		const patPromise = options.pat

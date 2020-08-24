@@ -76,7 +76,7 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
-		.option('--web', 'Experimental flag to enable packing web extension')
+		.option('--web', 'Experimental flag to enable packing web extensions. Note: This is supported only for selected extensions.')
 		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, web }) => main(packageCommand({ packagePath: out, githubBranch, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile, expandGitHubIssueLinks: noGitHubIssueLinking, web })));
 
 	program
@@ -91,7 +91,7 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
 		.option('--noVerify')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.option('--web', 'Experimental flag to enable publishing web extension. Note: This is supported only for selected extensions.')
+		.option('--web', 'Experimental flag to enable packing web extensions. Note: This is supported only for selected extensions.')
 		.action((version, { pat, message, packagePath, githubBranch, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile, web }) => main(publish({ pat, commitMessage: message, version, packagePath, githubBranch, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify, ignoreFile, web })));
 
 	program
