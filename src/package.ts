@@ -693,7 +693,7 @@ export class WebExtensionProcessor extends BaseProcessor {
 
 	async onEnd(): Promise<void> {
 		if (this.assets.length > 25) {
-			throw new Error('Cannot pack more than 25 files in a web extension. Use `vsce -ls` to see all the files that will be packed and exclude those which are not needed in .vscodeignore.');
+			throw new Error('Cannot pack more than 25 files in a web extension. Use `vsce ls` to see all the files that will be packed and exclude those which are not needed in .vscodeignore.');
 		}
 	}
 
