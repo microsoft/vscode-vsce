@@ -1060,13 +1060,6 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 
 	const manifest = await readManifest(cwd);
 
-	if (options.web && isWebKind(manifest)) {
-		const extensionsReport = await util.getPublicGalleryAPI().getExtensionsReport();
-		if (!isSupportedWebExtension(manifest, extensionsReport)) {
-			throw new Error(`This extension cannot be packed as a web extension because it is not supported.`);
-		}
-	}
-
 	await prepublish(cwd, manifest, options.useYarn);
 
 	const files = await collect(manifest, options);
