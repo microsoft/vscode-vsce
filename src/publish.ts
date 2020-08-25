@@ -153,6 +153,9 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		if (options.version) {
 			return Promise.reject(`Not supported: packagePath and version.`);
 		}
+		if (options.web) {
+			return Promise.reject(`Not supported: packagePath and web.`);
+		}
 
 		promise = readManifestFromPackage(options.packagePath)
 			.then(manifest => ({ manifest, packagePath: options.packagePath }));
