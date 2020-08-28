@@ -70,7 +70,8 @@ function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOp
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
 		const assets = _.flatten(processors.map(p => p.assets));
-		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
+		const tags = _(_.flatten(processors.map(p => p.tags))).join(',');
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
 		return toVsixManifest(vsix);
 	});
@@ -2040,40 +2041,44 @@ describe('WebExtensionProcessor', () => {
 		assert.fail('Should fail');
 	});
 
-	it('should include web extension property', async () => {
+	it('should include web extension property & tag', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 
 		await processor.onEnd();
 
 		assert.equal(processor.vsix.webExtension, true);
+		assert.deepEqual(processor.tags, ['__web_extension']);
 	});
 
-	it('should include web extension property when extension kind is not provided', async () => {
+	it('should include web extension property & tag when extension kind is not provided', async () => {
 		const manifest = createManifest({ browser: 'browser.js' });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 
 		await processor.onEnd();
 
 		assert.equal(processor.vsix.webExtension, true);
+		assert.deepEqual(processor.tags, ['__web_extension']);
 	});
 
-	it('should not include web extension property when not asked for', async () => {
+	it('should not include web extension property & tag when not asked for', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: false });
 
 		await processor.onEnd();
 
 		assert.equal(processor.vsix.webExtension, undefined);
+		assert.deepEqual(processor.tags, []);
 	});
 
-	it('should not include web extension property for non web extension', async () => {
+	it('should not include web extension property & tag for non web extension', async () => {
 		const manifest = createManifest({ extensionKind: ['ui'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
 
 		await processor.onEnd();
 
 		assert.equal(processor.vsix.webExtension, undefined);
+		assert.deepEqual(processor.tags, []);
 	});
 
 

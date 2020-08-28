@@ -74,12 +74,14 @@ export interface IProcessor {
 	onFile(file: IFile): Promise<IFile>;
 	onEnd(): Promise<void>;
 	assets: IAsset[];
+	tags: string[];
 	vsix: any;
 }
 
 export class BaseProcessor implements IProcessor {
 	constructor(protected manifest: Manifest) { }
 	assets: IAsset[] = [];
+	tags: string[] = [];
 	vsix: any = Object.create(null);
 	onFile(file: IFile): Promise<IFile> { return Promise.resolve(file); }
 	onEnd() { return Promise.resolve(null); }
@@ -351,10 +353,10 @@ export class TagsProcessor extends BaseProcessor {
 			...descriptionKeywords
 		];
 
-		this.vsix.tags = _(tags)
+		this.tags = _(tags)
 			.uniq() // deduplicate
 			.compact() // remove falsey values
-			.join(',');
+			.value();
 
 		return Promise.resolve(null);
 	}
@@ -672,12 +674,6 @@ export class WebExtensionProcessor extends BaseProcessor {
 	constructor(manifest: Manifest, options: IPackageOptions) {
 		super(manifest);
 		this.isWebKind = options.web && isWebKind(manifest);
-		if (this.isWebKind) {
-			this.vsix = {
-				...this.vsix,
-				webExtension: true
-			}
-		}
 	}
 
 	onFile(file: IFile): Promise<IFile> {
@@ -694,6 +690,13 @@ export class WebExtensionProcessor extends BaseProcessor {
 	async onEnd(): Promise<void> {
 		if (this.assets.length > 25) {
 			throw new Error('Cannot pack more than 25 files in a web extension. Use `vsce ls` to see all the files that will be packed and exclude those which are not needed in .vscodeignore.');
+		}
+		if (this.isWebKind) {
+			this.vsix = {
+				...this.vsix,
+				webExtension: true
+			}
+			this.tags = ['__web_extension'];
 		}
 	}
 
@@ -960,7 +963,11 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 	return Promise.all(processedFiles).then(files => {
 		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
 			const assets = _.flatten(processors.map(p => p.assets));
-			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets });
+			const tags = _(_.flatten(processors.map(p => p.tags)))
+				.uniq() // deduplicate
+				.compact() // remove falsey values
+				.join(',');
+			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
 				return [
