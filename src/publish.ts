@@ -178,10 +178,13 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			throw new Error('Extensions using proposed API (enableProposedApi: true) can\'t be published to the Marketplace');
 		}
 
-		if (options.web && isWebKind(manifest)) {
+		if (options.web) {
+			if (!isWebKind(manifest)) {
+				throw new Error('Extensions which are not web kind can\'t be published to the Marketpalce as a web extension');
+			}
 			const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
 			if (!isSupportedWebExtension(manifest, extensionsReport)) {
-				throw new Error(`This extension can\'t be packed as web extension because it is not supported`);
+				throw new Error('Extensions which are not supported can\'t be published to the Marketpalce as a web extension');
 			}
 		}
 
