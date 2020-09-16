@@ -14,7 +14,7 @@ import * as cheerio from 'cheerio';
 import * as url from 'url';
 import { lookup } from 'mime';
 import * as urljoin from 'url-join';
-import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
+import { validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from './validation';
 import { getDependencies } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
 
@@ -781,7 +781,6 @@ export class ValidationProcessor extends BaseProcessor {
 }
 
 export function validateManifest(manifest: Manifest): Manifest {
-	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
 
 	if (!manifest.version) {
