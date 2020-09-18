@@ -1,6 +1,6 @@
 # vsce
 
-> *The Visual Studio Code Extension Manager*
+> _The Visual Studio Code Extension Manager_
 
 [![Build Status](https://dev.azure.com/vscode/VSCE/_apis/build/status/VSCE?branchName=master)](https://dev.azure.com/vscode/VSCE/_build/latest?definitionId=16&branchName=master) [![npm version](https://badge.fury.io/js/vsce.svg)](https://badge.fury.io/js/vsce)
 

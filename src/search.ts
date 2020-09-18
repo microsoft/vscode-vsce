@@ -9,9 +9,7 @@ export async function search(searchText: string, json: boolean = false): Promise
 	const api = getPublicGalleryAPI();
 	const results = await api.extensionQuery({
 		pageSize,
-		criteria: [
-			{ filterType: ExtensionQueryFilterType.SearchText, value: searchText },
-		],
+		criteria: [{ filterType: ExtensionQueryFilterType.SearchText, value: searchText }],
 		flags,
 	});
 
@@ -25,18 +23,21 @@ export async function search(searchText: string, json: boolean = false): Promise
 		return;
 	}
 
-	console.log([
-		`Search results:`,
-		'',
-		...tableView([
-			['<ExtensionId>', '<Description>'],
-			...results.map(({ publisher: { publisherName }, extensionName, shortDescription }) =>
-				[publisherName + '.' + extensionName, (shortDescription || '').replace(/\n|\r|\t/g, ' ')]
-			)
-		]),
-		'',
-		'For more information on an extension use "vsce show <extensionId>"',
-	]
-		.map(line => wordTrim(line.replace(/\s+$/g, '')))
-		.join('\n'));
+	console.log(
+		[
+			`Search results:`,
+			'',
+			...tableView([
+				['<ExtensionId>', '<Description>'],
+				...results.map(({ publisher: { publisherName }, extensionName, shortDescription }) => [
+					publisherName + '.' + extensionName,
+					(shortDescription || '').replace(/\n|\r|\t/g, ' '),
+				]),
+			]),
+			'',
+			'For more information on an extension use "vsce show <extensionId>"',
+		]
+			.map(line => wordTrim(line.replace(/\s+$/g, '')))
+			.join('\n')
+	);
 }

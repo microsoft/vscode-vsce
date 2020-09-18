@@ -17,7 +17,7 @@ export interface Localization {
 }
 
 export interface Contributions {
-	'localizations'?: Localization[];
+	localizations?: Localization[];
 	[contributionType: string]: any;
 }
 
@@ -27,7 +27,7 @@ export interface Manifest {
 	// mandatory (npm)
 	name: string;
 	version: string;
-	engines: { [name: string]: string; };
+	engines: { [name: string]: string };
 
 	// vscode
 	publisher: string;
@@ -36,11 +36,11 @@ export interface Manifest {
 	activationEvents?: string[];
 	extensionDependencies?: string[];
 	extensionPack?: string[];
-	galleryBanner?: { color?: string; theme?: string; };
+	galleryBanner?: { color?: string; theme?: string };
 	preview?: boolean;
-	badges?: { url: string; href: string; description: string; }[];
+	badges?: { url: string; href: string; description: string }[];
 	markdown?: 'github' | 'standard';
-	_bundling?: { [name: string]: string; }[];
+	_bundling?: { [name: string]: string }[];
 	_testing?: string;
 	enableProposedApi?: boolean;
 	qna?: 'marketplace' | string | false;
@@ -58,10 +58,10 @@ export interface Manifest {
 	contributors?: string | Person[];
 	main?: string;
 	browser?: string;
-	repository?: string | { type?: string; url?: string; };
-	scripts?: { [name: string]: string; };
-	dependencies?: { [name: string]: string; };
-	devDependencies?: { [name: string]: string; };
+	repository?: string | { type?: string; url?: string };
+	scripts?: { [name: string]: string };
+	dependencies?: { [name: string]: string };
+	devDependencies?: { [name: string]: string };
 	private?: boolean;
 
 	// not supported (npm)

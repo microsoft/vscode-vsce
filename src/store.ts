@@ -25,7 +25,7 @@ export interface IGetOptions {
 
 function load(): Promise<IStore> {
 	return readFile(storePath, 'utf8')
-		.catch<string>(err => err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}'))
+		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
 		.then<IStore>(rawStore => {
 			try {
 				return Promise.resolve(JSON.parse(rawStore));
@@ -40,8 +40,7 @@ function load(): Promise<IStore> {
 }
 
 function save(store: IStore): Promise<IStore> {
-	return writeFile(storePath, JSON.stringify(store), {mode: '0600'})
-		.then(() => store);
+	return writeFile(storePath, JSON.stringify(store), { mode: '0600' }).then(() => store);
 }
 
 function addPublisherToStore(store: IStore, publisher: IPublisher): Promise<IPublisher> {
@@ -84,8 +83,9 @@ export function loginPublisher(publisherName: string): Promise<IPublisher> {
 
 			if (publisher) {
 				console.log(`Publisher '${publisherName}' is already known`);
-				return read('Do you want to overwrite its PAT? [y/N] ')
-					.then(answer => /^y$/i.test(answer) ? store : Promise.reject('Aborted'));
+				return read('Do you want to overwrite its PAT? [y/N] ').then(answer =>
+					/^y$/i.test(answer) ? store : Promise.reject('Aborted')
+				);
 			}
 
 			return Promise.resolve(store);
@@ -110,36 +110,37 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 export function createPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
 
-	return read(`Publisher human-friendly name: `, { default: publisherName }).then(displayName => {
-		return read(`E-mail: `).then(email => {
-			return read(`Personal Access Token:`, { silent: true, replace: '*' })
-				.then(async pat => {
-					const api = await getGalleryAPI(pat);
-					const raw = {
-						publisherName,
-						displayName,
-						extensions: [],
-						flags: null,
-						lastUpdated: null,
-						longDescription: '',
-						publisherId: null,
-						shortDescription: '',
-						emailAddress: [email]
-					};
+	return read(`Publisher human-friendly name: `, { default: publisherName })
+		.then(displayName => {
+			return read(`E-mail: `).then(email => {
+				return read(`Personal Access Token:`, { silent: true, replace: '*' })
+					.then(async pat => {
+						const api = await getGalleryAPI(pat);
+						const raw = {
+							publisherName,
+							displayName,
+							extensions: [],
+							flags: null,
+							lastUpdated: null,
+							longDescription: '',
+							publisherId: null,
+							shortDescription: '',
+							emailAddress: [email],
+						};
 
-					await api.createPublisher(raw);
-					return { name: publisherName, pat };
-				})
-				.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
-		});
-	})
+						await api.createPublisher(raw);
+						return { name: publisherName, pat };
+					})
+					.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
+			});
+		})
 		.then(() => log.done(`Created publisher '${publisherName}'.`));
 }
 
 export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
 		return read(`This will FOREVER delete '${publisherName}'! Are you sure? [y/N] `)
-			.then(answer => /^y$/i.test(answer) ? null : Promise.reject('Aborted'))
+			.then(answer => (/^y$/i.test(answer) ? null : Promise.reject('Aborted')))
 			.then(() => getGalleryAPI(pat))
 			.then(api => api.deletePublisher(publisherName))
 			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))

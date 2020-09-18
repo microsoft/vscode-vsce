@@ -38,63 +38,59 @@ function showOverview({
 	extensionName = 'unknown',
 	shortDescription = '',
 	versions = [],
-	publisher: {
-		displayName: publisherDisplayName,
-		publisherName
-	},
+	publisher: { displayName: publisherDisplayName, publisherName },
 	categories = [],
 	tags = [],
 	statistics = [],
 	publishedDate,
 	lastUpdated,
 }: PublishedExtension) {
-
 	const [{ version = 'unknown' } = {}] = versions;
 
 	// Create formatted table list of versions
-	const versionList = <ViewTable>versions
-		.slice(0, limitVersions)
-		.map(({ version, lastUpdated }) => [version, formatDate(lastUpdated)]);
+	const versionList = <ViewTable>(
+		versions.slice(0, limitVersions).map(({ version, lastUpdated }) => [version, formatDate(lastUpdated)])
+	);
 
-	const {
-		install: installs = 0,
-		averagerating = 0,
-		ratingcount = 0,
-	} = statistics
-		.reduce((map, { statisticName, value }) => ({ ...map, [statisticName]: value }), <ExtensionStatiticsMap>{});
+	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
+		(map, { statisticName, value }) => ({ ...map, [statisticName]: value }),
+		<ExtensionStatiticsMap>{}
+	);
 
 	// Render
-	console.log([
-		`${displayName}`,
-		`${publisherDisplayName} | ${icons.download} ` +
-		`${Number(installs).toLocaleString()} installs |` +
-		` ${ratingStars(averagerating)} (${ratingcount})`,
-		'',
-		`${shortDescription}`,
-		'',
-		'Recent versions:',
-		...(versionList.length ? tableView(versionList).map(indentRow) : ['no versions found']),
-		'',
-		'Categories:',
-		`  ${categories.join(', ')}`,
-		'',
-		'Tags:',
-		`  ${tags.filter(tag => !isExtensionTag.test(tag)).join(', ')}`,
-		'',
-		'More info:',
-		...tableView([
-			['Unique identifier:', `${publisherName}.${extensionName}`],
-			['Version:', version],
-			['Last updated:', formatDateTime(lastUpdated)],
-			['Publisher:', publisherDisplayName],
-			['Published at:', formatDate(publishedDate)],
-		])
-			.map(indentRow),
-		'',
-		'Statistics:',
-		...tableView(<ViewTable>statistics.map(({ statisticName, value }) => [statisticName, Number(value).toFixed(2)]))
-			.map(indentRow),
-	]
-		.map(line => wordWrap(line))
-		.join('\n'));
+	console.log(
+		[
+			`${displayName}`,
+			`${publisherDisplayName} | ${icons.download} ` +
+				`${Number(installs).toLocaleString()} installs |` +
+				` ${ratingStars(averagerating)} (${ratingcount})`,
+			'',
+			`${shortDescription}`,
+			'',
+			'Recent versions:',
+			...(versionList.length ? tableView(versionList).map(indentRow) : ['no versions found']),
+			'',
+			'Categories:',
+			`  ${categories.join(', ')}`,
+			'',
+			'Tags:',
+			`  ${tags.filter(tag => !isExtensionTag.test(tag)).join(', ')}`,
+			'',
+			'More info:',
+			...tableView([
+				['Unique identifier:', `${publisherName}.${extensionName}`],
+				['Version:', version],
+				['Last updated:', formatDateTime(lastUpdated)],
+				['Publisher:', publisherDisplayName],
+				['Published at:', formatDate(publishedDate)],
+			]).map(indentRow),
+			'',
+			'Statistics:',
+			...tableView(
+				<ViewTable>statistics.map(({ statisticName, value }) => [statisticName, Number(value).toFixed(2)])
+			).map(indentRow),
+		]
+			.map(line => wordWrap(line))
+			.join('\n')
+	);
 }

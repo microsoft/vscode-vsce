@@ -10,7 +10,10 @@ import * as yauzl from 'yauzl';
 import * as semver from 'semver';
 import * as cp from 'child_process';
 
-const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
+const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; stderr: string }>(
+	cp.exec as any,
+	(err, stdout, stderr) => [err, { stdout, stderr }]
+);
 const tmpName = denodeify<string>(tmp.tmpName);
 
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
@@ -60,8 +63,9 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 	const fullName = `${name}@${manifest.version}`;
 	console.log(`Publishing ${fullName}...`);
 
-	return api.getExtension(null, manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
-		.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
+	return api
+		.getExtension(null, manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
+		.catch<PublishedExtension>(err => (err.statusCode === 404 ? null : Promise.reject(err)))
 		.then(extension => {
 			if (extension && extension.versions.some(v => v.version === manifest.version)) {
 				return Promise.reject(`${fullName} already exists. Version number cannot be the same.`);
@@ -73,10 +77,16 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 
 			return promise
 				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few minutes for it to show up).`));
+				.then(() =>
+					log.done(
+						`Published ${fullName}\nYour extension will live at ${getPublishedUrl(
+							name
+						)} (might take a few minutes for it to show up).`
+					)
+				);
 		})
 		.catch(err => {
-			const message = err && err.message || '';
+			const message = (err && err.message) || '';
 
 			if (/Invalid Resource/.test(message)) {
 				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
@@ -157,8 +167,10 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			return Promise.reject(`Not supported: packagePath and web.`);
 		}
 
-		promise = readManifestFromPackage(options.packagePath)
-			.then(manifest => ({ manifest, packagePath: options.packagePath }));
+		promise = readManifestFromPackage(options.packagePath).then(manifest => ({
+			manifest,
+			packagePath: options.packagePath,
+		}));
 	} else {
 		const cwd = options.cwd;
 		const githubBranch = options.githubBranch;
@@ -170,27 +182,27 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, githubBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web }));
+			.then(packagePath =>
+				pack({ packagePath, cwd, githubBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web })
+			);
 	}
 
 	return promise.then(async ({ manifest, packagePath }) => {
 		if (!options.noVerify && manifest.enableProposedApi) {
-			throw new Error('Extensions using proposed API (enableProposedApi: true) can\'t be published to the Marketplace');
+			throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 		}
 
 		if (options.web) {
 			if (!isWebKind(manifest)) {
-				throw new Error('Extensions which are not web kind can\'t be published to the Marketpalce as a web extension');
+				throw new Error("Extensions which are not web kind can't be published to the Marketpalce as a web extension");
 			}
 			const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
 			if (!isSupportedWebExtension(manifest, extensionsReport)) {
-				throw new Error('Extensions which are not supported can\'t be published to the Marketpalce as a web extension');
+				throw new Error("Extensions which are not supported can't be published to the Marketpalce as a web extension");
 			}
 		}
 
-		const patPromise = options.pat
-			? Promise.resolve(options.pat)
-			: getPublisher(manifest.publisher).then(p => p.pat);
+		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);
 
 		return patPromise.then(pat => _publish(packagePath, pat, manifest));
 	});

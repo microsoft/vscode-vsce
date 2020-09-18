@@ -1,7 +1,18 @@
 import {
-	readManifest, collect, toContentTypes, ReadmeProcessor,
-	read, processFiles, createDefaultProcessors,
-	toVsixManifest, IFile, validateManifest, isSupportedWebExtension, WebExtensionProcessor, IAsset, IPackageOptions
+	readManifest,
+	collect,
+	toContentTypes,
+	ReadmeProcessor,
+	read,
+	processFiles,
+	createDefaultProcessors,
+	toVsixManifest,
+	IFile,
+	validateManifest,
+	isSupportedWebExtension,
+	WebExtensionProcessor,
+	IAsset,
+	IPackageOptions,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -34,33 +45,35 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
-function createXMLParser<T>(): (raw: string) => Promise<T> { return denodeify<string, T>(parseString); }
+function createXMLParser<T>(): (raw: string) => Promise<T> {
+	return denodeify<string, T>(parseString);
+}
 
 type XMLManifest = {
 	PackageManifest: {
-		$: { Version: string, xmlns: string, },
+		$: { Version: string; xmlns: string };
 		Metadata: {
-			Description: { _: string; }[],
-			DisplayName: string[],
-			Identity: { $: { Id: string, Version: string, Publisher: string } }[],
-			Tags: string[],
-			GalleryFlags: string[],
-			License: string[],
-			Icon: string[],
-			Properties: { Property: { $: { Id: string, Value: string } }[] }[],
-			Categories: string[],
-			Badges: { Badge: { $: { Link: string, ImgUri: string, Description: string } }[] }[]
-		}[],
-		Installation: { InstallationTarget: { $: { Id: string } }[] }[]
-		Dependencies: string[]
-		Assets: { Asset: { $: { Type: string, Path: string } }[] }[]
-	}
+			Description: { _: string }[];
+			DisplayName: string[];
+			Identity: { $: { Id: string; Version: string; Publisher: string } }[];
+			Tags: string[];
+			GalleryFlags: string[];
+			License: string[];
+			Icon: string[];
+			Properties: { Property: { $: { Id: string; Value: string } }[] }[];
+			Categories: string[];
+			Badges: { Badge: { $: { Link: string; ImgUri: string; Description: string } }[] }[];
+		}[];
+		Installation: { InstallationTarget: { $: { Id: string } }[] }[];
+		Dependencies: string[];
+		Assets: { Asset: { $: { Type: string; Path: string } }[] }[];
+	};
 };
 
 type ContentTypes = {
 	Types: {
-		Default: { $: { Extension: string, ContentType } }[]
-	}
+		Default: { $: { Extension: string; ContentType } }[];
+	};
 };
 
 const parseXmlManifest = createXMLParser<XMLManifest>();
@@ -102,7 +115,7 @@ function createManifest(extra: Partial<Manifest>): Manifest {
 		version: '0.0.1',
 		description: 'test extension',
 		engines: { vscode: '*' },
-		...extra
+		...extra,
 	};
 }
 
@@ -225,18 +238,16 @@ describe('collect', function () {
 });
 
 describe('readManifest', () => {
-
 	it('should patch NLS', () => {
 		const cwd = fixture('nls');
 		const raw = require(path.join(cwd, 'package.json'));
 		const translations = require(path.join(cwd, 'package.nls.json'));
 
-		return readManifest(cwd)
-			.then((manifest: any) => {
-				assert.equal(manifest.name, raw.name);
-				assert.equal(manifest.description, translations['extension.description']);
-				assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
-			});
+		return readManifest(cwd).then((manifest: any) => {
+			assert.equal(manifest.name, raw.name);
+			assert.equal(manifest.description, translations['extension.description']);
+			assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
+		});
 	});
 
 	it('should not patch NLS if required', () => {
@@ -244,48 +255,109 @@ describe('readManifest', () => {
 		const raw = require(path.join(cwd, 'package.json'));
 		const translations = require(path.join(cwd, 'package.nls.json'));
 
-		return readManifest(cwd, false)
-			.then((manifest: any) => {
-				assert.equal(manifest.name, raw.name);
-				assert.notEqual(manifest.description, translations['extension.description']);
-				assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-			});
+		return readManifest(cwd, false).then((manifest: any) => {
+			assert.equal(manifest.name, raw.name);
+			assert.notEqual(manifest.description, translations['extension.description']);
+			assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
+		});
 	});
 });
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
 		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
-		assert.throws(() => { validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' } }); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' } }); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } }); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null }); });
-		assert.throws(() => { validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } }); });
+		assert.throws(() => {
+			validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } });
+		});
+		assert.throws(() => {
+			validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' } });
+		});
+		assert.throws(() => {
+			validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' } });
+		});
+		assert.throws(() => {
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } });
+		});
+		assert.throws(() => {
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null });
+		});
+		assert.throws(() => {
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } });
+		});
 	});
 
 	it('should prevent SVG icons', () => {
 		assert(validateManifest(createManifest({ icon: 'icon.png' })));
-		assert.throws(() => { validateManifest(createManifest({ icon: 'icon.svg' })); });
+		assert.throws(() => {
+			validateManifest(createManifest({ icon: 'icon.svg' }));
+		});
 	});
 
 	it('should prevent badges from non HTTPS sources', () => {
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })); });
-		assert.throws(() => { validateManifest(createManifest({ badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }] })); });
+		assert.throws(() => {
+			validateManifest(
+				createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })
+			);
+		});
+		assert.throws(() => {
+			validateManifest(
+				createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })
+			);
+		});
+		assert.throws(() => {
+			validateManifest(
+				createManifest({
+					badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }],
+				})
+			);
+		});
 	});
 
 	it('should allow non SVG badges', () => {
-		assert(validateManifest(createManifest({ badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }] })));
+		assert(
+			validateManifest(
+				createManifest({
+					badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }],
+				})
+			)
+		);
 	});
 
 	it('should allow SVG badges from trusted sources', () => {
-		assert(validateManifest(createManifest({ badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] })));
+		assert(
+			validateManifest(
+				createManifest({
+					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+				})
+			)
+		);
 	});
 
 	it('should prevent SVG badges from non trusted sources', () => {
-		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
-		assert.throws(() => { assert(validateManifest(createManifest({ badges: [{ url: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/410.sv%67', href: 'http://badgeurl', description: 'this is a badge' }] }))); });
+		assert.throws(() => {
+			assert(
+				validateManifest(
+					createManifest({
+						badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+					})
+				)
+			);
+		});
+		assert.throws(() => {
+			assert(
+				validateManifest(
+					createManifest({
+						badges: [
+							{
+								url: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/410.sv%67',
+								href: 'http://badgeurl',
+								description: 'this is a badge',
+							},
+						],
+					})
+				)
+			);
+		});
 	});
 });
 
@@ -296,7 +368,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -307,7 +379,10 @@ describe('toVsixManifest', () => {
 				assert.ok(result.PackageManifest.$);
 				assert.equal(result.PackageManifest.$.Version, '2.0.0');
 				assert.equal(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
-				assert.equal(result.PackageManifest.$['xmlns:d'], 'http://schemas.microsoft.com/developer/vsx-schema-design/2011');
+				assert.equal(
+					result.PackageManifest.$['xmlns:d'],
+					'http://schemas.microsoft.com/developer/vsx-schema-design/2011'
+				);
 				assert.ok(result.PackageManifest.Metadata);
 				assert.equal(result.PackageManifest.Metadata.length, 1);
 				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, 'test extension');
@@ -328,7 +403,7 @@ describe('toVsixManifest', () => {
 			});
 	});
 
-	it("should escape special characters", () => {
+	it('should escape special characters', () => {
 		const specialCharacters = '\'"<>&`';
 
 		const name = `name${specialCharacters}`;
@@ -337,8 +412,11 @@ describe('toVsixManifest', () => {
 		const description = `description${specialCharacters}`;
 
 		const manifest = {
-			name, publisher, version, description,
-			engines: Object.create(null)
+			name,
+			publisher,
+			version,
+			description,
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -357,18 +435,19 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/readme.md', contents: Buffer.from('') }
-		];
+		const files = [{ path: 'extension/readme.md', contents: Buffer.from('') }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Details');
+				assert.equal(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.Details'
+				);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
@@ -379,18 +458,19 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/changelog.md', contents: Buffer.from('') }
-		];
+		const files = [{ path: 'extension/changelog.md', contents: Buffer.from('') }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.Changelog');
+				assert.equal(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.Changelog'
+				);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
@@ -401,7 +481,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			displayName: 'Test Extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -419,18 +499,19 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			license: 'SEE LICENSE IN thelicense.md',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/thelicense.md' }
-		];
+		const files = [{ path: 'extension/thelicense.md' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
+				assert.equal(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
 			});
 	});
@@ -442,12 +523,10 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			license: 'SEE LICENSE IN thelicense.md',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/thelicense.md' }
-		];
+		const files = [{ path: 'extension/thelicense.md' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -464,12 +543,10 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/LICENSE.md' }
-		];
+		const files = [{ path: 'extension/LICENSE.md' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -478,7 +555,10 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
 				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
 				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Type, 'Microsoft.VisualStudio.Services.Content.License');
+				assert.equal(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
 				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
 			});
 	});
@@ -491,13 +571,10 @@ describe('toVsixManifest', () => {
 			description: 'test extension',
 			engines: Object.create(null),
 			icon: 'fake.png',
-			license: 'SEE LICENSE IN thelicense.md'
+			license: 'SEE LICENSE IN thelicense.md',
 		};
 
-		const files = [
-			{ path: 'extension/fake.png' },
-			{ path: 'extension/thelicense.md' }
-		];
+		const files = [{ path: 'extension/fake.png' }, { path: 'extension/thelicense.md' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -516,17 +593,19 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			icon: 'fake.png'
+			icon: 'fake.png',
 		};
 
-		const files = [
-			{ path: 'extension/fake.png' }
-		];
+		const files = [{ path: 'extension/fake.png' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.ok(result.PackageManifest.Assets[0].Asset.some(d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'));
+				assert.ok(
+					result.PackageManifest.Assets[0].Asset.some(
+						d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'
+					)
+				);
 			});
 	});
 
@@ -538,13 +617,10 @@ describe('toVsixManifest', () => {
 			description: 'test extension',
 			engines: Object.create(null),
 			icon: 'fake.png',
-			license: 'SEE LICENSE IN thelicense.md'
+			license: 'SEE LICENSE IN thelicense.md',
 		};
 
-		const files = [
-			{ path: 'extension\\fake.png' },
-			{ path: 'extension\\thelicense.md' }
-		];
+		const files = [{ path: 'extension\\fake.png' }, { path: 'extension\\thelicense.md' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -564,16 +640,20 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			galleryBanner: {
 				color: '#5c2d91',
-				theme: 'dark'
-			}
+				theme: 'dark',
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark'));
+				assert.ok(
+					properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91')
+				);
+				assert.ok(
+					properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark')
+				);
 			});
 	});
 
@@ -584,24 +664,54 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			repository: {
-				type: "git",
-				url: "https://server.com/Microsoft/vscode-spell-check.git"
+				type: 'git',
+				url: 'https://server.com/Microsoft/vscode-spell-check.git',
 			},
 			bugs: {
-				url: "https://server.com/Microsoft/vscode-spell-check/issues"
+				url: 'https://server.com/Microsoft/vscode-spell-check/issues',
 			},
-			homepage: "https://server.com/Microsoft/vscode-spell-check",
+			homepage: 'https://server.com/Microsoft/vscode-spell-check',
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Source' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' && p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Support' && p.Value === 'https://server.com/Microsoft/vscode-spell-check/issues'));
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' && p.Value === 'https://server.com/Microsoft/vscode-spell-check'));
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Source' &&
+							p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Getstarted' &&
+							p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' &&
+							p.Value === 'https://server.com/Microsoft/vscode-spell-check.git'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Support' &&
+							p.Value === 'https://server.com/Microsoft/vscode-spell-check/issues'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' &&
+							p.Value === 'https://server.com/Microsoft/vscode-spell-check'
+					)
+				);
 			});
 	});
 
@@ -612,16 +722,22 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			repository: {
-				type: "git",
-				url: "https://github.com/Microsoft/vscode-spell-check.git"
-			}
+				type: 'git',
+				url: 'https://github.com/Microsoft/vscode-spell-check.git',
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' &&
+							p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'
+					)
+				);
 				assert.ok(properties.every(p => p.Id !== 'Microsoft.VisualStudio.Services.Links.Repository'));
 			});
 	});
@@ -632,14 +748,20 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			repository: 'Microsoft/vscode-spell-check'
+			repository: 'Microsoft/vscode-spell-check',
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
-				assert.ok(properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' && p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'));
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.GitHub' &&
+							p.Value === 'https://github.com/Microsoft/vscode-spell-check.git'
+					)
+				);
 				assert.ok(properties.every(p => p.Id !== 'Microsoft.VisualStudio.Services.Links.Repository'));
 			});
 	});
@@ -650,7 +772,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			categories: ['hello', 'world']
+			categories: ['hello', 'world'],
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -668,7 +790,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			preview: true
+			preview: true,
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -685,8 +807,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
-			}
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -704,8 +826,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: []
-			}
+				themes: [],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -720,8 +842,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }]
-			}
+				themes: [{ label: 'monokai', uiTheme: 'vs', path: 'monokai.tmTheme' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -739,8 +861,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }]
-			}
+				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -758,8 +880,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }]
-			}
+				iconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -776,7 +898,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			activationEvents: ['onLanguage:go']
+			activationEvents: ['onLanguage:go'],
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -791,8 +913,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				languages: [{ id: 'go' }]
-			}
+				languages: [{ id: 'go' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -807,8 +929,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				snippets: [{ language: 'go', path: 'gosnippets.json' }]
-			}
+				snippets: [{ language: 'go', path: 'gosnippets.json' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -822,7 +944,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			keywords: ['theme', 'theme']
+			keywords: ['theme', 'theme'],
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -837,10 +959,8 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				keybindings: [
-					{ command: 'hello', 'key': 'ctrl+f1' }
-				]
-			}
+				keybindings: [{ command: 'hello', key: 'ctrl+f1' }],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -858,14 +978,16 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				debuggers: [{
-					type: "node",
-					label: "Node Debug",
-					program: "./out/node/nodeDebug.js",
-					runtime: "node",
-					enableBreakpointsFor: { "languageIds": ["javascript", "javascriptreact"] }
-				}]
-			}
+				debuggers: [
+					{
+						type: 'node',
+						label: 'Node Debug',
+						program: './out/node/nodeDebug.js',
+						runtime: 'node',
+						enableBreakpointsFor: { languageIds: ['javascript', 'javascriptreact'] },
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -883,11 +1005,13 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				jsonValidation: [{
-					fileMatch: ".jshintrc",
-					url: "http://json.schemastore.org/jshintrc"
-				}]
-			}
+				jsonValidation: [
+					{
+						fileMatch: '.jshintrc',
+						url: 'http://json.schemastore.org/jshintrc',
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -904,16 +1028,25 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			description: 'This C++ extension likes combines ftp with javascript'
+			description: 'This C++ extension likes combines ftp with javascript',
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'c++'), 'detect c++');
-				assert(tags.some(tag => tag === 'ftp'), 'detect ftp');
-				assert(tags.some(tag => tag === 'javascript'), 'detect javascript');
+				assert(
+					tags.some(tag => tag === 'c++'),
+					'detect c++'
+				);
+				assert(
+					tags.some(tag => tag === 'ftp'),
+					'detect ftp'
+				);
+				assert(
+					tags.some(tag => tag === 'javascript'),
+					'detect javascript'
+				);
 				assert(!_.includes(tags, 'java'), "don't detect java");
 			});
 	});
@@ -925,12 +1058,14 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				grammars: [{
-					language: "shellscript",
-					scopeName: "source.shell",
-					path: "./syntaxes/Shell-Unix-Bash.tmLanguage"
-				}]
-			}
+				grammars: [
+					{
+						language: 'shellscript',
+						scopeName: 'source.shell',
+						path: './syntaxes/Shell-Unix-Bash.tmLanguage',
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -948,11 +1083,13 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				languages: [{
-					id: 'go',
-					aliases: ['golang', 'google-go']
-				}]
-			}
+				languages: [
+					{
+						id: 'go',
+						aliases: ['golang', 'google-go'],
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -972,11 +1109,16 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				localizations: [{
-					languageId: 'de',
-					translations: [{ id: 'vscode', path: 'fake.json' }, { id: 'vscode.go', path: 'what.json' }]
-				}]
-			}
+				localizations: [
+					{
+						languageId: 'de',
+						translations: [
+							{ id: 'vscode', path: 'fake.json' },
+							{ id: 'vscode.go', path: 'what.json' },
+						],
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1004,32 +1146,41 @@ describe('toVsixManifest', () => {
 						languageName: 'German',
 						translations: [
 							{ id: 'vscode', path: 'de.json' },
-							{ id: 'vscode.go', path: 'what.json' }
-						]
+							{ id: 'vscode.go', path: 'what.json' },
+						],
 					},
 					{
 						languageId: 'pt',
 						languageName: 'Portuguese',
 						localizedLanguageName: 'Português',
-						translations: [
-							{ id: 'vscode', path: './translations/pt.json' }
-						]
-					}
-				]
-			}
+						translations: [{ id: 'vscode', path: './translations/pt.json' }],
+					},
+				],
+			},
 		};
 
 		const files = [
 			{ path: 'extension/de.json', contents: Buffer.from('') },
-			{ path: 'extension/translations/pt.json', contents: Buffer.from('') }
+			{ path: 'extension/translations/pt.json', contents: Buffer.from('') },
 		];
 
 		return _toVsixManifest(manifest, files)
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'));
-				assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' && asset.$.Path === 'extension/translations/pt.json'));
+				assert(
+					assets.some(
+						asset =>
+							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'
+					)
+				);
+				assert(
+					assets.some(
+						asset =>
+							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' &&
+							asset.$.Path === 'extension/translations/pt.json'
+					)
+				);
 
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
@@ -1049,11 +1200,13 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				languages: [{
-					id: 'go',
-					extensions: ['go', 'golang']
-				}]
-			}
+				languages: [
+					{
+						id: 'go',
+						extensions: ['go', 'golang'],
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1072,11 +1225,13 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				languages: [{
-					id: 'go',
-					extensions: ['.go']
-				}]
-			}
+				languages: [
+					{
+						id: 'go',
+						extensions: ['.go'],
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1095,8 +1250,8 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			badges: [
 				{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' },
-				{ url: 'http://anotherbadgeurl.png', href: 'http://anotherbadgeurl', description: 'this is another badge' }
-			]
+				{ url: 'http://anotherbadgeurl.png', href: 'http://anotherbadgeurl', description: 'this is another badge' },
+			],
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1119,19 +1274,19 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			"contributes": {
-				"grammars": [
+			contributes: {
+				grammars: [
 					{
-						"language": "javascript",
-						"scopeName": "source.js.jsx",
-						"path": "./syntaxes/Babel Language.json"
+						language: 'javascript',
+						scopeName: 'source.js.jsx',
+						path: './syntaxes/Babel Language.json',
 					},
 					{
-						"scopeName": "source.regexp.babel",
-						"path": "./syntaxes/Babel Regex.json"
-					}
-				]
-			}
+						scopeName: 'source.regexp.babel',
+						path: './syntaxes/Babel Regex.json',
+					},
+				],
+			},
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1148,7 +1303,7 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: { vscode: '^1.0.0' } as any
+			engines: { vscode: '^1.0.0' } as any,
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1169,14 +1324,18 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(properties.some(p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'));
+				assert(
+					properties.some(
+						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
+					)
+				);
 			});
 	});
 
@@ -1187,14 +1346,18 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			markdown: 'standard' as 'standard',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(properties.some(p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'));
+				assert(
+					properties.some(
+						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'
+					)
+				);
 			});
 	});
 
@@ -1205,14 +1368,18 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			markdown: 'wow' as any,
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(properties.some(p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'));
+				assert(
+					properties.some(
+						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
+					)
+				);
 			});
 	});
 
@@ -1223,11 +1390,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			extensionDependencies: [
-				"foo.bar",
-				"foo.bar",
-				"monkey.hello"
-			]
+			extensionDependencies: ['foo.bar', 'foo.bar', 'monkey.hello'],
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1250,13 +1413,10 @@ describe('toVsixManifest', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
-		const files = [
-			{ path: 'extension/file.txt' },
-			{ path: 'extension/FILE.txt' },
-		];
+		const files = [{ path: 'extension/file.txt' }, { path: 'extension/FILE.txt' }];
 
 		try {
 			await _toVsixManifest(manifest, files);
@@ -1273,14 +1433,18 @@ describe('toVsixManifest', () => {
 			browser: 'browser.js',
 			extensionKind: ['web'],
 		});
-		const files = [
-			{ path: 'extension/browser.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
 		const result = await parseXmlManifest(vsixManifest);
 		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' && asset.$.Path === 'extension/browser.js'));
+		assert(
+			assets.some(
+				asset =>
+					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
+					asset.$.Path === 'extension/browser.js'
+			)
+		);
 
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
@@ -1292,14 +1456,18 @@ describe('toVsixManifest', () => {
 		const manifest = createManifest({
 			browser: 'browser.js',
 		});
-		const files = [
-			{ path: 'extension/browser.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
 		const result = await parseXmlManifest(vsixManifest);
 		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.some(asset => asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' && asset.$.Path === 'extension/browser.js'));
+		assert(
+			assets.some(
+				asset =>
+					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
+					asset.$.Path === 'extension/browser.js'
+			)
+		);
 
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
@@ -1312,11 +1480,9 @@ describe('toVsixManifest', () => {
 			browser: 'browser.js',
 			extensionKind: ['web'],
 		});
-		const files = [
-			{ path: 'extension/browser.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files)
+		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
 		const assets = result.PackageManifest.Assets[0].Asset;
 		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
@@ -1330,11 +1496,9 @@ describe('toVsixManifest', () => {
 		const manifest = createManifest({
 			main: 'main.js',
 		});
-		const files = [
-			{ path: 'extension/main.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
 		const result = await parseXmlManifest(vsixManifest);
 		const assets = result.PackageManifest.Assets[0].Asset;
 		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
@@ -1348,11 +1512,9 @@ describe('toVsixManifest', () => {
 		const manifest = createManifest({
 			extensionKind: ['ui', 'workspace', 'web'],
 		});
-		const files = [
-			{ path: 'extension/main.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
@@ -1363,17 +1525,14 @@ describe('toVsixManifest', () => {
 		const manifest = createManifest({
 			main: 'main.js',
 		});
-		const files = [
-			{ path: 'extension/main.js', contents: Buffer.from('') },
-		];
+		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true })
+		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
 		assert.equal(extensionKindProps[0].$.Value, 'workspace');
 	});
-
 });
 
 describe('qna', () => {
@@ -1382,7 +1541,7 @@ describe('qna', () => {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		});
 
 		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
@@ -1395,7 +1554,7 @@ describe('qna', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository'
+			repository: 'https://github.com/username/repository',
 		});
 
 		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
@@ -1409,7 +1568,7 @@ describe('qna', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			repository: 'https://github.com/username/repository',
-			qna: 'marketplace'
+			qna: 'marketplace',
 		});
 
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
@@ -1422,7 +1581,7 @@ describe('qna', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			qna: 'marketplace'
+			qna: 'marketplace',
 		});
 
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'true');
@@ -1435,7 +1594,7 @@ describe('qna', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			qna: false
+			qna: false,
 		});
 
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA', 'false');
@@ -1448,7 +1607,7 @@ describe('qna', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			engines: Object.create(null),
-			qna: 'http://myqna'
+			qna: 'http://myqna',
 		});
 
 		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Services.EnableMarketplaceQnA');
@@ -1471,41 +1630,44 @@ describe('toContentTypes', () => {
 	});
 
 	it('should include extra extensions', () => {
-		const files = [
-			{ path: 'hello.txt' },
-			{ path: 'hello.png' },
-			{ path: 'hello.md' },
-			{ path: 'hello' }
-		];
+		const files = [{ path: 'hello.txt' }, { path: 'hello.png' }, { path: 'hello.md' }, { path: 'hello' }];
 
 		return toContentTypes(files)
 			.then(xml => parseContentTypes(xml))
 			.then(result => {
 				assert.ok(result.Types.Default, 'there are content types');
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'), 'there are txt');
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'), 'there are png');
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)), 'there are md');
+				assert.ok(
+					result.Types.Default.some(d => d.$.Extension === '.txt' && d.$.ContentType === 'text/plain'),
+					'there are txt'
+				);
+				assert.ok(
+					result.Types.Default.some(d => d.$.Extension === '.png' && d.$.ContentType === 'image/png'),
+					'there are png'
+				);
+				assert.ok(
+					result.Types.Default.some(d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)),
+					'there are md'
+				);
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
 	});
 });
 
 describe('MarkdownProcessor', () => {
-
 	it('should throw when no baseContentUrl is provided', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
+			localPath: path.join(root, 'readme.md'),
 		};
 
 		let didThrow = false;
@@ -1525,26 +1687,26 @@ describe('MarkdownProcessor', () => {
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
-			engines: Object.create(null)
+			engines: Object.create(null),
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {
 			baseContentUrl: 'https://github.com/username/repository/blob/master',
-			baseImagesUrl: 'https://github.com/username/repository/raw/master'
+			baseImagesUrl: 'https://github.com/username/repository/raw/master',
 		});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
+			localPath: path.join(root, 'readme.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1555,23 +1717,23 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository'
+			repository: 'https://github.com/username/repository',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
+			localPath: path.join(root, 'readme.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1582,90 +1744,84 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository'
+			repository: 'https://github.com/username/repository',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {
-			githubBranch: 'main'
+			githubBranch: 'main',
 		});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
-		};
-
-		return processor.onFile(readme)
-			.then(file => read(file))
-			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
-			});
-	});
-
-	it("should override image URLs with baseImagesUrl while also respecting githubBranch", () => {
-		const manifest = {
-			name: "test",
-			publisher: "mocha",
-			version: "0.0.1",
-			description: "test extension",
-			engines: Object.create(null),
-			repository: "https://github.com/username/repository",
-		};
-
-		const root = fixture("readme");
-		const processor = new ReadmeProcessor(manifest, {
-			githubBranch: "main",
-			// Override image relative links to point to different base URL
-			baseImagesUrl: "https://github.com/base",
-		});
-		const readme = {
-			path: "extension/readme.md",
-			localPath: path.join(root, "readme.md"),
+			localPath: path.join(root, 'readme.md'),
 		};
 
 		return processor
 			.onFile(readme)
-			.then((file) => read(file))
-			.then((actual) => {
-				return readFile(
-					path.join(root, "readme.branch.override.images.expected.md"),
-					"utf8"
-				).then((expected) => {
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
 	});
 
-	it("should override githubBranch setting with baseContentUrl", () => {
+	it('should override image URLs with baseImagesUrl while also respecting githubBranch', () => {
 		const manifest = {
-			name: "test",
-			publisher: "mocha",
-			version: "0.0.1",
-			description: "test extension",
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
 			engines: Object.create(null),
-			repository: "https://github.com/username/repository",
+			repository: 'https://github.com/username/repository',
 		};
 
-		const root = fixture("readme");
+		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {
-			githubBranch: "main",
-			baseContentUrl: "https://github.com/base",
+			githubBranch: 'main',
+			// Override image relative links to point to different base URL
+			baseImagesUrl: 'https://github.com/base',
 		});
 		const readme = {
-			path: "extension/readme.md",
-			localPath: path.join(root, "readme.md"),
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
 		};
 
 		return processor
 			.onFile(readme)
-			.then((file) => read(file))
-			.then((actual) => {
-				return readFile(
-					path.join(root, "readme.branch.override.content.expected.md"),
-					"utf8"
-				).then((expected) => {
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should override githubBranch setting with baseContentUrl', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			githubBranch: 'main',
+			baseContentUrl: 'https://github.com/base',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1678,23 +1834,23 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository.git'
+			repository: 'https://github.com/username/repository.git',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
+			localPath: path.join(root, 'readme.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1705,27 +1861,27 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository.git'
+			repository: 'https://github.com/username/repository.git',
 		};
 
 		const options = {
-			baseImagesUrl: 'https://github.com/username/repository/path/to'
+			baseImagesUrl: 'https://github.com/username/repository/path/to',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, options);
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.md')
+			localPath: path.join(root, 'readme.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1736,23 +1892,23 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository.git'
+			repository: 'https://github.com/username/repository.git',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.github.md')
+			localPath: path.join(root, 'readme.github.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1763,23 +1919,23 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://github.com/username/repository.git'
+			repository: 'https://github.com/username/repository.git',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, { expandGitHubIssueLinks: false });
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.github.md')
+			localPath: path.join(root, 'readme.github.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
@@ -1790,28 +1946,34 @@ describe('MarkdownProcessor', () => {
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			repository: 'https://some-other-provider.com/username/repository.git'
+			repository: 'https://some-other-provider.com/username/repository.git',
 		};
 
 		const root = fixture('readme');
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = {
 			path: 'extension/readme.md',
-			localPath: path.join(root, 'readme.github.md')
+			localPath: path.join(root, 'readme.github.md'),
 		};
 
-		return processor.onFile(readme)
+		return processor
+			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8')
-					.then(expected => {
-						assert.equal(actual, expected);
-					});
+				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
 			});
 	});
 
 	it('should prevent non-HTTPS images', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `![title](http://foo.png)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1820,7 +1982,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent non-HTTPS img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `<img src="http://foo.png" />`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1829,7 +1997,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent SVGs from not trusted sources', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `![title](https://foo/hello.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1838,7 +2012,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should allow SVGs from trusted sources', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `![title](https://badges.gitter.im/hello.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1848,7 +2028,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should allow SVG from GitHub actions in image tag', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `![title](https://github.com/fakeuser/fakerepo/workflows/fakeworkflowname/badge.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1858,7 +2044,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent SVG from a GitHub repo in image tag', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `![title](https://github.com/eviluser/evilrepo/blob/master/malicious.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1867,7 +2059,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent SVGs from not trusted sources in img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `<img src="https://foo/hello.svg" />`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1876,7 +2074,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should allow SVGs from trusted sources in img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `<img src="https://badges.gitter.im/hello.svg" />`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1886,7 +2090,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent SVG tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M224 387.814V512L32 320l192-192v126.912C447.375 260.152 437.794 103.016 380.93 0 521.287 151.707 491.48 394.785 224 387.814z"/></svg>`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1895,7 +2105,13 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should prevent SVG data urls in img tags', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBkPSJNMjI0IDM4Ny44MTRWNTEyTDMyIDMyMGwxOTItMTkydjEyNi45MTJDNDQ3LjM3NSAyNjAuMTUyIDQzNy43OTQgMTAzLjAxNiAzODAuOTMgMCA1MjEuMjg3IDE1MS43MDcgNDkxLjQ4IDM5NC43ODUgMjI0IDM4Ny44MTR6Ii8+PC9zdmc+" />`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
@@ -1904,17 +2120,22 @@ describe('MarkdownProcessor', () => {
 	});
 
 	it('should catch an unchanged README.md', async () => {
-		const manifest = { name: 'test', publisher: 'mocha', version: '0.0.1', engines: Object.create(null), repository: 'https://github.com/username/repository' };
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
 		const contents = `This is the README for your extension `;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
-	})
+	});
 });
 
 describe('isSupportedWebExtension', () => {
-
 	it('should return true if extension report has extension', () => {
 		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
 		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: ['mocha.test'], publishers: [] } };
@@ -1932,11 +2153,9 @@ describe('isSupportedWebExtension', () => {
 		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: [] } };
 		assert.ok(!isSupportedWebExtension(manifest, extensionReport));
 	});
-
 });
 
 describe('WebExtensionProcessor', () => {
-
 	it('should include file', async () => {
 		const manifest = createManifest({ extensionKind: ['web'] });
 		const processor = new WebExtensionProcessor(manifest, { web: true });
@@ -1991,7 +2210,9 @@ describe('WebExtensionProcessor', () => {
 		await processor.onFile(manifestFile);
 		await processor.onEnd();
 
-		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${manifestFile.path}`, path: manifestFile.path }];
+		const expected: IAsset[] = [
+			{ type: `Microsoft.VisualStudio.Code.WebResources/${manifestFile.path}`, path: manifestFile.path },
+		];
 		assert.deepEqual(processor.assets, expected);
 	});
 
@@ -2080,6 +2301,4 @@ describe('WebExtensionProcessor', () => {
 		assert.equal(processor.vsix.webExtension, undefined);
 		assert.deepEqual(processor.tags, []);
 	});
-
-
 });

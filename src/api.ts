@@ -33,7 +33,6 @@ export interface ICreateVSIXOptions {
 }
 
 export interface IPublishOptions {
-
 	/**
 	 * The location of the extension in the file system.
 	 *
@@ -69,11 +68,10 @@ export interface IPublishOptions {
  */
 export enum PackageManager {
 	Npm,
-	Yarn
+	Yarn,
 }
 
 export interface IListFilesOptions {
-
 	/**
 	 * The working directory of the extension. Defaults to `process.cwd()`.
 	 */
@@ -85,7 +83,7 @@ export interface IListFilesOptions {
 	packageManager?: PackageManager;
 
 	/**
-	 * A subset of the top level dependencies which should be included. The 
+	 * A subset of the top level dependencies which should be included. The
 	 * default is `undefined` which include all dependencies, an empty array means
 	 * no dependencies will be included.
 	 */
@@ -100,7 +98,6 @@ export interface IListFilesOptions {
 }
 
 export interface IPublishVSIXOptions {
-
 	/**
 	 * The Personal Access Token to use.
 	 *
@@ -142,7 +139,12 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options.cwd, options.packageManager === PackageManager.Yarn, options.packagedDependencies, options.ignoreFile);
+	return _listFiles(
+		options.cwd,
+		options.packageManager === PackageManager.Yarn,
+		options.packagedDependencies,
+		options.ignoreFile
+	);
 }
 
 /**
