@@ -35,14 +35,24 @@ const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml')
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
-export interface IFile {
+export interface IInMemoryFile {
 	path: string;
-	contents?: Buffer | string;
-	localPath?: string;
+	readonly contents: Buffer | string;
+}
+
+export interface ILocalFile {
+	path: string;
+	readonly localPath: string;
+}
+
+export type IFile = IInMemoryFile | ILocalFile;
+
+function isInMemoryFile(file: IFile): file is IInMemoryFile {
+	return !!(file as IInMemoryFile).contents;
 }
 
 export function read(file: IFile): Promise<string> {
-	if (file.contents) {
+	if (isInMemoryFile(file)) {
 		return Promise.resolve(file.contents).then(b => (typeof b === 'string' ? b : b.toString('utf8')));
 	} else {
 		return readFile(file.localPath, 'utf8');
@@ -1094,7 +1104,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 				new Promise((c, e) => {
 					const zip = new yazl.ZipFile();
 					files.forEach(f =>
-						f.contents
+						isInMemoryFile(f)
 							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path)
 							: zip.addFile(f.localPath, f.path)
 					);

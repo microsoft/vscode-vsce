@@ -502,7 +502,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 		};
 
-		const files = [{ path: 'extension/thelicense.md' }];
+		const files = [{ path: 'extension/thelicense.md', contents: '' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -526,7 +526,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 		};
 
-		const files = [{ path: 'extension/thelicense.md' }];
+		const files = [{ path: 'extension/thelicense.md', contents: '' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -546,7 +546,7 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 		};
 
-		const files = [{ path: 'extension/LICENSE.md' }];
+		const files = [{ path: 'extension/LICENSE.md', contents: '' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -574,7 +574,10 @@ describe('toVsixManifest', () => {
 			license: 'SEE LICENSE IN thelicense.md',
 		};
 
-		const files = [{ path: 'extension/fake.png' }, { path: 'extension/thelicense.md' }];
+		const files = [
+			{ path: 'extension/fake.png', contents: '' },
+			{ path: 'extension/thelicense.md', contents: '' },
+		];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -596,7 +599,7 @@ describe('toVsixManifest', () => {
 			icon: 'fake.png',
 		};
 
-		const files = [{ path: 'extension/fake.png' }];
+		const files = [{ path: 'extension/fake.png', contents: '' }];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -620,7 +623,10 @@ describe('toVsixManifest', () => {
 			license: 'SEE LICENSE IN thelicense.md',
 		};
 
-		const files = [{ path: 'extension\\fake.png' }, { path: 'extension\\thelicense.md' }];
+		const files = [
+			{ path: 'extension\\fake.png', contents: '' },
+			{ path: 'extension\\thelicense.md', contents: '' },
+		];
 
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
@@ -1416,7 +1422,10 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 		};
 
-		const files = [{ path: 'extension/file.txt' }, { path: 'extension/FILE.txt' }];
+		const files = [
+			{ path: 'extension/file.txt', contents: '' },
+			{ path: 'extension/FILE.txt', contents: '' },
+		];
 
 		try {
 			await _toVsixManifest(manifest, files);
@@ -1630,7 +1639,12 @@ describe('toContentTypes', () => {
 	});
 
 	it('should include extra extensions', () => {
-		const files = [{ path: 'hello.txt' }, { path: 'hello.png' }, { path: 'hello.md' }, { path: 'hello' }];
+		const files = [
+			{ path: 'hello.txt', contents: '' },
+			{ path: 'hello.png', contents: '' },
+			{ path: 'hello.md', contents: '' },
+			{ path: 'hello', contents: '' },
+		];
 
 		return toContentTypes(files)
 			.then(xml => parseContentTypes(xml))
