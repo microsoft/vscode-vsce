@@ -23,6 +23,8 @@ import {
 } from './validation';
 import { getDependencies } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
+import { IFile, isInMemoryFile } from './util';
+import { createChecksumFile } from './sign';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -34,22 +36,6 @@ const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifes
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
-
-export interface IInMemoryFile {
-	path: string;
-	readonly contents: Buffer | string;
-}
-
-export interface ILocalFile {
-	path: string;
-	readonly localPath: string;
-}
-
-export type IFile = IInMemoryFile | ILocalFile;
-
-function isInMemoryFile(file: IFile): file is IInMemoryFile {
-	return !!(file as IInMemoryFile).contents;
-}
 
 export function read(file: IFile): Promise<string> {
 	if (isInMemoryFile(file)) {
@@ -84,6 +70,7 @@ export interface IPackageOptions {
 	ignoreFile?: string;
 	expandGitHubIssueLinks?: boolean;
 	web?: boolean;
+	checksum?: boolean;
 }
 
 export interface IProcessor {
@@ -1164,7 +1151,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 
 	await prepublish(cwd, manifest, options.useYarn);
 
-	const files = await collect(manifest, options);
+	let files = await collect(manifest, options);
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 
 	if (files.length > 5000 || jsFiles.length > 100) {
@@ -1174,6 +1161,12 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	}
 
 	const packagePath = await getPackagePath(cwd, manifest, options);
+
+	if (options.checksum) {
+		const checksum = await createChecksumFile(files);
+		files = [checksum, ...files];
+	}
+
 	await writeVsix(files, path.resolve(packagePath));
 
 	return { manifest, packagePath, files };

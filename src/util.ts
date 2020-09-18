@@ -6,6 +6,22 @@ import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 
+export interface IInMemoryFile {
+	path: string;
+	readonly contents: Buffer | string;
+}
+
+export interface ILocalFile {
+	path: string;
+	readonly localPath: string;
+}
+
+export type IFile = IInMemoryFile | ILocalFile;
+
+export function isInMemoryFile(file: IFile): file is IInMemoryFile {
+	return !!(file as IInMemoryFile).contents;
+}
+
 const __read = denodeify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
 	if (process.env['VSCE_TESTS'] || !process.stdout.isTTY) {

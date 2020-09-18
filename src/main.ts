@@ -86,7 +86,8 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
-		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking }) =>
+		.option('--checksum', 'Create checksum file')
+		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, checksum }) =>
 			main(
 				packageCommand({
 					packagePath: out,
@@ -96,6 +97,7 @@ module.exports = function (argv: string[]): void {
 					useYarn: yarn,
 					ignoreFile,
 					expandGitHubIssueLinks: noGitHubIssueLinking,
+					checksum,
 				})
 			)
 		);
