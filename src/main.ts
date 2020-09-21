@@ -10,6 +10,7 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+import { verifyCommand } from './sign';
 const pkg = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
@@ -186,6 +187,12 @@ module.exports = function (argv: string[]): void {
 		.option('--json', 'Output result in json format', false)
 		.description('search extension gallery')
 		.action((text, { json }) => main(search(text, json)));
+
+	program
+		.command('verify <path>')
+		.option('--checksum', 'Verify checksum only', false)
+		.description('Verify extension signature(s)')
+		.action((packagePath, { checksum }) => main(verifyCommand(packagePath, { checksum })));
 
 	program.command('*', '', { noHelp: true }).action((cmd: string) => {
 		program.help(help => {

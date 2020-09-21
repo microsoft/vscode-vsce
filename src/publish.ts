@@ -3,10 +3,9 @@ import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/i
 import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI, unzipAll } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
-import * as yauzl from 'yauzl';
 import * as semver from 'semver';
 import * as cp from 'child_process';
 
@@ -16,42 +15,14 @@ const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; st
 );
 const tmpName = denodeify<string>(tmp.tmpName);
 
-function readManifestFromPackage(packagePath: string): Promise<Manifest> {
-	return new Promise<Manifest>((c, e) => {
-		yauzl.open(packagePath, (err, zipfile) => {
-			if (err) {
-				return e(err);
-			}
+export async function readManifestFromPackage(packagePath: string): Promise<Manifest> {
+	const files = await unzipAll(packagePath, name => /^extension\/package\.json$/i.test(name));
 
-			const onEnd = () => e(new Error('Manifest not found'));
-			zipfile.once('end', onEnd);
+	if (files.length !== 1) {
+		throw new Error('Manifest file not found');
+	}
 
-			zipfile.on('entry', entry => {
-				if (!/^extension\/package\.json$/i.test(entry.fileName)) {
-					return;
-				}
-
-				zipfile.removeListener('end', onEnd);
-
-				zipfile.openReadStream(entry, (err, stream) => {
-					if (err) {
-						return e(err);
-					}
-
-					const buffers = [];
-					stream.on('data', buffer => buffers.push(buffer));
-					stream.once('error', e);
-					stream.once('end', () => {
-						try {
-							c(JSON.parse(Buffer.concat(buffers).toString('utf8')));
-						} catch (err) {
-							e(err);
-						}
-					});
-				});
-			});
-		});
-	});
+	return JSON.parse(files[0].contents.toString('utf8'));
 }
 
 async function _publish(packagePath: string, pat: string, manifest: Manifest): Promise<void> {

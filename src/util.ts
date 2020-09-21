@@ -3,6 +3,7 @@ import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import * as denodeify from 'denodeify';
 import chalk from 'chalk';
+import * as yauzl from 'yauzl';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 
@@ -154,3 +155,57 @@ export const log = {
 	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
 	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };
+
+export function unzip(
+	packagePath: string,
+	onFile: (file: IInMemoryFile) => void,
+	filter?: (name: string) => boolean
+): Promise<void> {
+	return new Promise<void>((c, e) => {
+		yauzl.open(packagePath, (err, zipfile) => {
+			if (err) {
+				return e(err);
+			}
+
+			const promises: Promise<void>[] = [];
+			zipfile.once('end', () => Promise.all(promises).then(() => c()));
+			zipfile.on('entry', entry => {
+				try {
+					if (filter && !filter(entry.fileName)) {
+						return;
+					}
+				} catch (err) {
+					return e(err);
+				}
+
+				const promise = new Promise<void>((c, e) => {
+					zipfile.openReadStream(entry, (err, stream) => {
+						if (err) {
+							return e(err);
+						}
+
+						const buffers = [];
+						stream.on('data', buffer => buffers.push(buffer));
+						stream.once('error', e);
+						stream.once('end', () => {
+							try {
+								onFile({ path: entry.fileName, contents: Buffer.concat(buffers) });
+								c();
+							} catch (err) {
+								e(err);
+							}
+						});
+					});
+				});
+
+				promises.push(promise);
+			});
+		});
+	});
+}
+
+export async function unzipAll(packagePath: string, filter?: (name: string) => boolean): Promise<IInMemoryFile[]> {
+	const result: IInMemoryFile[] = [];
+	await unzip(packagePath, f => result.push(f), filter);
+	return result;
+}

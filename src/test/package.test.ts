@@ -7,7 +7,6 @@ import {
 	processFiles,
 	createDefaultProcessors,
 	toVsixManifest,
-	IFile,
 	validateManifest,
 	isSupportedWebExtension,
 	WebExtensionProcessor,
@@ -22,6 +21,7 @@ import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 import { IExtensionsReport } from '../publicgalleryapi';
+import { IFile } from '../util';
 
 // don't warn in tests
 console.warn = () => null;
