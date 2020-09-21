@@ -23,11 +23,14 @@ async function checksumFile(file: IFile): Promise<string> {
 }
 
 export async function createChecksumFile(files: IFile[]): Promise<IFile> {
-	const contents: string[] = [];
+	const lines: string[] = [];
 
 	for (const file of files) {
-		contents.push(`${file.path} ${await checksumFile(file)}`);
+		lines.push(`${await checksumFile(file)} ${file.path}\n`);
 	}
+
+	return { path: 'checksum', contents: lines.join('') };
+}
 
 	return { path: 'checksum', contents: contents.join('\n') };
 }
