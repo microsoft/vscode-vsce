@@ -86,7 +86,11 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
-		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking }) =>
+		.option(
+			'--web',
+			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
+		)
+		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, web }) =>
 			main(
 				packageCommand({
 					packagePath: out,
@@ -96,6 +100,7 @@ module.exports = function (argv: string[]): void {
 					useYarn: yarn,
 					ignoreFile,
 					expandGitHubIssueLinks: noGitHubIssueLinking,
+					web
 				})
 			)
 		);
