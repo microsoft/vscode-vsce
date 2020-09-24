@@ -984,7 +984,7 @@ const defaultIgnore = [
 	'**/.vscode-test/**',
 ];
 
-function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: string[]): Promise<string[]> {
+function collectAllFiles(cwd: string, useYarn = detectYarn(cwd), dependencyEntryPoints?: string[]): Promise<string[]> {
 	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
 		const promises: Promise<string[]>[] = deps.map(dep => {
 			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
@@ -998,7 +998,7 @@ function collectAllFiles(cwd: string, useYarn = false, dependencyEntryPoints?: s
 
 function collectFiles(
 	cwd: string,
-	useYarn = false,
+	useYarn = detectYarn(cwd),
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
@@ -1084,7 +1084,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
-	const useYarn = options.useYarn || false;
+	const useYarn = options.useYarn === undefined ? detectYarn(cwd) : options.useYarn;
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
@@ -1124,14 +1124,14 @@ function getDefaultPackageName(manifest: Manifest): string {
 	return `${manifest.name}-${manifest.version}.vsix`;
 }
 
-async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<void> {
+async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = detectYarn(cwd)): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
 	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
-	await new Promise((c, e) => {
+	await new Promise<void>((c, e) => {
 		const tool = useYarn ? 'yarn' : 'npm';
 		const child = cp.spawn(tool, ['run', 'vscode:prepublish'], { cwd, shell: true, stdio: 'inherit' });
 		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
@@ -1155,6 +1155,16 @@ async function getPackagePath(cwd: string, manifest: Manifest, options: IPackage
 	} catch {
 		return options.packagePath;
 	}
+}
+
+function detectYarn(cwd: string) {
+	for (const file of ["yarn.lock", ".yarnrc"]) {
+		if (fs.existsSync(path.join(cwd, file))) {
+			console.log(`Detected presense of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`);
+			return true;
+		}
+	}
+	return false;
 }
 
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
@@ -1202,7 +1212,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
  */
 export function listFiles(
 	cwd = process.cwd(),
-	useYarn = false,
+	useYarn = detectYarn(cwd),
 	packagedDependencies?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
@@ -1214,7 +1224,7 @@ export function listFiles(
  */
 export function ls(
 	cwd = process.cwd(),
-	useYarn = false,
+	useYarn = detectYarn(cwd),
 	packagedDependencies?: string[],
 	ignoreFile?: string
 ): Promise<void> {

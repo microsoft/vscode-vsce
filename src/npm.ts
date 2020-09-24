@@ -181,7 +181,10 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	const result: string[] = [cwd];
 
-	if (await new Promise(c => fs.exists(path.join(cwd, 'yarn.lock'), c))) {
+	// Using 'existsSync' instead of 'exists' since 'exists' is deprecated. While 'fs.existsSync'
+	// is a blocking IO operation, this won't affect the CLI as every code path that calls
+	// 'getYarnDependencies' essentially blocks the CLI anyways while waiting for `exists` to complete.
+	if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
 		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 		const flatten = (dep: YarnDependency) => {
 			result.push(dep.path);
