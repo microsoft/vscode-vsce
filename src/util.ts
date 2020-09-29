@@ -67,10 +67,11 @@ export function isCancelledError(error: any) {
 }
 
 export class CancellationToken {
-
 	private listeners: Function[] = [];
 	private _cancelled: boolean = false;
-	get isCancelled(): boolean { return this._cancelled; }
+	get isCancelled(): boolean {
+		return this._cancelled;
+	}
 
 	subscribe(fn: Function): Function {
 		this.listeners.push(fn);
@@ -105,7 +106,7 @@ enum LogMessageType {
 	DONE,
 	INFO,
 	WARNING,
-	ERROR
+	ERROR,
 }
 
 const LogPrefix = {
@@ -135,5 +136,5 @@ export const log = {
 	done: _log.bind(null, LogMessageType.DONE) as LogFn,
 	info: _log.bind(null, LogMessageType.INFO) as LogFn,
 	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
-	error: _log.bind(null, LogMessageType.ERROR) as LogFn
+	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };

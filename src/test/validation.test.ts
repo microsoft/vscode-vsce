@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from '../validation';
+import {
+	validatePublisher,
+	validateExtensionName,
+	validateVersion,
+	validateEngineCompatibility,
+	validateVSCodeTypesCompatibility,
+} from '../validation';
 
 describe('validatePublisher', () => {
 	it('should throw with empty', () => {
@@ -101,7 +107,6 @@ describe('validateEngineCompatibility', () => {
 });
 
 describe('validateVSCodeTypesCompatibility', () => {
-
 	it('should validate', () => {
 		validateVSCodeTypesCompatibility('*', '1.30.0');
 		validateVSCodeTypesCompatibility('*', '^1.30.0');

@@ -38,44 +38,72 @@ function main(task: Promise<any>): void {
 
 	if (isatty(1)) {
 		getLatestVersion(pkg.name, token)
-			.then(version => latestVersion = version)
-			.catch(_ => { /* noop */ });
+			.then(version => (latestVersion = version))
+			.catch(_ => {
+				/* noop */
+			});
 	}
 
-	task
-		.catch(fatal)
-		.then(() => {
-			if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-				log.info(`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
-			} else {
-				token.cancel();
-			}
-		});
+	task.catch(fatal).then(() => {
+		if (latestVersion && semver.gt(latestVersion, pkg.version)) {
+			log.info(
+				`\nThe latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`
+			);
+		} else {
+			token.cancel();
+		}
+	});
 }
 
 module.exports = function (argv: string[]): void {
-	program
-		.version(pkg.version)
-		.usage('<command> [options]');
+	program.version(pkg.version).usage('<command> [options]');
 
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm')
-		.option('--packagedDependencies <path>', 'Select packages that should be published only (includes dependencies)', (val, all) => all ? all.concat(val) : [val], undefined)
+		.option(
+			'--packagedDependencies <path>',
+			'Select packages that should be published only (includes dependencies)',
+			(val, all) => (all ? all.concat(val) : [val]),
+			undefined
+		)
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.action(({ yarn, packagedDependencies, ignoreFile }) => main(ls(undefined, yarn, packagedDependencies, ignoreFile)));
+		.action(({ yarn, packagedDependencies, ignoreFile }) =>
+			main(ls(undefined, yarn, packagedDependencies, ignoreFile))
+		);
 
 	program
 		.command('package')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
+		.option(
+			'--githubBranch [branch]',
+			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
-		.action(({ out, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking }) => main(packageCommand({ packagePath: out, baseContentUrl, baseImagesUrl, useYarn: yarn, ignoreFile, expandGitHubIssueLinks: noGitHubIssueLinking })));
+		.option(
+			'--web',
+			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
+		)
+		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, web }) =>
+			main(
+				packageCommand({
+					packagePath: out,
+					githubBranch,
+					baseContentUrl,
+					baseImagesUrl,
+					useYarn: yarn,
+					ignoreFile,
+					expandGitHubIssueLinks: noGitHubIssueLinking,
+					web
+				})
+			)
+		);
 
 	program
 		.command('publish [<version>]')
@@ -83,12 +111,40 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token', process.env['VSCE_PAT'])
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
+		.option(
+			'--githubBranch [branch]',
+			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm while packing extension files')
 		.option('--noVerify')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.action((version, { pat, message, packagePath, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile }) => main(publish({ pat, commitMessage: message, version, packagePath, baseContentUrl, baseImagesUrl, useYarn: yarn, noVerify, ignoreFile })));
+		.option(
+			'--web',
+			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
+		)
+		.action(
+			(
+				version,
+				{ pat, message, packagePath, githubBranch, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile, web }
+			) =>
+				main(
+					publish({
+						pat,
+						commitMessage: message,
+						version,
+						packagePath,
+						githubBranch,
+						baseContentUrl,
+						baseImagesUrl,
+						useYarn: yarn,
+						noVerify,
+						ignoreFile,
+						web,
+					})
+				)
+		);
 
 	program
 		.command('unpublish [<extensionid>]')
@@ -134,19 +190,17 @@ module.exports = function (argv: string[]): void {
 		.description('search extension gallery')
 		.action((text, { json }) => main(search(text, json)));
 
-	program
-		.command('*', '', { noHelp: true })
-		.action((cmd: string) => {
-			program.help(help => {
-				const availableCommands = program.commands.map(c => c._name);
-				const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
+	program.command('*', '', { noHelp: true }).action((cmd: string) => {
+		program.help(help => {
+			const availableCommands = program.commands.map(c => c._name);
+			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
-				help = `${help}
+			help = `${help}
 Unknown command '${cmd}'`;
 
-				return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
-			});
+			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 		});
+	});
 
 	program.parse(argv);
 

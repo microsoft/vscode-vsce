@@ -12,6 +12,7 @@
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="<%- engine %>" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="<%- extensionDependencies %>" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="<%- extensionPack %>" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="<%- extensionKind %>" />
       <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="<%- localizedLanguages %>" />
       <% if (links.repository) { %>
         <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="<%- links.repository %>" />
@@ -29,6 +30,7 @@
       <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="<%- githubMarkdown %>" />
       <% if (typeof enableMarketplaceQnA === 'boolean') { %><Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="<%- enableMarketplaceQnA %>" /><% } %>
       <% if (customerQnALink) { %><Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="<%- customerQnALink %>" /><% } %>
+      <% if (typeof webExtension === 'boolean') { %><Property Id="Microsoft.VisualStudio.Code.WebExtension" Value="<%- webExtension %>" /><% } %>
     </Properties>
     <% if (license) { %><License><%- license %></License><% } %>
     <% if (icon) { %><Icon><%- icon %></Icon><% } %>

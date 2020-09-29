@@ -5,11 +5,15 @@ const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
 export function validatePublisher(publisher: string): void {
 	if (!publisher) {
-		throw new Error(`Missing publisher name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`);
+		throw new Error(
+			`Missing publisher name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
+		);
 	}
 
 	if (!nameRegex.test(publisher)) {
-		throw new Error(`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.  Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`);
+		throw new Error(
+			`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.  Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
+		);
 	}
 }
 
@@ -44,7 +48,7 @@ export function validateEngineCompatibility(version: string): void {
 }
 
 /**
- * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode 
+ * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode
  */
 export function validateVSCodeTypesCompatibility(engineVersion: string, typeVersion: string): void {
 	if (engineVersion === '*') {
@@ -89,7 +93,9 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 		}
 	});
 
-	const error = new Error(`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`);
+	const error = new Error(
+		`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`
+	);
 
 	if (typeMajor > engineMajor) {
 		throw error;

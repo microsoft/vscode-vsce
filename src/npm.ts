@@ -21,7 +21,11 @@ function parseStdout({ stdout }: { stdout: string }): string {
 	return stdout.split(/[\r\n]/).filter(line => !!line)[0];
 }
 
-function exec(command: string, options: IOptions = {}, cancellationToken?: CancellationToken): Promise<{ stdout: string; stderr: string; }> {
+function exec(
+	command: string,
+	options: IOptions = {},
+	cancellationToken?: CancellationToken
+): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((c, e) => {
 		let disposeCancellationListener: Function = null;
 
@@ -31,7 +35,9 @@ function exec(command: string, options: IOptions = {}, cancellationToken?: Cance
 				disposeCancellationListener = null;
 			}
 
-			if (err) { return e(err); }
+			if (err) {
+				return e(err);
+			}
 			c({ stdout, stderr });
 		});
 
@@ -56,14 +62,14 @@ function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 
 function getNpmDependencies(cwd: string): Promise<SourceAndDestination[]> {
 	return checkNPM()
-		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 }))
-		.then(({ stdout }) => stdout
-			.split(/[\r\n]/)
-			.filter(dir => path.isAbsolute(dir))
+		.then(() =>
+			exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
+		)
+		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
 			.map(dir => {
-				return { 
-					src: dir, 
-					dest: path.relative(cwd, dir) 
+				return {
+					src: dir,
+					dest: path.relative(cwd, dir)
 				}
 			}));
 }
@@ -96,10 +102,10 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 				}
 			}
 			const children = await resolve(depPath, Object.keys(depManifest.dependencies || {}));
-			return { 
-				name, 
+			return {
+				name,
 				path: {
-					src: depPath, 
+					src: depPath,
 					dest: path.relative(root, depPath),
 				},
 				children,
@@ -109,8 +115,7 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 }
 
 function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: string[]): YarnDependency[] {
-
-	const index = new class {
+	const index = new (class {
 		private data: { [name: string]: YarnDependency } = Object.create(null);
 		constructor() {
 			for (const dep of deps) {
@@ -127,9 +132,9 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 			}
 			return result;
 		}
-	};
+	})();
 
-	const reached = new class {
+	const reached = new (class {
 		values: YarnDependency[] = [];
 		add(dep: YarnDependency): boolean {
 			if (this.values.indexOf(dep) < 0) {
@@ -138,7 +143,7 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 			}
 			return false;
 		}
-	};
+	})();
 
 	const visit = (name: string) => {
 		let dep = index.find(name);
@@ -168,14 +173,17 @@ async function getYarnProductionDependencies(root: string, manifest: Manifest, p
 
 async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
 	const root = findWorkspaceRoot(cwd) || cwd;
-	const result: SourceAndDestination[] = [{ 
-		src: cwd, 
+	const result: SourceAndDestination[] = [{
+		src: cwd,
 		dest: ''
 	}];
 
 	if (await new Promise(c => fs.exists(path.join(root, 'yarn.lock'), c))) {
 		const deps = await getYarnProductionDependencies(root, manifest, packagedDependencies);
-		const flatten = (dep: YarnDependency) => { result.push(dep.path); dep.children.forEach(flatten); };
+		const flatten = (dep: YarnDependency) => {
+			result.push(dep.path);
+			dep.children.forEach(flatten);
+		};
 		deps.forEach(flatten);
 	}
 

@@ -8,13 +8,14 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Launch Program",
+			// "cwd": "<absolute path to your extension>",
 			"program": "${workspaceFolder}/out/vsce",
 			"args": [
 				"--version"
+				// "ls", "package", "publish"
 			],
 			"sourceMaps": true,
-			"outputCapture": "std",
-			"preLaunchTask": "compile"
+			"outputCapture": "std"
 		}
 	]
 }
