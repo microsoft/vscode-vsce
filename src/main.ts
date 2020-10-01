@@ -90,12 +90,24 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
 		.option('--checksum', 'Create checksum file')
+		.option('--sign [privatekey]', 'Sign the extension using the provided PGP private key')
 		.option(
 			'--web',
 			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
 		)
 		.action(
-			({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, checksum, web }) =>
+			({
+				out,
+				githubBranch,
+				baseContentUrl,
+				baseImagesUrl,
+				yarn,
+				ignoreFile,
+				noGitHubIssueLinking,
+				checksum,
+				sign,
+				web,
+			}) =>
 				main(
 					packageCommand({
 						packagePath: out,
@@ -106,6 +118,7 @@ module.exports = function (argv: string[]): void {
 						ignoreFile,
 						expandGitHubIssueLinks: noGitHubIssueLinking,
 						checksum,
+						sign,
 						web,
 					})
 				)

@@ -24,7 +24,7 @@ import {
 import { detectYarn, getDependencies } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
 import { IFile, isInMemoryFile } from './util';
-import { createChecksumFile } from './sign';
+import { createChecksumFile, signChecksumFile } from './sign';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -71,6 +71,7 @@ export interface IPackageOptions {
 	expandGitHubIssueLinks?: boolean;
 	web?: boolean;
 	checksum?: boolean;
+	sign?: string;
 }
 
 export interface IProcessor {
@@ -1165,9 +1166,14 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 
 	const packagePath = await getPackagePath(cwd, manifest, options);
 
-	if (options.checksum) {
+	if (options.checksum || options.sign) {
 		const checksum = await createChecksumFile(files);
 		files = [checksum, ...files];
+
+		if (options.sign) {
+			const signature = await signChecksumFile(checksum, options.sign);
+			files = [signature, ...files];
+		}
 	}
 
 	await writeVsix(files, path.resolve(packagePath));

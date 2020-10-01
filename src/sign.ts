@@ -1,6 +1,10 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { IFile, IInMemoryFile, isInMemoryFile, unzip, log } from './util';
+import * as openpgp from 'openpgp';
+import * as denodeify from 'denodeify';
+import { IFile, IInMemoryFile, isInMemoryFile, unzip, log, read } from './util';
+
+const readFile = denodeify<string, string, string>(fs.readFile);
 
 export type Path = string;
 export type Checksum = string;
@@ -34,7 +38,7 @@ export async function createChecksumMap(files: IFile[]): Promise<ChecksumMap> {
 	return result;
 }
 
-export async function createChecksumFile(files: IFile[]): Promise<IFile> {
+export async function createChecksumFile(files: IFile[]): Promise<IInMemoryFile> {
 	const checksumMap = await createChecksumMap(files);
 	const lines: string[] = [];
 
@@ -45,7 +49,24 @@ export async function createChecksumFile(files: IFile[]): Promise<IFile> {
 	return { path: 'checksum', contents: lines.join('') };
 }
 
-export function parseChecksumMap(buffer: Buffer): ChecksumMap {
+export async function signChecksumFile(checksum: IInMemoryFile, privateKeyFile: string): Promise<IInMemoryFile> {
+	const privateKeyArmored = await readFile(privateKeyFile, 'utf8');
+	const passphrase = await read('Private key passphrase:', { silent: true, replace: '*' });
+	const {
+		keys: [privateKey],
+	} = await openpgp.key.readArmored(privateKeyArmored);
+	await privateKey.decrypt(passphrase);
+
+	const { signature: detachedSignature } = await openpgp.sign({
+		message: openpgp.cleartext.fromText(checksum.contents as string),
+		privateKeys: [privateKey],
+		detached: true,
+	});
+
+	return { path: 'checksum.sig', contents: detachedSignature };
+}
+
+function parseChecksumMap(buffer: Buffer): ChecksumMap {
 	const result: ChecksumMap = new Map();
 	const raw = buffer.toString('utf8');
 	let index = 0;
