@@ -212,9 +212,9 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('verify <path>')
-		.option('--checksum', 'Verify checksum only', false)
-		.description('Verify extension signature(s)')
-		.action((packagePath, { checksum }) => main(verifyCommand(packagePath, { checksum })));
+		.option('--signature <publickey>', 'Verify signature')
+		.description('Verify extension checksum and signature(s)')
+		.action((packagePath, { signature }) => main(verifyCommand(packagePath, { signature })));
 
 	program.command('*', '', { noHelp: true }).action((cmd: string) => {
 		program.help(help => {

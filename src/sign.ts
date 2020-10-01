@@ -94,20 +94,21 @@ function parseChecksumMap(buffer: Buffer): ChecksumMap {
 }
 
 export interface IVerifyOptions {
-	readonly checksum?: boolean;
+	readonly signature?: string;
 }
 
 export async function verifyCommand(packagePath: string, opts: IVerifyOptions): Promise<void> {
-	if (!opts.checksum) {
-		throw new Error('Signature verification not implemented, please use --checksum');
-	}
-
 	const files: IInMemoryFile[] = [];
+	let checksum: Buffer | undefined;
 	let expectedChecksumMap: ChecksumMap | undefined;
+	let signature: Buffer | undefined;
 
 	await unzip(packagePath, file => {
 		if (/^checksum$/i.test(file.path)) {
-			expectedChecksumMap = parseChecksumMap(file.contents as Buffer);
+			checksum = file.contents as Buffer;
+			expectedChecksumMap = parseChecksumMap(checksum);
+		} else if (/^checksum.sig$/i.test(file.path)) {
+			signature = file.contents as Buffer;
 		} else {
 			files.push(file);
 		}
@@ -158,5 +159,32 @@ export async function verifyCommand(packagePath: string, opts: IVerifyOptions): 
 		throw new Error(`Validation failed\n\n${errorMessages.join('\n\n')}`);
 	}
 
-	log.done(`Extension checksum is valid: ${packagePath} (${files.length} files)`);
+	if (!opts.signature) {
+		if (signature) {
+			log.warn(`Extension signature found but not verified. Provide --signature <publickey> to verify the signature.`);
+		}
+
+		log.done(`Extension checksum is valid: ${packagePath} (${files.length} files)`);
+		return;
+	}
+
+	if (opts.signature && !signature) {
+		throw new Error(`Extension is not signed.`);
+	}
+
+	const publicKey = await readFile(opts.signature, 'utf8');
+
+	const verified = await openpgp.verify({
+		message: openpgp.cleartext.fromText(checksum.toString('utf8')),
+		signature: await openpgp.signature.readArmored(signature.toString('utf8')),
+		publicKeys: (await openpgp.key.readArmored(publicKey)).keys,
+	});
+
+	const { valid } = verified.signatures[0];
+
+	if (!valid) {
+		throw new Error(`Signature invalid. Couldn't verify the signature against the provided public key.`);
+	}
+
+	log.done(`Extension signature is valid: ${packagePath} (${files.length} files)`);
 }
