@@ -1,9 +1,17 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as denodeify from 'denodeify';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
-import { CancellationToken } from './util';
+import { CancellationToken, log } from './util';
+
+const stat = denodeify(fs.stat);
+const exists = (file: string) =>
+	stat(file).then(
+		_ => true,
+		_ => false
+	);
 
 interface IOptions {
 	cwd?: string;
@@ -181,7 +189,7 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	const result: string[] = [cwd];
 
-	if (await new Promise(c => fs.exists(path.join(cwd, 'yarn.lock'), c))) {
+	if (await exists(path.join(cwd, 'yarn.lock'))) {
 		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 		const flatten = (dep: YarnDependency) => {
 			result.push(dep.path);
@@ -193,8 +201,26 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return _.uniq(result);
 }
 
-export function getDependencies(cwd: string, useYarn = false, packagedDependencies?: string[]): Promise<string[]> {
-	return useYarn ? getYarnDependencies(cwd, packagedDependencies) : getNpmDependencies(cwd);
+export async function detectYarn(cwd: string) {
+	for (const file of ['yarn.lock', '.yarnrc']) {
+		if (await exists(path.join(cwd, file))) {
+			log.info(
+				`Detected presense of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+			);
+			return true;
+		}
+	}
+	return false;
+}
+
+export async function getDependencies(
+	cwd: string,
+	useYarn?: boolean,
+	packagedDependencies?: string[]
+): Promise<string[]> {
+	return (useYarn !== undefined ? useYarn : await detectYarn(cwd))
+		? await getYarnDependencies(cwd, packagedDependencies)
+		: await getNpmDependencies(cwd);
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
