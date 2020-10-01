@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.79.5",
+	"version": "1.80.0",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -33,7 +33,7 @@
 		"vsce": "out/vsce"
 	},
 	"engines": {
-		"node": ">= 8"
+		"node": ">= 10"
 	},
 	"dependencies": {
 		"azure-devops-node-api": "^7.2.0",

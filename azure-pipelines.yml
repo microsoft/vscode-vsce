@@ -7,7 +7,7 @@ trigger:
 steps:
   - task: NodeTool@0
     inputs:
-      versionSpec: '8.x'
+      versionSpec: '10.x'
 
   - task: geeklearningio.gl-vsts-tasks-yarn.yarn-installer-task.YarnInstaller@2
     inputs:

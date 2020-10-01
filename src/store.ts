@@ -110,6 +110,10 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 export function createPublisher(publisherName: string): Promise<any> {
 	validatePublisher(publisherName);
 
+	log.warn(
+		'Creating a publisher via vsce is deprecated and will be removed soon. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher'
+	);
+
 	return read(`Publisher human-friendly name: `, { default: publisherName })
 		.then(displayName => {
 			return read(`E-mail: `).then(email => {

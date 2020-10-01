@@ -6,7 +6,7 @@
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `8.x.x`
+- [Node.js](https://nodejs.org/en/) at least `10.x.x`
 
 ## Usage
 
