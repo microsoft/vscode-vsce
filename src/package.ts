@@ -1128,7 +1128,9 @@ async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): P
 		return;
 	}
 
-	if (useYarn === undefined) useYarn = await detectYarn(cwd);
+	if (useYarn === undefined) {
+		useYarn = await detectYarn(cwd);
+	}
 
 	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
