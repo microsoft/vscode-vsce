@@ -39,7 +39,7 @@
 		"azure-devops-node-api": "^7.2.0",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.1",
-		"commander": "^2.8.1",
+		"commander": "^6.1.0",
 		"denodeify": "^1.2.1",
 		"glob": "^7.0.6",
 		"leven": "^3.1.0",

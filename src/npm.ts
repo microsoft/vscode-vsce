@@ -204,9 +204,11 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 export async function detectYarn(cwd: string) {
 	for (const file of ['yarn.lock', '.yarnrc']) {
 		if (await exists(path.join(cwd, file))) {
-			log.info(
-				`Detected presense of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
-			);
+			if (!process.env['VSCE_TESTS']) {
+				log.info(
+					`Detected presense of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+				);
+			}
 			return true;
 		}
 	}
