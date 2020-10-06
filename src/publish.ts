@@ -3,7 +3,7 @@ import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/i
 import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI, getHubUrl } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
@@ -63,37 +63,53 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 	const fullName = `${name}@${manifest.version}`;
 	console.log(`Publishing ${fullName}...`);
 
-	return api
-		.getExtension(null, manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
-		.catch<PublishedExtension>(err => (err.statusCode === 404 ? null : Promise.reject(err)))
-		.then(extension => {
-			if (extension && extension.versions.some(v => v.version === manifest.version)) {
-				return Promise.reject(`${fullName} already exists. Version number cannot be the same.`);
+	let extension: PublishedExtension | null = null;
+
+	try {
+		try {
+			extension = await api.getExtension(
+				null,
+				manifest.publisher,
+				manifest.name,
+				null,
+				ExtensionQueryFlags.IncludeVersions
+			);
+		} catch (err) {
+			if (err.statusCode !== 404) {
+				throw err;
 			}
+		}
 
-			var promise = extension
-				? api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name)
-				: api.createExtension(undefined, packageStream);
+		if (extension && extension.versions.some(v => v.version === manifest.version)) {
+			throw new Error(`${fullName} already exists. Version number cannot be the same.`);
+		}
 
-			return promise
-				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() =>
-					log.done(
-						`Published ${fullName}\nYour extension will live at ${getPublishedUrl(
-							name
-						)} (might take a few minutes for it to show up).`
-					)
-				);
-		})
-		.catch(err => {
-			const message = (err && err.message) || '';
-
-			if (/Invalid Resource/.test(message)) {
-				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		if (extension) {
+			try {
+				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
+			} catch (err) {
+				if (err.statusCode === 409) {
+					throw new Error(`${fullName} already exists.`);
+				} else {
+					throw err;
+				}
 			}
+		} else {
+			await api.createExtension(undefined, packageStream);
+		}
+	} catch (err) {
+		const message = (err && err.message) || '';
 
-			return Promise.reject(err);
-		});
+		if (/Invalid Resource/.test(message)) {
+			err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		}
+
+		throw err;
+	}
+
+	log.info(`Extension URL (might take a few minutes): ${getPublishedUrl(name)}`);
+	log.info(`Hub URL: ${getHubUrl(manifest.publisher, manifest.name)}`);
+	log.done(`Published ${fullName}.`);
 }
 
 export interface IPublishOptions {
