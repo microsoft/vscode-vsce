@@ -42,7 +42,7 @@
 		"commander": "^2.8.1",
 		"denodeify": "^1.2.1",
 		"find-yarn-workspace-root": "^2.0.0",
-    "glob": "^7.0.6",
+		"glob": "^7.0.6",
 		"leven": "^3.1.0",
 		"lodash": "^4.17.15",
 		"markdown-it": "^10.0.0",

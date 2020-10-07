@@ -86,11 +86,11 @@ export interface SourceAndDestination {
 }
 
 async function asYarnDependencies(root: string, rootDependencies: string[]): Promise<YarnDependency[]> {
-	const resolve = async (prefix: string, dependencies: string[]): Promise<YarnDependency[]> => await Promise.all(dependencies
+	const resolve = async (prefix: string, dependencies: string[], collected: Map<string, YarnDependency> = new Map()): Promise<YarnDependency[]> => await Promise.all(dependencies
 		.map(async (name: string) => {
 			let newPrefix = prefix, depPath = null, depManifest = null;
 			while (!depManifest && root.length <= newPrefix.length) {
-        depPath = path.join(newPrefix, 'node_modules', name);
+				depPath = path.join(newPrefix, 'node_modules', name);
 				try {
 					depManifest = await readNodeManifest(depPath);
 				}
@@ -101,15 +101,20 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 					}
 				}
 			}
-			const children = await resolve(depPath, Object.keys(depManifest.dependencies || {}));
-			return {
+			const result = {
 				name,
 				path: {
 					src: depPath,
 					dest: path.relative(root, depPath),
 				},
-				children,
+				children: [],
 			};
+			const shouldResolveChildren = !collected.has(depPath);
+			collected.set(depPath, result);
+			if (shouldResolveChildren) {
+				result.children = await resolve(depPath, Object.keys(depManifest.dependencies || {}), collected);
+			}
+			return result;
 		}));
 	return resolve(root, rootDependencies);
 }
