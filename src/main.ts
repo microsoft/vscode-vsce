@@ -102,7 +102,7 @@ module.exports = function (argv: string[]): void {
 					useYarn: yarn,
 					ignoreFile,
 					expandGitHubIssueLinks: noGitHubIssueLinking,
-					web
+					web,
 				})
 			)
 		);
@@ -193,21 +193,17 @@ module.exports = function (argv: string[]): void {
 		.description('search extension gallery')
 		.action((text, { json }) => main(search(text, json)));
 
-	program.command('*', '', { noHelp: true }).action((cmd: string) => {
+	program.on('command:*', (cmd: string) => {
 		program.help(help => {
 			const availableCommands = program.commands.map(c => c._name);
-			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
+			const suggestion = availableCommands.find(c => leven(c, cmd[0]) < c.length * 0.4);
 
 			help = `${help}
-Unknown command '${cmd}'`;
+Unknown command '${cmd[0]}'`;
 
 			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 		});
 	});
 
 	program.parse(argv);
-
-	if (process.argv.length <= 2) {
-		program.help();
-	}
 };
