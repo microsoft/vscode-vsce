@@ -193,7 +193,7 @@ module.exports = function (argv: string[]): void {
 		.description('search extension gallery')
 		.action((text, { json }) => main(search(text, json)));
 
-	program.command('*', '', { noHelp: true }).action((cmd: string) => {
+	program.on('command:*', ([cmd]: string) => {
 		program.help(help => {
 			const availableCommands = program.commands.map(c => c._name);
 			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
