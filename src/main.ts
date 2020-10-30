@@ -5,7 +5,7 @@ import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
-import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
+import { listPublishers, deletePublisher, loginPublisher, logoutPublisher } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
@@ -102,7 +102,7 @@ module.exports = function (argv: string[]): void {
 					useYarn: yarn,
 					ignoreFile,
 					expandGitHubIssueLinks: noGitHubIssueLinking,
-					web
+					web,
 				})
 			)
 		);
@@ -162,11 +162,6 @@ module.exports = function (argv: string[]): void {
 		.action(() => main(listPublishers()));
 
 	program
-		.command('create-publisher <publisher>')
-		.description('Creates a new publisher')
-		.action(publisher => main(createPublisher(publisher)));
-
-	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher')
 		.action(publisher => main(deletePublisher(publisher)));
@@ -194,7 +189,15 @@ module.exports = function (argv: string[]): void {
 		.action((text, { json }) => main(search(text, json)));
 
 	program.on('command:*', ([cmd]: string) => {
-		program.help(help => {
+		if (cmd === 'create-publisher') {
+			log.error(
+				`The 'create-publisher' command is no longer available. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher`
+			);
+
+			process.exit(1);
+		}
+
+		program.outputHelp(help => {
 			const availableCommands = program.commands.map(c => c._name);
 			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
@@ -203,6 +206,7 @@ Unknown command '${cmd}'`;
 
 			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 		});
+		process.exit(1);
 	});
 
 	program.parse(argv);

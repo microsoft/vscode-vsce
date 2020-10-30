@@ -107,40 +107,6 @@ export function logoutPublisher(publisherName: string): Promise<any> {
 	});
 }
 
-export function createPublisher(publisherName: string): Promise<any> {
-	validatePublisher(publisherName);
-
-	log.warn(
-		'Creating a publisher via vsce is deprecated and will be removed soon. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher'
-	);
-
-	return read(`Publisher human-friendly name: `, { default: publisherName })
-		.then(displayName => {
-			return read(`E-mail: `).then(email => {
-				return read(`Personal Access Token:`, { silent: true, replace: '*' })
-					.then(async pat => {
-						const api = await getGalleryAPI(pat);
-						const raw = {
-							publisherName,
-							displayName,
-							extensions: [],
-							flags: null,
-							lastUpdated: null,
-							longDescription: '',
-							publisherId: null,
-							shortDescription: '',
-							emailAddress: [email],
-						};
-
-						await api.createPublisher(raw);
-						return { name: publisherName, pat };
-					})
-					.then(publisher => load().then(store => addPublisherToStore(store, publisher)));
-			});
-		})
-		.then(() => log.done(`Created publisher '${publisherName}'.`));
-}
-
 export function deletePublisher(publisherName: string): Promise<any> {
 	return getPublisher(publisherName).then(({ pat }) => {
 		return read(`This will FOREVER delete '${publisherName}'! Are you sure? [y/N] `)
