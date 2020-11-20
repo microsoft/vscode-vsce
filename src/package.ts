@@ -37,11 +37,13 @@ const MinimatchOptions: minimatch.IOptions = { dot: true };
 
 export interface IInMemoryFile {
 	path: string;
+	mode?: number;
 	readonly contents: Buffer | string;
 }
 
 export interface ILocalFile {
 	path: string;
+	mode?: number;
 	readonly localPath: string;
 }
 
@@ -272,6 +274,18 @@ class ManifestProcessor extends BaseProcessor {
 		if (isGitHub) {
 			this.vsix.links.github = repository;
 		}
+	}
+
+	async onFile(file: IFile): Promise<IFile> {
+		const path = util.normalize(file.path);
+
+		if (!/^extension\/package.json$/i.test(path)) {
+			return Promise.resolve(file);
+		}
+
+		// Ensure that package.json is writable as VS Code needs to
+		// store metadata in the extracted file.
+		return { ...file, mode: 0o100644 };
 	}
 
 	async onEnd(): Promise<void> {
@@ -1104,8 +1118,10 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 					const zip = new yazl.ZipFile();
 					files.forEach(f =>
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path)
-							: zip.addFile(f.localPath, f.path)
+							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
+									mode: f.mode,
+							  })
+							: zip.addFile(f.localPath, f.path, { mode: f.mode })
 					);
 					zip.end();
 
