@@ -210,7 +210,7 @@ function isHostTrusted(url: url.UrlWithStringQuery): boolean {
 	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
 }
 
-class ManifestProcessor extends BaseProcessor {
+export class ManifestProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 

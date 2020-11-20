@@ -13,6 +13,7 @@ import {
 	WebExtensionProcessor,
 	IAsset,
 	IPackageOptions,
+	ManifestProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -1681,6 +1682,21 @@ describe('toContentTypes', () => {
 				);
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
+	});
+});
+
+describe('ManifestProcessor', () => {
+	it('should ensure that package.json is writable', async () => {
+		const root = fixture('uuid');
+		const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		const processor = new ManifestProcessor(manifest);
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		const outPackageJson = await processor.onFile(packageJson);
+		assert.ok(outPackageJson.mode & 0o200);
 	});
 });
 
