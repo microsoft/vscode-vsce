@@ -206,7 +206,7 @@ export async function detectYarn(cwd: string) {
 		if (await exists(path.join(cwd, file))) {
 			if (!process.env['VSCE_TESTS']) {
 				log.info(
-					`Detected presense of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+					`Detected presence of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
 				);
 			}
 			return true;
