@@ -210,8 +210,4 @@ Unknown command '${cmd}'`;
 	});
 
 	program.parse(argv);
-
-	if (process.argv.length <= 2) {
-		program.help();
-	}
 };
