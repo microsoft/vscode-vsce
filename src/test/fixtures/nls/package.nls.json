@@ -18,7 +18,7 @@
 	"node.launch.console.description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
 	"node.launch.args.description": "Command line arguments passed to the program.",
 	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
-	"node.launch.runtimeExecutable.description": "Runtime to use. Either an absolute path or the name of a runtime available on the PATH. If ommitted 'node' is assumed.",
+	"node.launch.runtimeExecutable.description": "Runtime to use. Either an absolute path or the name of a runtime available on the PATH. If omitted 'node' is assumed.",
 	"node.launch.runtimeArgs.description": "Optional arguments passed to the runtime executable.",
 	"node.launch.env.description": "Environment variables passed to the program.",
 
