@@ -359,6 +359,7 @@ export class TagsProcessor extends BaseProcessor {
 
 		const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
 		const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
+		const productIconThemes = doesContribute('productIconThemes') ? ['theme', 'product-icon-theme'] : [];
 		const snippets = doesContribute('snippets') ? ['snippet'] : [];
 		const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
@@ -394,6 +395,7 @@ export class TagsProcessor extends BaseProcessor {
 			...keywords,
 			...colorThemes,
 			...iconThemes,
+			...productIconThemes,
 			...snippets,
 			...keybindings,
 			...debuggers,
