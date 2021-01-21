@@ -468,7 +468,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 				if (isLinkRelative) {
 					throw new Error(
-						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 					);
 				}
 			}
@@ -492,7 +492,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			if (!this.baseImagesUrl && isLinkRelative) {
 				throw new Error(
-					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 				);
 			}
 			const prefix = this.baseImagesUrl;
