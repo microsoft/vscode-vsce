@@ -916,6 +916,25 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should automatically add product-icon-theme tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				productIconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'product-icon-theme'));
+			});
+	});
+
 	it('should automatically add language tag with activationEvent', () => {
 		const manifest = {
 			name: 'test',
