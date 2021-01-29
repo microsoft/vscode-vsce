@@ -880,6 +880,22 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	validateEngineCompatibility(manifest.engines['vscode']);
 
+	const hasActivationEvents = !!manifest.activationEvents;
+	const hasMain = !!manifest.main;
+	const hasBrowser = !!manifest.browser;
+
+	if (hasActivationEvents) {
+		if (!hasMain && !hasBrowser) {
+			throw new Error(
+				"Manifest needs either a 'main' or 'browser' property, given it has a 'activationEvents' property."
+			);
+		}
+	} else if (hasMain) {
+		throw new Error("Manifest needs the 'activationEvents' property, given it has a 'main' property.");
+	} else if (hasBrowser) {
+		throw new Error("Manifest needs the 'activationEvents' property, given it has a 'browser' property.");
+	}
+
 	if (manifest.devDependencies && manifest.devDependencies['@types/vscode']) {
 		validateVSCodeTypesCompatibility(manifest.engines['vscode'], manifest.devDependencies['@types/vscode']);
 	}

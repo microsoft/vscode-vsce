@@ -377,6 +377,16 @@ describe('validateManifest', () => {
 			);
 		});
 	});
+
+	it('should validate activationEvents against main and browser', () => {
+		assert.throws(() => validateManifest(createManifest({ activationEvents: ['any'] })));
+		assert.throws(() => validateManifest(createManifest({ main: 'main.js' })));
+		assert.throws(() => validateManifest(createManifest({ browser: 'browser.js' })));
+		assert.throws(() => validateManifest(createManifest({ main: 'main.js', browser: 'browser.js' })));
+		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js' }));
+		validateManifest(createManifest({ activationEvents: ['any'], browser: 'browser.js' }));
+		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js', browser: 'browser.js' }));
+	});
 });
 
 describe('toVsixManifest', () => {
