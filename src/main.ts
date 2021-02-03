@@ -5,7 +5,7 @@ import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
-import { listPublishers, deletePublisher, loginPublisher, logoutPublisher } from './store';
+import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
@@ -110,7 +110,11 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
-		.option('-p, --pat <token>', 'Personal Access Token', process.env['VSCE_PAT'])
+		.option(
+			'-p, --pat <token>',
+			'Personal Access Token (defaults to VSCE_PAT environment variable)',
+			process.env['VSCE_PAT']
+		)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option(
@@ -175,6 +179,16 @@ module.exports = function (argv: string[]): void {
 		.command('logout <publisher>')
 		.description('Remove a publisher from the known publishers list')
 		.action(name => main(logoutPublisher(name)));
+
+	program
+		.command('verify-pat [<publisher>]')
+		.option(
+			'-p, --pat <token>',
+			'Personal Access Token (defaults to VSCE_PAT environment variable)',
+			process.env['VSCE_PAT']
+		)
+		.description('Verify if the Personal Access Token has publish rights for the publisher.')
+		.action((name, { pat }) => main(verifyPat(pat, name)));
 
 	program
 		.command('show <extensionid>')
