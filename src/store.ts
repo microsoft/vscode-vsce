@@ -4,6 +4,7 @@ import { home } from 'osenv';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
 import * as denodeify from 'denodeify';
+import { readManifest } from './package';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const writeFile = denodeify<string, string, object, void>(fs.writeFile as any);
@@ -53,14 +54,39 @@ function removePublisherFromStore(store: IStore, publisherName: string): Promise
 	return save(store);
 }
 
+export async function verifyPat(pat: string, publisherName?: string): Promise<void> {
+	if (!pat) {
+		throw new Error('The Personal Access Token is mandatory.');
+	}
+
+	if (!publisherName) {
+		try {
+			publisherName = (await readManifest()).publisher;
+		} catch (error) {
+			throw new Error(
+				'Can not read the publisher name. Either supply it as argument or call from the package root folder. Additional information:\n\n' +
+					error
+			);
+		}
+	}
+
+	try {
+		// If the caller of the `getRoleAssignments` API has any of the roles
+		// (Creator, Owner, Contributor, Reader) on the publisher, we get a 200,
+		// otherwise we get a 403.
+		const api = await getSecurityRolesAPI(pat);
+		await api.getRoleAssignments('gallery.publisher', publisherName);
+	} catch (error) {
+		throw new Error('The Personal Access Token verification has failed. Additional information:\n\n' + error);
+	}
+
+	console.log(`The Personal Access Token verification succeeded for the publisher '${publisherName}'.`);
+}
+
 async function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
 	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
 
-	// If the caller of the `getRoleAssignments` API has any of the roles
-	// (Creator, Owner, Contributor, Reader) on the publisher, we get a 200,
-	// otherwise we get a 403.
-	const api = await getSecurityRolesAPI(pat);
-	await api.getRoleAssignments('gallery.publisher', publisherName);
+	await verifyPat(pat, publisherName);
 
 	return await addPublisherToStore(store, { name: publisherName, pat });
 }
