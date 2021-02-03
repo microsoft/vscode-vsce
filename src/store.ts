@@ -64,7 +64,7 @@ export async function verifyPat(pat: string, publisherName?: string): Promise<vo
 			publisherName = (await readManifest()).publisher;
 		} catch (error) {
 			throw new Error(
-				'Can not read the publisher name. Either supply it as argument or call from the package root folder. Additional information:\n\n' +
+				'Can not read the publisher name. Either supply it as argument or run vsce from the extension folder. Additional information:\n\n' +
 					error
 			);
 		}
