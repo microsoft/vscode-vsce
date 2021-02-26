@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.85.0",
+	"version": "1.85.1",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
