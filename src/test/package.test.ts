@@ -283,6 +283,10 @@ describe('collect', function () {
 				localPath: path.resolve(root, 'node_modules/package-a/package.json')
 			},
 			{
+				path: 'extension/node_modules/package-a/important/prod.log',
+				localPath: path.resolve(root, 'node_modules/package-a/important/prod.log')
+			},
+			{
 				path: 'extension/node_modules/curry/curry.js',
 				localPath: path.resolve(root, 'node_modules/curry/curry.js')
 			},
@@ -297,6 +301,9 @@ describe('collect', function () {
 				assert.equal(found.localPath, expected.localPath, 'localPath');
 			}
 		})
+		const ignoreFilename = 'extension/node_modules/package-a/logger.log';
+		const ignore = files.find(f => f.path === ignoreFilename);
+		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
 	})
 });
 
