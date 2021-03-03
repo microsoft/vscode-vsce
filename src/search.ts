@@ -1,16 +1,15 @@
 import { getPublicGalleryAPI } from './util';
-import { ExtensionQueryFilterType } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFilterType, ExtensionQueryFlags } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { tableView, wordTrim } from './viewutils';
 
 const pageSize = 100;
 
 export async function search(searchText: string, json: boolean = false): Promise<any> {
-	const flags = [];
 	const api = getPublicGalleryAPI();
 	const results = await api.extensionQuery({
 		pageSize,
 		criteria: [{ filterType: ExtensionQueryFilterType.SearchText, value: searchText }],
-		flags,
+		flags: [ExtensionQueryFlags.ExcludeNonValidated, ExtensionQueryFlags.IncludeLatestVersionOnly],
 	});
 
 	if (json) {

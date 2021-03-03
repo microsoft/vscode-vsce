@@ -13,6 +13,7 @@ import {
 	WebExtensionProcessor,
 	IAsset,
 	IPackageOptions,
+	ManifestProcessor,
 	ILocalFile,
 } from '../package';
 import { Manifest } from '../manifest';
@@ -210,6 +211,23 @@ describe('collect', function () {
 			});
 	});
 
+	it('should detect yarn', () => {
+		const cwd = fixture('packagedDependencies');
+
+		return readManifest(cwd)
+			.then(manifest => collect(manifest, { cwd, dependencyEntryPoints: ['isexe'] }))
+			.then(files => {
+				let seenWhich: boolean;
+				let seenIsexe: boolean;
+				files.forEach(file => {
+					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
+					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
+				});
+				assert.equal(seenWhich, false);
+				assert.equal(seenIsexe, true);
+			});
+	});
+
 	it('should include all node_modules when dependencyEntryPoints is not defined', () => {
 		const cwd = fixture('packagedDependencies');
 
@@ -246,7 +264,7 @@ describe('collect', function () {
 		assert.equal(manifest.name, 'package-b');
 
 		const files = await collect(manifest, { cwd, useYarn: true }) as ILocalFile[];
-		
+
 		[
 			{
 				path: 'extension/main.js',
@@ -403,6 +421,16 @@ describe('validateManifest', () => {
 				)
 			);
 		});
+	});
+
+	it('should validate activationEvents against main and browser', () => {
+		assert.throws(() => validateManifest(createManifest({ activationEvents: ['any'] })));
+		assert.throws(() => validateManifest(createManifest({ main: 'main.js' })));
+		assert.throws(() => validateManifest(createManifest({ browser: 'browser.js' })));
+		assert.throws(() => validateManifest(createManifest({ main: 'main.js', browser: 'browser.js' })));
+		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js' }));
+		validateManifest(createManifest({ activationEvents: ['any'], browser: 'browser.js' }));
+		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js', browser: 'browser.js' }));
 	});
 });
 
@@ -940,6 +968,25 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert(tags.some(tag => tag === 'icon-theme'));
+			});
+	});
+
+	it('should automatically add product-icon-theme tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				productIconThemes: [{ id: 'fakeicons', label: 'fakeicons', path: 'fake.icons' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'product-icon-theme'));
 			});
 	});
 
@@ -1709,6 +1756,21 @@ describe('toContentTypes', () => {
 				);
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
 			});
+	});
+});
+
+describe('ManifestProcessor', () => {
+	it('should ensure that package.json is writable', async () => {
+		const root = fixture('uuid');
+		const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		const processor = new ManifestProcessor(manifest);
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		const outPackageJson = await processor.onFile(packageJson);
+		assert.ok(outPackageJson.mode & 0o200);
 	});
 });
 

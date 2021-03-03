@@ -21,6 +21,10 @@ export function getPublishedUrl(extension: string): string {
 	return `${marketplaceUrl}/items?itemName=${extension}`;
 }
 
+export function getHubUrl(publisher: string, name: string): string {
+	return `${marketplaceUrl}/manage/publishers/${publisher}/extensions/${name}/hub`;
+}
+
 export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
 	// from https://github.com/Microsoft/tfs-cli/blob/master/app/exec/extension/default.ts#L287-L292
 	const authHandler = getBasicHandler('OAuth', pat);

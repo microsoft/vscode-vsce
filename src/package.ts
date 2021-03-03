@@ -21,7 +21,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 } from './validation';
-import { getDependencies, SourceAndDestination } from './npm';
+import { detectYarn, getDependencies, SourceAndDestination } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
@@ -37,11 +37,13 @@ const MinimatchOptions: minimatch.IOptions = { dot: true };
 
 export interface IInMemoryFile {
 	path: string;
+	mode?: number;
 	readonly contents: Buffer | string;
 }
 
 export interface ILocalFile {
 	path: string;
+	mode?: number;
 	readonly localPath: string;
 }
 
@@ -208,7 +210,7 @@ function isHostTrusted(url: url.UrlWithStringQuery): boolean {
 	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
 }
 
-class ManifestProcessor extends BaseProcessor {
+export class ManifestProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 
@@ -272,6 +274,18 @@ class ManifestProcessor extends BaseProcessor {
 		if (isGitHub) {
 			this.vsix.links.github = repository;
 		}
+	}
+
+	async onFile(file: IFile): Promise<IFile> {
+		const path = util.normalize(file.path);
+
+		if (!/^extension\/package.json$/i.test(path)) {
+			return Promise.resolve(file);
+		}
+
+		// Ensure that package.json is writable as VS Code needs to
+		// store metadata in the extracted file.
+		return { ...file, mode: 0o100644 };
 	}
 
 	async onEnd(): Promise<void> {
@@ -345,6 +359,7 @@ export class TagsProcessor extends BaseProcessor {
 
 		const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
 		const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
+		const productIconThemes = doesContribute('productIconThemes') ? ['theme', 'product-icon-theme'] : [];
 		const snippets = doesContribute('snippets') ? ['snippet'] : [];
 		const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
@@ -380,6 +395,7 @@ export class TagsProcessor extends BaseProcessor {
 			...keywords,
 			...colorThemes,
 			...iconThemes,
+			...productIconThemes,
 			...snippets,
 			...keybindings,
 			...debuggers,
@@ -454,7 +470,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 				if (isLinkRelative) {
 					throw new Error(
-						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 					);
 				}
 			}
@@ -478,7 +494,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			if (!this.baseImagesUrl && isLinkRelative) {
 				throw new Error(
-					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. Please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 				);
 			}
 			const prefix = this.baseImagesUrl;
@@ -864,6 +880,22 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	validateEngineCompatibility(manifest.engines['vscode']);
 
+	const hasActivationEvents = !!manifest.activationEvents;
+	const hasMain = !!manifest.main;
+	const hasBrowser = !!manifest.browser;
+
+	if (hasActivationEvents) {
+		if (!hasMain && !hasBrowser) {
+			throw new Error(
+				"Manifest needs either a 'main' or 'browser' property, given it has a 'activationEvents' property."
+			);
+		}
+	} else if (hasMain) {
+		throw new Error("Manifest needs the 'activationEvents' property, given it has a 'main' property.");
+	} else if (hasBrowser) {
+		throw new Error("Manifest needs the 'activationEvents' property, given it has a 'browser' property.");
+	}
+
 	if (manifest.devDependencies && manifest.devDependencies['@types/vscode']) {
 		validateVSCodeTypesCompatibility(manifest.engines['vscode'], manifest.devDependencies['@types/vscode']);
 	}
@@ -968,7 +1000,6 @@ const defaultIgnore = [
 	'.editorconfig',
 	'.npmrc',
 	'.yarnrc',
-	'.gitattributes',
 	'*.todo',
 	'tslint.yaml',
 	'.eslintrc*',
@@ -981,14 +1012,16 @@ const defaultIgnore = [
 	'.github',
 	'.travis.yml',
 	'appveyor.yml',
+	'**/.git',
 	'**/.git/**',
+	'**/{.gitignore,.gitattributes,.gitmodules}',
 	'**/*.vsix',
 	'**/.DS_Store',
 	'**/*.vsixmanifest',
 	'**/.vscode-test/**',
 ];
 
-function collectAllFiles(cwd: string, manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[]): Promise<SourceAndDestination[]> {
+function collectAllFiles(cwd: string, manifest: Manifest, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<SourceAndDestination[]> {
 	return getDependencies(cwd, manifest, useYarn, dependencyEntryPoints).then(deps => {
 		const promises: Promise<SourceAndDestination[]>[] = deps.map(dep => {
 			return glob('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
@@ -1007,7 +1040,7 @@ function collectAllFiles(cwd: string, manifest: Manifest, useYarn = false, depen
 
 function collectFiles(
 	cwd: string,
-	manifest: Manifest, useYarn = false, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<SourceAndDestination[]> {
+	manifest: Manifest, useYarn?: boolean, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<SourceAndDestination[]> {
 	return collectAllFiles(cwd, manifest, useYarn, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f.src));
 
@@ -1090,12 +1123,11 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
-	const useYarn = options.useYarn || false;
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, manifest, options.useYarn, packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f.dest}`, localPath: path.join(cwd, f.src) }));
 
 		return processFiles(processors, files);
@@ -1111,8 +1143,10 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 					const zip = new yazl.ZipFile();
 					files.forEach(f =>
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path)
-							: zip.addFile(f.localPath, f.path)
+							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
+									mode: f.mode,
+							  })
+							: zip.addFile(f.localPath, f.path, { mode: f.mode })
 					);
 					zip.end();
 
@@ -1130,14 +1164,18 @@ function getDefaultPackageName(manifest: Manifest): string {
 	return `${manifest.name}-${manifest.version}.vsix`;
 }
 
-async function prepublish(cwd: string, manifest: Manifest, useYarn: boolean = false): Promise<void> {
+async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
+	if (useYarn === undefined) {
+		useYarn = await detectYarn(cwd);
+	}
+
 	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
 
-	await new Promise((c, e) => {
+	await new Promise<void>((c, e) => {
 		const tool = useYarn ? 'yarn' : 'npm';
 		const child = cp.spawn(tool, ['run', 'vscode:prepublish'], { cwd, shell: true, stdio: 'inherit' });
 		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
@@ -1206,14 +1244,14 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 /**
  * Lists the files included in the extension's package. Does not run prepublish.
  */
-export function listFiles(
+export async function listFiles(
 	cwd = process.cwd(),
-	useYarn = false,
+	useYarn?: boolean,
 	packagedDependencies?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
-	return readManifest(cwd).then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile))
-		.then(files => files.map(f => f.src));
+	const manifest = await readManifest(cwd);
+	return (await collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile)).map(f => f.src);
 }
 
 /**
@@ -1221,7 +1259,7 @@ export function listFiles(
  */
 export function ls(
 	cwd = process.cwd(),
-	useYarn = false,
+	useYarn?: boolean,
 	packagedDependencies?: string[],
 	ignoreFile?: string
 ): Promise<void> {

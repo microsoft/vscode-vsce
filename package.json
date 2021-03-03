@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.80.0",
+	"version": "1.85.1",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -39,7 +39,7 @@
 		"azure-devops-node-api": "^7.2.0",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.1",
-		"commander": "^2.8.1",
+		"commander": "^6.1.0",
 		"denodeify": "^1.2.1",
 		"find-yarn-workspace-root": "^2.0.0",
 		"glob": "^7.0.6",

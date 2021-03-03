@@ -5,7 +5,7 @@ import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
-import { listPublishers, createPublisher, deletePublisher, loginPublisher, logoutPublisher } from './store';
+import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
 import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
@@ -61,7 +61,8 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
-		.option('--yarn', 'Use yarn instead of npm')
+		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
@@ -83,7 +84,8 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
-		.option('--yarn', 'Use yarn instead of npm')
+		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
 		.option(
@@ -100,7 +102,7 @@ module.exports = function (argv: string[]): void {
 					useYarn: yarn,
 					ignoreFile,
 					expandGitHubIssueLinks: noGitHubIssueLinking,
-					web
+					web,
 				})
 			)
 		);
@@ -108,7 +110,11 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('publish [<version>]')
 		.description('Publishes an extension')
-		.option('-p, --pat <token>', 'Personal Access Token', process.env['VSCE_PAT'])
+		.option(
+			'-p, --pat <token>',
+			'Personal Access Token (defaults to VSCE_PAT environment variable)',
+			process.env['VSCE_PAT']
+		)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option(
@@ -117,7 +123,8 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
-		.option('--yarn', 'Use yarn instead of npm while packing extension files')
+		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option(
@@ -159,11 +166,6 @@ module.exports = function (argv: string[]): void {
 		.action(() => main(listPublishers()));
 
 	program
-		.command('create-publisher <publisher>')
-		.description('Creates a new publisher')
-		.action(publisher => main(createPublisher(publisher)));
-
-	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher')
 		.action(publisher => main(deletePublisher(publisher)));
@@ -179,6 +181,16 @@ module.exports = function (argv: string[]): void {
 		.action(name => main(logoutPublisher(name)));
 
 	program
+		.command('verify-pat [<publisher>]')
+		.option(
+			'-p, --pat <token>',
+			'Personal Access Token (defaults to VSCE_PAT environment variable)',
+			process.env['VSCE_PAT']
+		)
+		.description('Verify if the Personal Access Token has publish rights for the publisher.')
+		.action((name, { pat }) => main(verifyPat(pat, name)));
+
+	program
 		.command('show <extensionid>')
 		.option('--json', 'Output data in json format', false)
 		.description('Show extension metadata')
@@ -190,8 +202,16 @@ module.exports = function (argv: string[]): void {
 		.description('search extension gallery')
 		.action((text, { json }) => main(search(text, json)));
 
-	program.command('*', '', { noHelp: true }).action((cmd: string) => {
-		program.help(help => {
+	program.on('command:*', ([cmd]: string) => {
+		if (cmd === 'create-publisher') {
+			log.error(
+				`The 'create-publisher' command is no longer available. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher`
+			);
+
+			process.exit(1);
+		}
+
+		program.outputHelp(help => {
 			const availableCommands = program.commands.map(c => c._name);
 			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
@@ -200,11 +220,8 @@ Unknown command '${cmd}'`;
 
 			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 		});
+		process.exit(1);
 	});
 
 	program.parse(argv);
-
-	if (process.argv.length <= 2) {
-		program.help();
-	}
 };

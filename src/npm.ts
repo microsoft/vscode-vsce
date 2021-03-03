@@ -1,11 +1,19 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as denodeify from 'denodeify';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as findWorkspaceRoot from 'find-yarn-workspace-root';
-import { CancellationToken } from './util';
 import { Manifest } from './manifest';
 import { readNodeManifest } from './package';
+import { CancellationToken, log } from './util';
+
+const stat = denodeify(fs.stat);
+const exists = (file: string) =>
+	stat(file).then(
+		_ => true,
+		_ => false
+	);
 
 interface IOptions {
 	cwd?: string;
@@ -95,7 +103,7 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 					depManifest = await readNodeManifest(depPath);
 				}
 				catch (err) {
-          newPrefix = path.join(newPrefix, '..');
+					newPrefix = path.join(newPrefix, '..');
 					if (newPrefix.length < root.length) {
 						throw err;
 					}
@@ -183,7 +191,7 @@ async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDepe
 		dest: ''
 	}];
 
-	if (await new Promise(c => fs.exists(path.join(root, 'yarn.lock'), c))) {
+	if (await exists(path.join(root, 'yarn.lock'))) {
 		const deps = await getYarnProductionDependencies(root, manifest, packagedDependencies);
 		const flatten = (dep: YarnDependency) => {
 			result.push(dep.path);
@@ -195,8 +203,29 @@ async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDepe
 	return _.uniqBy(result, 'src');
 }
 
-export function getDependencies(cwd: string, manifest: Manifest, useYarn = false, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
-	return useYarn ? getYarnDependencies(cwd, manifest, packagedDependencies) : getNpmDependencies(cwd);
+export async function detectYarn(cwd: string) {
+	for (const file of ['yarn.lock', '.yarnrc']) {
+		if (await exists(path.join(cwd, file))) {
+			if (!process.env['VSCE_TESTS']) {
+				log.info(
+					`Detected presence of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+				);
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+export async function getDependencies(
+	cwd: string,
+	manifest: Manifest,
+	useYarn?: boolean,
+	packagedDependencies?: string[]
+): Promise<SourceAndDestination[]> {
+	return (useYarn !== undefined ? useYarn : await detectYarn(cwd))
+		? await getYarnDependencies(cwd, manifest, packagedDependencies)
+		: await getNpmDependencies(cwd);
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
