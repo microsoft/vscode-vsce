@@ -263,7 +263,7 @@ describe('collect', function () {
 
 		assert.equal(manifest.name, 'package-b');
 
-		const files = await collect(manifest, { cwd, useYarn: true }) as ILocalFile[];
+		const files = await collect(manifest, { cwd }) as ILocalFile[];
 
 		[
 			{

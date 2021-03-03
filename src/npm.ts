@@ -184,8 +184,7 @@ async function getYarnProductionDependencies(root: string, manifest: Manifest, p
 	return result;
 }
 
-async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
-	const root = findWorkspaceRoot(cwd) || cwd;
+async function getYarnDependencies(cwd: string, root: string, manifest: Manifest, packagedDependencies?: string[]): Promise<SourceAndDestination[]> {
 	const result: SourceAndDestination[] = [{
 		src: cwd,
 		dest: ''
@@ -203,9 +202,9 @@ async function getYarnDependencies(cwd: string, manifest: Manifest, packagedDepe
 	return _.uniqBy(result, 'src');
 }
 
-export async function detectYarn(cwd: string) {
+export async function detectYarn(root: string) {
 	for (const file of ['yarn.lock', '.yarnrc']) {
-		if (await exists(path.join(cwd, file))) {
+		if (await exists(path.join(root, file))) {
 			if (!process.env['VSCE_TESTS']) {
 				log.info(
 					`Detected presence of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
@@ -223,8 +222,9 @@ export async function getDependencies(
 	useYarn?: boolean,
 	packagedDependencies?: string[]
 ): Promise<SourceAndDestination[]> {
-	return (useYarn !== undefined ? useYarn : await detectYarn(cwd))
-		? await getYarnDependencies(cwd, manifest, packagedDependencies)
+	const root = findWorkspaceRoot(cwd) || cwd;
+	return (useYarn !== undefined ? useYarn : await detectYarn(root))
+		? await getYarnDependencies(cwd, root, manifest, packagedDependencies)
 		: await getNpmDependencies(cwd);
 }
 
