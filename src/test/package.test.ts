@@ -1807,7 +1807,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1924,7 +1924,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
