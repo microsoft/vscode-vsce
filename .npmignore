@@ -10,3 +10,5 @@ yarn.lock
 .vscode/
 out/**/*.d.ts
 !out/api.d.ts
+.dockerignore
+Dockerfile
