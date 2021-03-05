@@ -592,7 +592,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		const account = match[1];
 		const repositoryName = match[2].replace(/\.git$/i, '');
-		const branchName = githubBranch ? githubBranch : 'master';
+		const branchName = githubBranch ? githubBranch : 'HEAD';
 
 		return {
 			content: `https://github.com/${account}/${repositoryName}/blob/${branchName}`,
