@@ -4,3 +4,7 @@ npm-debug.log
 !src/test/**/node_modules
 package-lock.json
 Dockerfile
+.gitignore
+LICENSE
+README.md
+ThirdPartyNotices.txt
