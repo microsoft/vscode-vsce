@@ -101,7 +101,7 @@ module.exports = function (argv: string[]): void {
 					baseImagesUrl,
 					useYarn: yarn,
 					ignoreFile,
-					expandGitHubIssueLinks: noGitHubIssueLinking,
+					expandGitHubIssueLinks: !noGitHubIssueLinking,
 					web,
 				})
 			)
