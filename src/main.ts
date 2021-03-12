@@ -87,12 +87,12 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
+		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option(
 			'--web',
 			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
 		)
-		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, web }) =>
+		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, gitHubIssueLinking, web }) =>
 			main(
 				packageCommand({
 					packagePath: out,
@@ -101,7 +101,7 @@ module.exports = function (argv: string[]): void {
 					baseImagesUrl,
 					useYarn: yarn,
 					ignoreFile,
-					expandGitHubIssueLinks: noGitHubIssueLinking,
+					gitHubIssueLinking,
 					web,
 				})
 			)

@@ -1999,7 +1999,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, { expandGitHubIssueLinks: false });
+		const processor = new ReadmeProcessor(manifest, { gitHubIssueLinking: false });
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.github.md'),

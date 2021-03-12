@@ -76,16 +76,16 @@ export interface IAsset {
 }
 
 export interface IPackageOptions {
-	cwd?: string;
-	packagePath?: string;
-	githubBranch?: string;
-	baseContentUrl?: string;
-	baseImagesUrl?: string;
-	useYarn?: boolean;
-	dependencyEntryPoints?: string[];
-	ignoreFile?: string;
-	expandGitHubIssueLinks?: boolean;
-	web?: boolean;
+	readonly cwd?: string;
+	readonly packagePath?: string;
+	readonly githubBranch?: string;
+	readonly baseContentUrl?: string;
+	readonly baseImagesUrl?: string;
+	readonly useYarn?: boolean;
+	readonly dependencyEntryPoints?: string[];
+	readonly ignoreFile?: string;
+	readonly gitHubIssueLinking?: boolean;
+	readonly web?: boolean;
 }
 
 export interface IProcessor {
@@ -421,7 +421,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseImagesUrl: string;
 	private isGitHub: boolean;
 	private repositoryUrl: string;
-	private expandGitHubIssueLinks: boolean;
+	private gitHubIssueLinking: boolean;
 
 	constructor(
 		manifest: Manifest,
@@ -438,8 +438,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 		this.repositoryUrl = guess && guess.repository;
 		this.isGitHub = isGitHubRepository(this.repositoryUrl);
-		this.expandGitHubIssueLinks =
-			typeof options.expandGitHubIssueLinks === 'boolean' ? options.expandGitHubIssueLinks : true;
+		this.gitHubIssueLinking = typeof options.gitHubIssueLinking === 'boolean' ? options.gitHubIssueLinking : true;
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
@@ -506,7 +505,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			return all.replace(link, urljoin(prefix, link));
 		});
 
-		if (this.isGitHub && this.expandGitHubIssueLinks) {
+		if (this.gitHubIssueLinking && this.isGitHub) {
 			const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
 			const issueReplace = (
 				all: string,
