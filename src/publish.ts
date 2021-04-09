@@ -1,19 +1,13 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension } from './package';
+import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension, versionBump } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI, getHubUrl } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
-import * as semver from 'semver';
-import * as cp from 'child_process';
 
-const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; stderr: string }>(
-	cp.exec as any,
-	(err, stdout, stderr) => [err, { stdout, stderr }]
-);
 const tmpName = denodeify<string>(tmp.tmpName);
 
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
@@ -113,19 +107,20 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 }
 
 export interface IPublishOptions {
-	packagePath?: string;
-	version?: string;
-	commitMessage?: string;
-	cwd?: string;
-	pat?: string;
-	githubBranch?: string;
-	gitlabBranch?: string;
-	baseContentUrl?: string;
-	baseImagesUrl?: string;
-	useYarn?: boolean;
-	noVerify?: boolean;
-	ignoreFile?: string;
-	web?: boolean;
+	readonly packagePath?: string;
+	readonly version?: string;
+	readonly commitMessage?: string;
+	readonly gitTagVersion?: boolean;
+	readonly cwd?: string;
+	readonly pat?: string;
+	readonly githubBranch?: string;
+	readonly gitlabBranch?: string;
+	readonly baseContentUrl?: string;
+	readonly baseImagesUrl?: string;
+	readonly useYarn?: boolean;
+	readonly noVerify?: boolean;
+	readonly ignoreFile?: string;
+	readonly web?: boolean;
 }
 
 async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
@@ -198,7 +193,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const ignoreFile = options.ignoreFile;
 		const web = options.web;
 
-		promise = versionBump(options.cwd, options.version, options.commitMessage)
+		promise = versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion)
 			.then(() => tmpName())
 			.then(packagePath =>
 				pack({ packagePath, cwd, githubBranch, gitlabBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web })

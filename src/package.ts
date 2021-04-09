@@ -13,6 +13,7 @@ import * as markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
 import * as url from 'url';
 import { lookup } from 'mime';
+import * as semver from 'semver';
 import * as urljoin from 'url-join';
 import {
 	validatePublisher,
@@ -28,6 +29,10 @@ const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
 const stat = denodeify(fs.stat);
 const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
+const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; stderr: string }>(
+	cp.exec as any,
+	(err, stdout, stderr) => [err, { stdout, stderr }]
+);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
@@ -76,8 +81,11 @@ export interface IAsset {
 }
 
 export interface IPackageOptions {
-	readonly cwd?: string;
 	readonly packagePath?: string;
+	readonly version?: string;
+	readonly commitMessage?: string;
+	readonly gitTagVersion?: boolean;
+	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
 	readonly baseContentUrl?: string;
@@ -214,6 +222,60 @@ function isGitHubBadge(href: string): boolean {
 
 function isHostTrusted(url: url.UrlWithStringQuery): boolean {
 	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
+}
+
+export async function versionBump(
+	cwd: string = process.cwd(),
+	version?: string,
+	commitMessage?: string,
+	gitTagVersion?: boolean
+): Promise<void> {
+	if (!version) {
+		return Promise.resolve(null);
+	}
+
+	const manifest = await readManifest(cwd);
+
+	if (manifest.version === version) {
+		return null;
+	}
+
+	switch (version) {
+		case 'major':
+		case 'minor':
+		case 'patch':
+			break;
+		case 'premajor':
+		case 'preminor':
+		case 'prepatch':
+		case 'prerelease':
+		case 'from-git':
+			return Promise.reject(`Not supported: ${version}`);
+		default:
+			if (!semver.valid(version)) {
+				return Promise.reject(`Invalid version ${version}`);
+			}
+	}
+
+	let command = `npm version ${version}`;
+
+	if (commitMessage) {
+		command = `${command} -m "${commitMessage}"`;
+	}
+
+	if (!gitTagVersion) {
+		command = `${command} --no-git-tag-version`;
+	}
+
+	try {
+		// call `npm version` to do our dirty work
+		const { stdout, stderr } = await exec(command, { cwd });
+		process.stdout.write(stdout);
+		process.stderr.write(stderr);
+		return null;
+	} catch (err) {
+		throw err.message;
+	}
 }
 
 export class ManifestProcessor extends BaseProcessor {
@@ -1261,6 +1323,8 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
+
 	const { packagePath, files } = await pack(options);
 	const stats = await stat(packagePath);
 

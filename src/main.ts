@@ -75,9 +75,11 @@ module.exports = function (argv: string[]): void {
 		);
 
 	program
-		.command('package')
+		.command('package [<version>]')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
+		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
+		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
+		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
 			'--githubBranch [branch]',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
@@ -98,21 +100,29 @@ module.exports = function (argv: string[]): void {
 			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
 		)
 		.action(
-			({
-				out,
-				githubBranch,
-				gitlabBranch,
-				baseContentUrl,
-				baseImagesUrl,
-				yarn,
-				ignoreFile,
-				gitHubIssueLinking,
-				gitLabIssueLinking,
-				web,
-			}) =>
+			(
+				version,
+				{
+					out,
+					message,
+					gitTagVersion,
+					githubBranch,
+					gitlabBranch,
+					baseContentUrl,
+					baseImagesUrl,
+					yarn,
+					ignoreFile,
+					gitHubIssueLinking,
+					gitLabIssueLinking,
+					web,
+				}
+			) =>
 				main(
 					packageCommand({
 						packagePath: out,
+						version,
+						commitMessage: message,
+						gitTagVersion,
 						githubBranch,
 						gitlabBranch,
 						baseContentUrl,
@@ -135,6 +145,7 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
+		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option(
 			'--githubBranch [branch]',
@@ -160,6 +171,7 @@ module.exports = function (argv: string[]): void {
 				{
 					pat,
 					message,
+					gitTagVersion,
 					packagePath,
 					githubBranch,
 					gitlabBranch,
@@ -174,8 +186,9 @@ module.exports = function (argv: string[]): void {
 				main(
 					publish({
 						pat,
-						commitMessage: message,
 						version,
+						commitMessage: message,
+						gitTagVersion,
 						packagePath,
 						githubBranch,
 						gitlabBranch,
