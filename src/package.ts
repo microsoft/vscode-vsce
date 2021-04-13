@@ -79,12 +79,14 @@ export interface IPackageOptions {
 	readonly cwd?: string;
 	readonly packagePath?: string;
 	readonly githubBranch?: string;
+	readonly gitlabBranch?: string;
 	readonly baseContentUrl?: string;
 	readonly baseImagesUrl?: string;
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
+	readonly gitLabIssueLinking?: boolean;
 	readonly web?: boolean;
 }
 
@@ -200,6 +202,10 @@ const TrustedSVGSources = [
 
 function isGitHubRepository(repository: string): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
+}
+
+function isGitLabRepository(repository: string): boolean {
+	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository || '');
 }
 
 function isGitHubBadge(href: string): boolean {
@@ -420,8 +426,10 @@ export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
 	private isGitHub: boolean;
+	private isGitLab: boolean;
 	private repositoryUrl: string;
 	private gitHubIssueLinking: boolean;
+	private gitLabIssueLinking: boolean;
 
 	constructor(
 		manifest: Manifest,
@@ -432,13 +440,15 @@ export class MarkdownProcessor extends BaseProcessor {
 	) {
 		super(manifest);
 
-		const guess = this.guessBaseUrls(options.githubBranch);
+		const guess = this.guessBaseUrls(options.githubBranch || options.gitlabBranch);
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 		this.repositoryUrl = guess && guess.repository;
 		this.isGitHub = isGitHubRepository(this.repositoryUrl);
+		this.isGitLab = isGitLabRepository(this.repositoryUrl);
 		this.gitHubIssueLinking = typeof options.gitHubIssueLinking === 'boolean' ? options.gitHubIssueLinking : true;
+		this.gitLabIssueLinking = typeof options.gitLabIssueLinking === 'boolean' ? options.gitLabIssueLinking : true;
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
@@ -505,7 +515,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			return all.replace(link, urljoin(prefix, link));
 		});
 
-		if (this.gitHubIssueLinking && this.isGitHub) {
+		if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
 			const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
 			const issueReplace = (
 				all: string,
@@ -523,11 +533,19 @@ export class MarkdownProcessor extends BaseProcessor {
 
 				if (owner && repositoryName && issueNumber) {
 					// Issue in external repository
-					const issueUrl = urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber);
+					const issueUrl = this.isGitHub
+						? urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber)
+						: urljoin('https://gitlab.com', owner, repositoryName, '-', 'issues', issueNumber);
 					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
 				} else if (!owner && !repositoryName && issueNumber) {
 					// Issue in own repository
-					result = prefix + `[#${issueNumber}](${urljoin(this.repositoryUrl, 'issues', issueNumber)})`;
+					result =
+						prefix +
+						`[#${issueNumber}](${
+							this.isGitHub
+								? urljoin(this.repositoryUrl, 'issues', issueNumber)
+								: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
+						})`;
 				}
 
 				return result;
@@ -569,7 +587,7 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	// GitHub heuristics
-	private guessBaseUrls(githubBranch: string | undefined): { content: string; images: string; repository: string } {
+	private guessBaseUrls(githostBranch: string | undefined): { content: string; images: string; repository: string } {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -582,22 +600,36 @@ export class MarkdownProcessor extends BaseProcessor {
 			return null;
 		}
 
-		const regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
-		const match = regex.exec(repository);
+		const gitHubRegex = /(?<domain>github\.com)(?<project>\/(?:[^/]+)\/(?:[^/]+))(\/|$)/;
+		const gitLabRegex = /(?<domain>gitlab\.com)(?<project>(?:\/([^/]+)){2,})$/;
+		const match = ((gitHubRegex.exec(repository) || gitLabRegex.exec(repository)) as unknown) as {
+			groups: Record<string, string>;
+		};
 
 		if (!match) {
 			return null;
 		}
 
-		const account = match[1];
-		const repositoryName = match[2].replace(/\.git$/i, '');
-		const branchName = githubBranch ? githubBranch : 'HEAD';
+		const project = match.groups.project.substring(1).replace(/\.git$/i, '');
+		const branchName = githostBranch ? githostBranch : 'HEAD';
+		switch (match.groups.domain) {
+			case 'github.com':
+				return {
+					content: `https://github.com/${project}/blob/${branchName}`,
+					images: `https://github.com/${project}/raw/${branchName}`,
+					repository: `https://github.com/${project}`,
+				};
 
-		return {
-			content: `https://github.com/${account}/${repositoryName}/blob/${branchName}`,
-			images: `https://github.com/${account}/${repositoryName}/raw/${branchName}`,
-			repository: `https://github.com/${account}/${repositoryName}`,
-		};
+			case 'gitlab.com':
+				return {
+					content: `https://gitlab.com/${project}/-/blob/${branchName}`,
+					images: `https://gitlab.com/${project}/-/raw/${branchName}`,
+					repository: `https://gitlab.com/${project}`,
+				};
+
+			default:
+				return null;
+		}
 	}
 }
 
