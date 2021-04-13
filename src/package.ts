@@ -1015,6 +1015,8 @@ const defaultIgnore = [
 	'**/.vscode-test/**',
 ];
 
+const notIgnored = ['!package.json', '!README.md'];
+
 function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<string[]> {
 	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
 		const promises: Promise<string[]>[] = deps.map(dep => {
@@ -1058,7 +1060,7 @@ function collectFiles(
 				])
 
 				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
+				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
 
 				// Split into ignore and negate list
 				.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
