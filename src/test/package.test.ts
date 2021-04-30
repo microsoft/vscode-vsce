@@ -2011,6 +2011,33 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should infer baseContentUrl if its a gitlab repo (short format)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'gitlab:username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
 	it('should replace relative links with GitLab URLs while respecting gitlabBranch', () => {
 		const manifest = {
 			name: 'test',
