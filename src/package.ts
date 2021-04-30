@@ -582,15 +582,15 @@ export class MarkdownProcessor extends BaseProcessor {
 			return null;
 		}
 
-		const regex = /github\.com\/([^/]+)\/([^/]+)(\/|$)/;
+		const regex = /github(\.com\/|:)([^/]+)\/([^/]+)(\/|$)/;
 		const match = regex.exec(repository);
 
 		if (!match) {
 			return null;
 		}
 
-		const account = match[1];
-		const repositoryName = match[2].replace(/\.git$/i, '');
+		const account = match[2];
+		const repositoryName = match[3].replace(/\.git$/i, '');
 		const branchName = githubBranch ? githubBranch : 'HEAD';
 
 		return {
