@@ -1957,6 +1957,177 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should infer baseContentUrl if its a gitlab repo', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo (.git)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo (short format)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'gitlab:username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should replace relative links with GitLab URLs while respecting gitlabBranch', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should override image URLs with baseImagesUrl while also respecting gitlabBranch', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+			// Override image relative links to point to different base URL
+			baseImagesUrl: 'https://gitlab.com/base',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should override gitlabBranch setting with baseContentUrl', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+			baseContentUrl: 'https://gitlab.com/base',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
 	it('should replace img urls with baseImagesUrl', () => {
 		const manifest = {
 			name: 'test',
@@ -2064,6 +2235,60 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should replace issue links with urls if its a gitlab repo.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.gitlab.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should not replace issue links with urls if its a gitlab repo but issue link expansion is disabled.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, { gitLabIssueLinking: false });
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.gitlab.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
