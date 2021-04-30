@@ -479,7 +479,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 				if (isLinkRelative) {
 					throw new Error(
-						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 					);
 				}
 			}
@@ -503,7 +503,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			if (!this.baseImagesUrl && isLinkRelative) {
 				throw new Error(
-					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 				);
 			}
 			const prefix = this.baseImagesUrl;
@@ -600,8 +600,8 @@ export class MarkdownProcessor extends BaseProcessor {
 			return null;
 		}
 
-		const gitHubRegex = /(?<domain>github\.com)(?<project>\/(?:[^/]+)\/(?:[^/]+))(\/|$)/;
-		const gitLabRegex = /(?<domain>gitlab\.com)(?<project>(?:\/([^/]+)){2,})$/;
+		const gitHubRegex = /(?<domain>github(\.com\/|:))(?<project>(?:[^/]+)\/(?:[^/]+))(\/|$)/;
+		const gitLabRegex = /(?<domain>gitlab(\.com\/|:))(?<project>(?:[^/]+)(\/(?:[^/]+))+)(\/|$)/;
 		const match = ((gitHubRegex.exec(repository) || gitLabRegex.exec(repository)) as unknown) as {
 			groups: Record<string, string>;
 		};
@@ -610,26 +610,24 @@ export class MarkdownProcessor extends BaseProcessor {
 			return null;
 		}
 
-		const project = match.groups.project.substring(1).replace(/\.git$/i, '');
+		const project = match.groups.project.replace(/\.git$/i, '');
 		const branchName = githostBranch ? githostBranch : 'HEAD';
-		switch (match.groups.domain) {
-			case 'github.com':
-				return {
-					content: `https://github.com/${project}/blob/${branchName}`,
-					images: `https://github.com/${project}/raw/${branchName}`,
-					repository: `https://github.com/${project}`,
-				};
 
-			case 'gitlab.com':
-				return {
-					content: `https://gitlab.com/${project}/-/blob/${branchName}`,
-					images: `https://gitlab.com/${project}/-/raw/${branchName}`,
-					repository: `https://gitlab.com/${project}`,
-				};
-
-			default:
-				return null;
+		if (/^github/.test(match.groups.domain)) {
+			return {
+				content: `https://github.com/${project}/blob/${branchName}`,
+				images: `https://github.com/${project}/raw/${branchName}`,
+				repository: `https://github.com/${project}`,
+			};
+		} else if (/^gitlab/.test(match.groups.domain)) {
+			return {
+				content: `https://gitlab.com/${project}/-/blob/${branchName}`,
+				images: `https://gitlab.com/${project}/-/raw/${branchName}`,
+				repository: `https://gitlab.com/${project}`,
+			};
 		}
+
+		return null;
 	}
 }
 
@@ -1024,6 +1022,7 @@ const defaultIgnore = [
 	'.vscodeignore',
 	'package-lock.json',
 	'yarn.lock',
+	'npm-shrinkwrap.json',
 	'.editorconfig',
 	'.npmrc',
 	'.yarnrc',
@@ -1033,6 +1032,7 @@ const defaultIgnore = [
 	'.eslintrc*',
 	'.babelrc*',
 	'.prettierrc',
+	'webpack.config.js',
 	'ISSUE_TEMPLATE.md',
 	'CONTRIBUTING.md',
 	'PULL_REQUEST_TEMPLATE.md',
@@ -1046,6 +1046,8 @@ const defaultIgnore = [
 	'**/*.vsixmanifest',
 	'**/.vscode-test/**',
 ];
+
+const notIgnored = ['!package.json', '!README.md'];
 
 function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<string[]> {
 	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
@@ -1090,7 +1092,7 @@ function collectFiles(
 				])
 
 				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, '!package.json'])
+				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
 
 				// Split into ignore and negate list
 				.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
