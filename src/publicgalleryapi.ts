@@ -54,6 +54,10 @@ export class PublicGalleryAPI {
 		});
 		const raw = JSON.parse(await res.readBody());
 
+		if (raw.errorCode !== undefined) {
+			throw new Error(raw.message);
+		}
+
 		return ContractSerializer.deserialize(raw.results[0].extensions, TypeInfo.PublishedExtension, false, false);
 	}
 
