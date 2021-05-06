@@ -53,14 +53,14 @@ docker run -it -v $(pwd):/workspace vsce publish
 First clone this repository, then:
 
 ```sh
-yarn
-yarn watch # or `watch-test` to also run tests
+npm i
+npm run watch # or `watch-test` to also run tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
 ```sh
-yarn vsce
+npm run vsce
 ```
 
 ### Publish to NPM
