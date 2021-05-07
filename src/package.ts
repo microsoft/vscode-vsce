@@ -85,8 +85,6 @@ export interface IPackageOptions {
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
-	readonly gitHubIssueLinking?: boolean;
-	readonly gitLabIssueLinking?: boolean;
 	readonly web?: boolean;
 }
 
@@ -202,10 +200,6 @@ const TrustedSVGSources = [
 
 function isGitHubRepository(repository: string): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
-}
-
-function isGitLabRepository(repository: string): boolean {
-	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository || '');
 }
 
 function isGitHubBadge(href: string): boolean {
@@ -425,11 +419,6 @@ export class TagsProcessor extends BaseProcessor {
 export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string;
 	private baseImagesUrl: string;
-	private isGitHub: boolean;
-	private isGitLab: boolean;
-	private repositoryUrl: string;
-	private gitHubIssueLinking: boolean;
-	private gitLabIssueLinking: boolean;
 
 	constructor(
 		manifest: Manifest,
@@ -444,11 +433,6 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
-		this.repositoryUrl = guess && guess.repository;
-		this.isGitHub = isGitHubRepository(this.repositoryUrl);
-		this.isGitLab = isGitLabRepository(this.repositoryUrl);
-		this.gitHubIssueLinking = typeof options.gitHubIssueLinking === 'boolean' ? options.gitHubIssueLinking : true;
-		this.gitLabIssueLinking = typeof options.gitLabIssueLinking === 'boolean' ? options.gitLabIssueLinking : true;
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
@@ -514,45 +498,6 @@ export class MarkdownProcessor extends BaseProcessor {
 
 			return all.replace(link, urljoin(prefix, link));
 		});
-
-		if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
-			const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
-			const issueReplace = (
-				all: string,
-				prefix: string,
-				ownerAndRepositoryName: string,
-				issueNumber: string
-			): string => {
-				let result = all;
-				let owner: string;
-				let repositoryName: string;
-
-				if (ownerAndRepositoryName) {
-					[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
-				}
-
-				if (owner && repositoryName && issueNumber) {
-					// Issue in external repository
-					const issueUrl = this.isGitHub
-						? urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber)
-						: urljoin('https://gitlab.com', owner, repositoryName, '-', 'issues', issueNumber);
-					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
-				} else if (!owner && !repositoryName && issueNumber) {
-					// Issue in own repository
-					result =
-						prefix +
-						`[#${issueNumber}](${
-							this.isGitHub
-								? urljoin(this.repositoryUrl, 'issues', issueNumber)
-								: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
-						})`;
-				}
-
-				return result;
-			};
-			// Replace Markdown issue references with urls
-			contents = contents.replace(markdownIssueRegex, issueReplace);
-		}
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
