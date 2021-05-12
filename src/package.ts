@@ -209,7 +209,7 @@ function isGitLabRepository(repository: string): boolean {
 }
 
 function isGitHubBadge(href: string): boolean {
-	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/workflows\/.*badge\.svg/.test(href || '');
+	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/(actions\/)?workflows\/.*badge\.svg/.test(href || '');
 }
 
 function isHostTrusted(url: url.UrlWithStringQuery): boolean {

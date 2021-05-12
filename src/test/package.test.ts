@@ -2355,7 +2355,7 @@ describe('MarkdownProcessor', () => {
 		assert(file);
 	});
 
-	it('should allow SVG from GitHub actions in image tag', async () => {
+	it('should allow SVG from GitHub actions in image tag (old url format)', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -2364,6 +2364,22 @@ describe('MarkdownProcessor', () => {
 			repository: 'https://github.com/username/repository',
 		};
 		const contents = `![title](https://github.com/fakeuser/fakerepo/workflows/fakeworkflowname/badge.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should allow SVG from GitHub actions in image tag', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+		const contents = `![title](https://github.com/fakeuser/fakerepo/actions/workflows/fakeworkflowname/badge.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
 
