@@ -569,7 +569,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		const $ = cheerio.load(html);
 
 		$('img').each((_, img) => {
-			const src = decodeURI(img.attribs.src);
+			const src = decodeURI($(img).attr('src'));
 			const srcUrl = url.parse(src);
 
 			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.path)) {
