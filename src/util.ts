@@ -21,6 +21,10 @@ export function getPublishedUrl(extension: string): string {
 	return `${marketplaceUrl}/items?itemName=${extension}`;
 }
 
+export function getHubUrl(publisher: string, name: string): string {
+	return `${marketplaceUrl}/manage/publishers/${publisher}/extensions/${name}/hub`;
+}
+
 export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
 	// from https://github.com/Microsoft/tfs-cli/blob/master/app/exec/extension/default.ts#L287-L292
 	const authHandler = getBasicHandler('OAuth', pat);
@@ -67,10 +71,11 @@ export function isCancelledError(error: any) {
 }
 
 export class CancellationToken {
-
 	private listeners: Function[] = [];
 	private _cancelled: boolean = false;
-	get isCancelled(): boolean { return this._cancelled; }
+	get isCancelled(): boolean {
+		return this._cancelled;
+	}
 
 	subscribe(fn: Function): Function {
 		this.listeners.push(fn);
@@ -105,7 +110,7 @@ enum LogMessageType {
 	DONE,
 	INFO,
 	WARNING,
-	ERROR
+	ERROR,
 }
 
 const LogPrefix = {
@@ -135,5 +140,5 @@ export const log = {
 	done: _log.bind(null, LogMessageType.DONE) as LogFn,
 	info: _log.bind(null, LogMessageType.INFO) as LogFn,
 	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
-	error: _log.bind(null, LogMessageType.ERROR) as LogFn
+	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };

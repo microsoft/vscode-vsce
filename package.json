@@ -1,79 +1,99 @@
 {
-  "name": "vsce",
-  "version": "1.72.0",
-  "description": "VSCode Extension Manager",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Microsoft/vsce"
-  },
-  "homepage": "https://code.visualstudio.com",
-  "bugs": "https://github.com/Microsoft/vsce/issues",
-  "keywords": [
-    "vscode",
-    "vsce",
-    "extension"
-  ],
-  "contributors": [
-    "Microsoft Corporation"
-  ],
-  "author": "Microsoft Corporation",
-  "license": "MIT",
-  "main": "out/api.js",
-  "typings": "out/api.d.ts",
-  "bin": {
-    "vsce": "out/vsce"
-  },
-  "scripts": {
-    "compile": "tsc && cp src/vsce out/vsce",
-    "watch": "cp src/vsce out/vsce && tsc --watch",
-    "watch-test": "cp src/vsce out/vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
-    "test": "mocha",
-    "prepublishOnly": "tsc && cp src/vsce out/vsce && mocha",
-    "vsce": "out/vsce"
-  },
-  "engines": {
-    "node": ">= 8"
-  },
-  "dependencies": {
-    "azure-devops-node-api": "^7.2.0",
-    "chalk": "^2.4.2",
-    "cheerio": "^1.0.0-rc.1",
-    "commander": "^2.8.1",
-    "denodeify": "^1.2.1",
-    "didyoumean": "^1.2.1",
-    "glob": "^7.0.6",
-    "ignore": "^5.1.4",
-    "lodash": "^4.17.10",
-    "markdown-it": "^8.3.1",
-    "mime": "^1.3.4",
-    "osenv": "^0.1.3",
-    "parse-semver": "^1.1.1",
-    "read": "^1.0.7",
-    "semver": "^5.1.0",
-    "tmp": "0.0.29",
-    "typed-rest-client": "1.2.0",
-    "url-join": "^1.1.0",
-    "yauzl": "^2.3.1",
-    "yazl": "^2.2.2"
-  },
-  "devDependencies": {
-    "@types/cheerio": "^0.22.1",
-    "@types/denodeify": "^1.2.31",
-    "@types/didyoumean": "^1.2.0",
-    "@types/glob": "^7.1.1",
-    "@types/lodash": "^4.14.123",
-    "@types/markdown-it": "0.0.2",
-    "@types/mime": "^1",
-    "@types/mocha": "^5.2.6",
-    "@types/node": "^8",
-    "@types/read": "^0.0.28",
-    "@types/semver": "^6.0.0",
-    "@types/tmp": "^0.1.0",
-    "@types/xml2js": "^0.4.4",
-    "concurrently": "^4.1.0",
-    "mocha": "^5.2.0",
-    "source-map-support": "^0.4.2",
-    "typescript": "^3.4.3",
-    "xml2js": "^0.4.12"
-  }
+	"name": "vsce",
+	"version": "1.91.0",
+	"description": "VSCode Extension Manager",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vsce"
+	},
+	"homepage": "https://code.visualstudio.com",
+	"bugs": "https://github.com/Microsoft/vsce/issues",
+	"keywords": [
+		"vscode",
+		"vsce",
+		"extension"
+	],
+	"contributors": [
+		"Microsoft Corporation"
+	],
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"main": "out/api.js",
+	"typings": "out/api.d.ts",
+	"bin": {
+		"vsce": "out/vsce"
+	},
+	"scripts": {
+		"copy-vsce": "mkdir -p out && cp src/vsce out/vsce",
+		"compile": "tsc && yarn copy-vsce",
+		"watch": "yarn copy-vsce && tsc --watch",
+		"watch-test": "yarn copy-vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
+		"test": "mocha",
+		"prepublishOnly": "tsc && yarn copy-vsce && mocha",
+		"vsce": "out/vsce"
+	},
+	"engines": {
+		"node": ">= 10"
+	},
+	"dependencies": {
+		"azure-devops-node-api": "^10.2.2",
+		"chalk": "^2.4.2",
+		"cheerio": "^1.0.0-rc.9",
+		"commander": "^6.1.0",
+		"denodeify": "^1.2.1",
+		"glob": "^7.0.6",
+		"ignore": "^5.1.8",
+		"leven": "^3.1.0",
+		"lodash": "^4.17.15",
+		"markdown-it": "^10.0.0",
+		"mime": "^1.3.4",
+		"osenv": "^0.1.3",
+		"parse-semver": "^1.1.1",
+		"read": "^1.0.7",
+		"semver": "^5.1.0",
+		"tmp": "0.0.29",
+		"typed-rest-client": "^1.8.4",
+		"url-join": "^1.1.0",
+		"yauzl": "^2.3.1",
+		"yazl": "^2.2.2"
+	},
+	"devDependencies": {
+		"@types/cheerio": "^0.22.29",
+		"@types/denodeify": "^1.2.31",
+		"@types/glob": "^7.1.1",
+		"@types/lodash": "^4.14.123",
+		"@types/markdown-it": "0.0.2",
+		"@types/mime": "^1",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^10.17.60",
+		"@types/read": "^0.0.28",
+		"@types/semver": "^6.0.0",
+		"@types/tmp": "^0.1.0",
+		"@types/xml2js": "^0.4.4",
+		"concurrently": "^5.1.0",
+		"husky": "^4.3.0",
+		"mocha": "^7.1.1",
+		"prettier": "2.1.2",
+		"pretty-quick": "^3.0.2",
+		"source-map-support": "^0.4.2",
+		"typescript": "^4.3.2",
+		"xml2js": "^0.4.12"
+	},
+	"mocha": {
+		"require": [
+			"source-map-support/register"
+		],
+		"spec": "out/test"
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "pretty-quick --staged"
+		}
+	},
+	"prettier": {
+		"useTabs": true,
+		"printWidth": 120,
+		"singleQuote": true,
+		"arrowParens": "avoid"
+	}
 }

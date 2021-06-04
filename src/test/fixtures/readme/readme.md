@@ -31,6 +31,7 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 [mono](monkey)
 [not](http://shouldnottouchthis/)
+[Email me](mailto:example@example.com)
 
 # Install
 This extension is published in the VS Code Gallery.  So simply hit 'F1' and type 'ext inst' from there select `SpellMD` and follow instructions.

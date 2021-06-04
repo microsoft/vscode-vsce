@@ -19,7 +19,7 @@ Load up a Markdown file and get highlights and hovers for existing issues.  Chec
 The status bar lets you quickly navigate to any issue and you can see all positions in the gutter.
 
 [![Jump to issues](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
-[![Jump to issues](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)](https://github.com/username/repository/blob/master/monkey)
+[![Jump to issues](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)](https://github.com/username/repository/blob/HEAD/monkey)
 ![](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)
 <img src="https://github.com/username/repository/path/to/images/myImage.gif">
 
@@ -29,8 +29,9 @@ The `spellMD.json` config file is watched so you can add more ignores or change 
 
 ![issue](https://github.com/username/repository/path/to/issue)
 
-[mono](https://github.com/username/repository/blob/master/monkey)
+[mono](https://github.com/username/repository/blob/HEAD/monkey)
 [not](http://shouldnottouchthis/)
+[Email me](mailto:example@example.com)
 
 # Install
 This extension is published in the VS Code Gallery.  So simply hit 'F1' and type 'ext inst' from there select `SpellMD` and follow instructions.

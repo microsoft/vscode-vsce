@@ -1,16 +1,19 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage } from './package';
+import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI, getHubUrl } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
 import * as semver from 'semver';
 import * as cp from 'child_process';
 
-const exec = denodeify<string, { cwd?: string; env?: any; }, { stdout: string; stderr: string; }>(cp.exec as any, (err, stdout, stderr) => [err, { stdout, stderr }]);
+const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; stderr: string }>(
+	cp.exec as any,
+	(err, stdout, stderr) => [err, { stdout, stderr }]
+);
 const tmpName = denodeify<string>(tmp.tmpName);
 
 function readManifestFromPackage(packagePath: string): Promise<Manifest> {
@@ -60,30 +63,53 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 	const fullName = `${name}@${manifest.version}`;
 	console.log(`Publishing ${fullName}...`);
 
-	return api.getExtension(null, manifest.publisher, manifest.name, null, ExtensionQueryFlags.IncludeVersions)
-		.catch<PublishedExtension>(err => err.statusCode === 404 ? null : Promise.reject(err))
-		.then(extension => {
-			if (extension && extension.versions.some(v => v.version === manifest.version)) {
-				return Promise.reject(`${fullName} already exists. Version number cannot be the same.`);
+	let extension: PublishedExtension | null = null;
+
+	try {
+		try {
+			extension = await api.getExtension(
+				null,
+				manifest.publisher,
+				manifest.name,
+				null,
+				ExtensionQueryFlags.IncludeVersions
+			);
+		} catch (err) {
+			if (err.statusCode !== 404) {
+				throw err;
 			}
+		}
 
-			var promise = extension
-				? api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name)
-				: api.createExtension(undefined, packageStream);
+		if (extension && extension.versions.some(v => v.version === manifest.version)) {
+			throw new Error(`${fullName} already exists. Version number cannot be the same.`);
+		}
 
-			return promise
-				.catch(err => Promise.reject(err.statusCode === 409 ? `${fullName} already exists.` : err))
-				.then(() => log.done(`Published ${fullName}\nYour extension will live at ${getPublishedUrl(name)} (might take a few minutes for it to show up).`));
-		})
-		.catch(err => {
-			const message = err && err.message || '';
-
-			if (/Invalid Resource/.test(message)) {
-				err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		if (extension) {
+			try {
+				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
+			} catch (err) {
+				if (err.statusCode === 409) {
+					throw new Error(`${fullName} already exists.`);
+				} else {
+					throw err;
+				}
 			}
+		} else {
+			await api.createExtension(undefined, packageStream);
+		}
+	} catch (err) {
+		const message = (err && err.message) || '';
 
-			return Promise.reject(err);
-		});
+		if (/Invalid Resource/.test(message)) {
+			err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		}
+
+		throw err;
+	}
+
+	log.info(`Extension URL (might take a few minutes): ${getPublishedUrl(name)}`);
+	log.info(`Hub URL: ${getHubUrl(manifest.publisher, manifest.name)}`);
+	log.done(`Published ${fullName}.`);
 }
 
 export interface IPublishOptions {
@@ -92,16 +118,25 @@ export interface IPublishOptions {
 	commitMessage?: string;
 	cwd?: string;
 	pat?: string;
+	githubBranch?: string;
+	gitlabBranch?: string;
 	baseContentUrl?: string;
 	baseImagesUrl?: string;
 	useYarn?: boolean;
 	noVerify?: boolean;
 	ignoreFile?: string;
+	web?: boolean;
 }
 
-function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
+async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
 	if (!version) {
 		return Promise.resolve(null);
+	}
+
+	const manifest = await readManifest(cwd);
+
+	if (manifest.version === version) {
+		return null;
 	}
 
 	switch (version) {
@@ -127,14 +162,15 @@ function versionBump(cwd: string = process.cwd(), version?: string, commitMessag
 		command = `${command} -m "${commitMessage}"`;
 	}
 
-	// call `npm version` to do our dirty work
-	return exec(command, { cwd })
-		.then(({ stdout, stderr }) => {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-			return Promise.resolve(null);
-		})
-		.catch(err => Promise.reject(err.message));
+	try {
+		// call `npm version` to do our dirty work
+		const { stdout, stderr } = await exec(command, { cwd });
+		process.stdout.write(stdout);
+		process.stderr.write(stderr);
+		return null;
+	} catch (err) {
+		throw err.message;
+	}
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
@@ -144,29 +180,47 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		if (options.version) {
 			return Promise.reject(`Not supported: packagePath and version.`);
 		}
+		if (options.web) {
+			return Promise.reject(`Not supported: packagePath and web.`);
+		}
 
-		promise = readManifestFromPackage(options.packagePath)
-			.then(manifest => ({ manifest, packagePath: options.packagePath }));
+		promise = readManifestFromPackage(options.packagePath).then(manifest => ({
+			manifest,
+			packagePath: options.packagePath,
+		}));
 	} else {
 		const cwd = options.cwd;
+		const githubBranch = options.githubBranch;
+		const gitlabBranch = options.gitlabBranch;
 		const baseContentUrl = options.baseContentUrl;
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
 		const ignoreFile = options.ignoreFile;
+		const web = options.web;
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage)
 			.then(() => tmpName())
-			.then(packagePath => pack({ packagePath, cwd, baseContentUrl, baseImagesUrl, useYarn, ignoreFile }));
+			.then(packagePath =>
+				pack({ packagePath, cwd, githubBranch, gitlabBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web })
+			);
 	}
 
-	return promise.then(({ manifest, packagePath }) => {
+	return promise.then(async ({ manifest, packagePath }) => {
 		if (!options.noVerify && manifest.enableProposedApi) {
-			throw new Error('Extensions using proposed API (enableProposedApi: true) can\'t be published to the Marketplace');
+			throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 		}
 
-		const patPromise = options.pat
-			? Promise.resolve(options.pat)
-			: getPublisher(manifest.publisher).then(p => p.pat);
+		if (options.web) {
+			if (!isWebKind(manifest)) {
+				throw new Error("Extensions which are not web kind can't be published to the Marketpalce as a web extension");
+			}
+			const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
+			if (!isSupportedWebExtension(manifest, extensionsReport)) {
+				throw new Error("Extensions which are not supported can't be published to the Marketpalce as a web extension");
+			}
+		}
+
+		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);
 
 		return patPromise.then(pat => _publish(packagePath, pat, manifest));
 	});

@@ -7,7 +7,7 @@
 * Some issue in other repository with fancy name: my_user-name/my-rep_o12#6
 
 # Do not touch this:
- * username#4 (no valid github link)
+ * username#4 (no valid gitlab link)
  * /#7
  * foo/$234/#7
  * [#7](http://shouldnottouchthis/)

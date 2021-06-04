@@ -14,12 +14,18 @@ const columns = process.stdout.columns ? process.stdout.columns : 80;
 const useFallbackIcons = process.platform === 'win32';
 
 export const icons = useFallbackIcons
-	? { download: '\u{2193}', star: '\u{2665}', emptyStar: '\u{2022}', }
-	: { download: '\u{2913}', star: '\u{2605}', emptyStar: '\u{2606}', };
+	? { download: '\u{2193}', star: '\u{2665}', emptyStar: '\u{2022}' }
+	: { download: '\u{2913}', star: '\u{2605}', emptyStar: '\u{2606}' };
 
-export function formatDate(date) { return date.toLocaleString(fixedLocale, format.date); }
-export function formatTime(date) { return date.toLocaleString(fixedLocale, format.time); }
-export function formatDateTime(date) { return date.toLocaleString(fixedLocale, { ...format.date, ...format.time }); }
+export function formatDate(date) {
+	return date.toLocaleString(fixedLocale, format.date);
+}
+export function formatTime(date) {
+	return date.toLocaleString(fixedLocale, format.time);
+}
+export function formatDateTime(date) {
+	return date.toLocaleString(fixedLocale, { ...format.date, ...format.time });
+}
 
 export function repeatString(text: string, count: number): string {
 	let result: string = '';
@@ -36,8 +42,10 @@ export function ratingStars(rating: number, total = 5): string {
 
 export function tableView(table: ViewTable, spacing: number = 2): string[] {
 	const maxLen = {};
-	table.forEach(row => row.forEach((cell, i) => maxLen[i] = Math.max(maxLen[i] || 0, cell.length)));
-	return table.map(row => row.map((cell, i) => `${cell}${repeatString(' ', maxLen[i] - cell.length + spacing)}`).join(''));
+	table.forEach(row => row.forEach((cell, i) => (maxLen[i] = Math.max(maxLen[i] || 0, cell.length))));
+	return table.map(row =>
+		row.map((cell, i) => `${cell}${repeatString(' ', maxLen[i] - cell.length + spacing)}`).join('')
+	);
 }
 
 export function wordWrap(text: string, width: number = columns): string {
@@ -46,17 +54,21 @@ export function wordWrap(text: string, width: number = columns): string {
 	return text
 		.replace(/^\s+/, '')
 		.split('')
-		.reduce(([out, buffer, pos], ch) => {
-			const nl = pos === maxWidth ? `\n${indent}` : '';
-			const newPos: number = nl ? 0 : +pos + 1;
-			return / |-|,|\./.test(ch) ?
-				[`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer + ch, newPos];
-		}, [indent, '', 0])
+		.reduce(
+			([out, buffer, pos], ch) => {
+				const nl = pos === maxWidth ? `\n${indent}` : '';
+				const newPos: number = nl ? 0 : +pos + 1;
+				return / |-|,|\./.test(ch) ? [`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer + ch, newPos];
+			},
+			[indent, '', 0]
+		)
 		.slice(0, 2)
 		.join('');
-};
+}
 
-export function indentRow(row: string) { return `  ${row}`; };
+export function indentRow(row: string) {
+	return `  ${row}`;
+}
 
 export function wordTrim(text: string, width: number = columns, indicator = '...') {
 	if (text.length > width) {

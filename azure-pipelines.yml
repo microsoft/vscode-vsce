@@ -5,27 +5,27 @@ trigger:
     include: ['*']
 
 steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: "8.x"
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '10.x'
 
-- task: geeklearningio.gl-vsts-tasks-yarn.yarn-installer-task.YarnInstaller@2
-  inputs:
-    versionSpec: "1.x"
+  - task: geeklearningio.gl-vsts-tasks-yarn.yarn-installer-task.YarnInstaller@2
+    inputs:
+      versionSpec: '1.x'
 
-- script: yarn
-  displayName: Install Dependencies
+  - script: yarn
+    displayName: Install Dependencies
 
-- script: yarn compile
-  displayName: Compile
+  - script: yarn compile
+    displayName: Compile
 
-- script: yarn test
-  displayName: Run Tests
+  - script: yarn test
+    displayName: Run Tests
 
-- task: Npm@1
-  displayName: 'Publish to NPM'
-  inputs:
-    command: publish
-    verbose: false
-    publishEndpoint: 'NPM'
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+  - task: Npm@1
+    displayName: 'Publish to NPM'
+    inputs:
+      command: publish
+      verbose: false
+      publishEndpoint: 'NPM'
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))

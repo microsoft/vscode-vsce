@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { validatePublisher, validateExtensionName, validateVersion, validateEngineCompatibility, validateVSCodeTypesCompatibility } from '../validation';
+import {
+	validatePublisher,
+	validateExtensionName,
+	validateVersion,
+	validateEngineCompatibility,
+	validateVSCodeTypesCompatibility,
+} from '../validation';
 
 describe('validatePublisher', () => {
 	it('should throw with empty', () => {
@@ -57,6 +63,7 @@ describe('validateVersion', () => {
 	it('should validate', () => {
 		validateVersion('1.0.0');
 		validateVersion('0.1.1');
+		validateVersion('0.1.1-pre');
 
 		assert.throws(() => validateVersion('.'));
 		assert.throws(() => validateVersion('..'));
@@ -65,7 +72,6 @@ describe('validateVersion', () => {
 		assert.throws(() => validateVersion('.0.1'));
 		assert.throws(() => validateVersion('0.1.'));
 		assert.throws(() => validateVersion('0.0.0.1'));
-		assert.throws(() => validateVersion('0.1.1-pre'));
 	});
 });
 
@@ -101,7 +107,6 @@ describe('validateEngineCompatibility', () => {
 });
 
 describe('validateVSCodeTypesCompatibility', () => {
-
 	it('should validate', () => {
 		validateVSCodeTypesCompatibility('*', '1.30.0');
 		validateVSCodeTypesCompatibility('*', '^1.30.0');
@@ -109,6 +114,7 @@ describe('validateVSCodeTypesCompatibility', () => {
 
 		validateVSCodeTypesCompatibility('1.30.0', '1.30.0');
 		validateVSCodeTypesCompatibility('1.30.0', '1.20.0');
+		validateVSCodeTypesCompatibility('1.46.0', '1.45.1');
 
 		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '1.40.0'));
 		assert.throws(() => validateVSCodeTypesCompatibility('1.30.0', '^1.40.0'));
