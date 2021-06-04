@@ -945,6 +945,31 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should automatically add remote-menu tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				menus: {
+					'statusBar/remoteIndicator': [
+						{
+							command: 'remote-wsl.newWindow',
+						},
+					],
+				},
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'remote-menu'));
+			});
+	});
+
 	it('should automatically add language tag with activationEvent', () => {
 		const manifest = {
 			name: 'test',
@@ -2355,7 +2380,7 @@ describe('MarkdownProcessor', () => {
 		assert(file);
 	});
 
-	it('should allow SVG from GitHub actions in image tag', async () => {
+	it('should allow SVG from GitHub actions in image tag (old url format)', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -2364,6 +2389,22 @@ describe('MarkdownProcessor', () => {
 			repository: 'https://github.com/username/repository',
 		};
 		const contents = `![title](https://github.com/fakeuser/fakerepo/workflows/fakeworkflowname/badge.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should allow SVG from GitHub actions in image tag', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+		const contents = `![title](https://github.com/fakeuser/fakerepo/actions/workflows/fakeworkflowname/badge.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
 

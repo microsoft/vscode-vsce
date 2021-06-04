@@ -209,7 +209,7 @@ function isGitLabRepository(repository: string): boolean {
 }
 
 function isGitHubBadge(href: string): boolean {
-	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/workflows\/.*badge\.svg/.test(href || '');
+	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/(actions\/)?workflows\/.*badge\.svg/.test(href || '');
 }
 
 function isHostTrusted(url: url.UrlWithStringQuery): boolean {
@@ -361,7 +361,16 @@ export class TagsProcessor extends BaseProcessor {
 		const keywords = this.manifest.keywords || [];
 		const contributes = this.manifest.contributes;
 		const activationEvents = this.manifest.activationEvents || [];
-		const doesContribute = name => contributes && contributes[name] && contributes[name].length > 0;
+		const doesContribute = (...properties: string[]) => {
+			let obj = contributes;
+			for (const property of properties) {
+				if (!obj) {
+					return false;
+				}
+				obj = obj[property];
+			}
+			return obj && obj.length > 0;
+		};
 
 		const colorThemes = doesContribute('themes') ? ['theme', 'color-theme'] : [];
 		const iconThemes = doesContribute('iconThemes') ? ['theme', 'icon-theme'] : [];
@@ -370,6 +379,7 @@ export class TagsProcessor extends BaseProcessor {
 		const keybindings = doesContribute('keybindings') ? ['keybindings'] : [];
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
+		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) || []).reduce(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -406,6 +416,7 @@ export class TagsProcessor extends BaseProcessor {
 			...keybindings,
 			...debuggers,
 			...json,
+			...remoteMenu,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
@@ -558,7 +569,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		const $ = cheerio.load(html);
 
 		$('img').each((_, img) => {
-			const src = decodeURI(img.attribs.src);
+			const src = decodeURI($(img).attr('src'));
 			const srcUrl = url.parse(src);
 
 			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.path)) {

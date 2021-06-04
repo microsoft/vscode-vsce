@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.88.0",
+	"version": "1.91.0",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -38,7 +38,7 @@
 	"dependencies": {
 		"azure-devops-node-api": "^10.2.2",
 		"chalk": "^2.4.2",
-		"cheerio": "^1.0.0-rc.1",
+		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.1.0",
 		"denodeify": "^1.2.1",
 		"glob": "^7.0.6",
@@ -58,7 +58,7 @@
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
-		"@types/cheerio": "^0.22.1",
+		"@types/cheerio": "^0.22.29",
 		"@types/denodeify": "^1.2.31",
 		"@types/glob": "^7.1.1",
 		"@types/lodash": "^4.14.123",
@@ -66,7 +66,7 @@
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^8",
+		"@types/node": "^10.17.60",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
 		"@types/tmp": "^0.1.0",
@@ -77,7 +77,7 @@
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
 		"source-map-support": "^0.4.2",
-		"typescript": "^3.4.3",
+		"typescript": "^4.3.2",
 		"xml2js": "^0.4.12"
 	},
 	"mocha": {
