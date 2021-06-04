@@ -123,51 +123,6 @@ export interface IPublishOptions {
 	readonly web?: boolean;
 }
 
-async function versionBump(cwd: string = process.cwd(), version?: string, commitMessage?: string): Promise<void> {
-	if (!version) {
-		return Promise.resolve(null);
-	}
-
-	const manifest = await readManifest(cwd);
-
-	if (manifest.version === version) {
-		return null;
-	}
-
-	switch (version) {
-		case 'major':
-		case 'minor':
-		case 'patch':
-			break;
-		case 'premajor':
-		case 'preminor':
-		case 'prepatch':
-		case 'prerelease':
-		case 'from-git':
-			return Promise.reject(`Not supported: ${version}`);
-		default:
-			if (!semver.valid(version)) {
-				return Promise.reject(`Invalid version ${version}`);
-			}
-	}
-
-	let command = `npm version ${version}`;
-
-	if (commitMessage) {
-		command = `${command} -m "${commitMessage}"`;
-	}
-
-	try {
-		// call `npm version` to do our dirty work
-		const { stdout, stderr } = await exec(command, { cwd });
-		process.stdout.write(stdout);
-		process.stderr.write(stderr);
-		return null;
-	} catch (err) {
-		throw err.message;
-	}
-}
-
 export function publish(options: IPublishOptions = {}): Promise<any> {
 	let promise: Promise<IPackage>;
 
