@@ -1,10 +1,10 @@
 FROM node:12-alpine
 WORKDIR /opt/vsce
-COPY package.json .
-COPY yarn.lock .
-RUN yarn
+COPY package.json package-lock.json .
+RUN npm install
 COPY . .
-RUN yarn compile
+RUN npm run compile
+RUN rm package-lock.json tsconfig.json
 VOLUME /workspace
 WORKDIR /workspace
 ENTRYPOINT ["/opt/vsce/out/vsce"]

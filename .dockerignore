@@ -2,9 +2,12 @@ node_modules/
 out/
 npm-debug.log
 !src/test/**/node_modules
-package-lock.json
 Dockerfile
 .gitignore
+.npmignore
+.prettierignore
 LICENSE
 README.md
+SECURITY.md
+azure-pipelines.yml
 ThirdPartyNotices.txt
