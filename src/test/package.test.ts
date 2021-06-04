@@ -2717,20 +2717,24 @@ describe('version', () => {
 		assert.strictEqual(newManifest.version, '2.0.0');
 	});
 
-	it('should not fail with same version', async () => {
-		await versionBump(cwd, '1.0.0');
-
-		const newManifest = await readManifest(cwd);
-
-		assert.strictEqual(newManifest.version, '1.0.0');
-	});
-
 	it('should set custom version', async () => {
 		await versionBump(cwd, '1.1.1');
 
 		const newManifest = await readManifest(cwd);
 
 		assert.strictEqual(newManifest.version, '1.1.1');
+	});
+
+	it('should fail with not allowed version bump', () => {
+		assert.rejects(versionBump(cwd, 'prepatch'));
+		assert.rejects(versionBump(cwd, 'preminor'));
+		assert.rejects(versionBump(cwd, 'premajor'));
+		assert.rejects(versionBump(cwd, 'prerelease'));
+		assert.rejects(versionBump(cwd, 'from-git'));
+	});
+
+	it('should fail with invalid version', () => {
+		assert.rejects(versionBump(cwd, 'a1.a.2'));
 	});
 
 	it('should create git tag and commit', async () => {
@@ -2740,17 +2744,17 @@ describe('version', () => {
 		assert.strictEqual(git(['rev-parse', 'HEAD']).status, 0);
 	});
 
-	it('should not create git tag and commit', async () => {
-		await versionBump(cwd, '1.1.1', undefined, false);
-
-		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
-		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
-	});
-
 	it('should use custom commit message', async () => {
 		const commitMessage = 'test commit message';
 		await versionBump(cwd, '1.1.1', commitMessage);
 
 		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
+	});
+
+	it('should not create git tag and commit', async () => {
+		await versionBump(cwd, '1.1.1', undefined, false);
+
+		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
+		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
 	});
 });
