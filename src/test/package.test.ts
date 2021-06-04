@@ -2687,6 +2687,8 @@ describe('version', () => {
 		cwd = dir.name;
 		fs.copyFileSync(path.join(fixtureFolder, 'package.json'), path.join(cwd, 'package.json'));
 		git(['init']);
+		git(['config', '--local', 'user.name', 'Sample Name']);
+		git(['config', '--local', 'user.email', 'sample@email.com']);
 	});
 
 	afterEach(() => {
