@@ -228,7 +228,7 @@ export async function versionBump(
 	cwd: string = process.cwd(),
 	version?: string,
 	commitMessage?: string,
-	gitTagVersion?: boolean
+	gitTagVersion: boolean = true
 ): Promise<void> {
 	if (!version) {
 		return Promise.resolve(null);
