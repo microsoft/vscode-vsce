@@ -6,7 +6,6 @@
 		"out": true
 	},
 	"typescript.tsdk": "./node_modules/typescript/lib",
-	"mochaExplorer.files": "out/**/test/*.test.js",
 	"[json]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},

@@ -24,12 +24,12 @@
 		"vsce": "out/vsce"
 	},
 	"scripts": {
-		"copy-vsce": "mkdir -p out && cp src/vsce out/vsce",
-		"compile": "tsc && yarn copy-vsce",
-		"watch": "yarn copy-vsce && tsc --watch",
-		"watch-test": "yarn copy-vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
+		"copy-vsce": "mkdir -p out && cp -f src/vsce out/vsce",
+		"build": "yarn copy-vsce && tsc",
+		"build:watch": "yarn compile -- --watch",
 		"test": "mocha",
-		"prepublishOnly": "tsc && yarn copy-vsce && mocha",
+		"test:watch": "yarn copy-vsce && yarn test -- --watch",
+		"prepublishOnly": "yarn compile && yarn test",
 		"vsce": "out/vsce"
 	},
 	"engines": {
@@ -51,7 +51,7 @@
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
 		"semver": "^5.1.0",
-		"tmp": "0.0.29",
+		"tmp": "^0.2.1",
 		"typed-rest-client": "^1.8.4",
 		"url-join": "^1.1.0",
 		"yauzl": "^2.3.1",
@@ -77,14 +77,15 @@
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
 		"source-map-support": "^0.4.2",
+		"ts-node": "^10.0.0",
 		"typescript": "^4.3.2",
 		"xml2js": "^0.4.12"
 	},
 	"mocha": {
 		"require": [
-			"source-map-support/register"
+			"ts-node/register"
 		],
-		"spec": "out/test"
+		"spec": "src/test/**/*.ts"
 	},
 	"husky": {
 		"hooks": {

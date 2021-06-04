@@ -14,15 +14,18 @@ import {
 	IAsset,
 	IPackageOptions,
 	ManifestProcessor,
+	versionBump,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
+import * as tmp from 'tmp';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 import { IExtensionsReport } from '../publicgalleryapi';
+import { spawnSync } from 'child_process';
 
 // don't warn in tests
 console.warn = () => null;
@@ -2669,5 +2672,85 @@ describe('WebExtensionProcessor', () => {
 
 		assert.equal(processor.vsix.webExtension, undefined);
 		assert.deepEqual(processor.tags, []);
+	});
+});
+
+describe('version', () => {
+	let dir: tmp.DirResult;
+	const fixtureFolder = fixture('vsixmanifest');
+	let cwd;
+
+	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8' });
+
+	beforeEach(() => {
+		dir = tmp.dirSync({ unsafeCleanup: true });
+		cwd = dir.name;
+		fs.copyFileSync(path.join(fixtureFolder, 'package.json'), path.join(cwd, 'package.json'));
+		git(['init']);
+	});
+
+	afterEach(() => {
+		dir.removeCallback();
+	});
+
+	it('should bump patch version', async () => {
+		await versionBump(cwd, 'patch');
+
+		const newManifest = await readManifest(cwd);
+
+		assert.strictEqual(newManifest.version, '1.0.1');
+	});
+
+	it('should bump minor version', async () => {
+		await versionBump(cwd, 'minor');
+
+		const newManifest = await readManifest(cwd);
+
+		assert.strictEqual(newManifest.version, '1.1.0');
+	});
+
+	it('should bump major version', async () => {
+		await versionBump(cwd, 'major');
+
+		const newManifest = await readManifest(cwd);
+
+		assert.strictEqual(newManifest.version, '2.0.0');
+	});
+
+	it('should not fail with same version', async () => {
+		await versionBump(cwd, '1.0.0');
+
+		const newManifest = await readManifest(cwd);
+
+		assert.strictEqual(newManifest.version, '1.0.0');
+	});
+
+	it('should set custom version', async () => {
+		await versionBump(cwd, '1.1.1');
+
+		const newManifest = await readManifest(cwd);
+
+		assert.strictEqual(newManifest.version, '1.1.1');
+	});
+
+	it('should create git tag and commit', async () => {
+		await versionBump(cwd, '1.1.1');
+
+		assert.strictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
+		assert.strictEqual(git(['rev-parse', 'HEAD']).status, 0);
+	});
+
+	it('should not create git tag and commit', async () => {
+		await versionBump(cwd, '1.1.1', undefined, false);
+
+		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
+		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
+	});
+
+	it('should use custom commit message', async () => {
+		const commitMessage = 'test commit message';
+		await versionBump(cwd, '1.1.1', commitMessage);
+
+		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
 	});
 });
