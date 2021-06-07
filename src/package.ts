@@ -268,8 +268,11 @@ export async function versionBump(
 	try {
 		// call `npm version` to do our dirty work
 		const { stdout, stderr } = await exec(command, { cwd });
-		process.stdout.write(stdout);
-		process.stderr.write(stderr);
+
+		if (!process.env['VSCE_TESTS']) {
+			process.stdout.write(stdout);
+			process.stderr.write(stderr);
+		}
 		return null;
 	} catch (err) {
 		throw err.message;
