@@ -1072,7 +1072,8 @@ function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?:
 
 async function readIgnoreFile(cwd: string, ignoreFile?: string): Promise<string> {
 	try {
-		return await readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8');
+		// https://www.npmjs.com/package/ignore
+		return fs.readFileSync(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore')).toString();
 	} catch (err) {
 		if (err.code !== 'ENOENT' || ignoreFile) {
 			throw err;
