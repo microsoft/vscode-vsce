@@ -7,7 +7,6 @@ import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import * as _glob from 'glob';
-import * as minimatch from 'minimatch';
 import * as denodeify from 'denodeify';
 import * as markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
@@ -24,6 +23,7 @@ import {
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import { IExtensionsReport } from './publicgalleryapi';
+import ignore from 'ignore';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -37,8 +37,6 @@ const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; st
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
 const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
-
-const MinimatchOptions: minimatch.IOptions = { dot: true };
 
 export interface IInMemoryFile {
 	path: string;
@@ -1134,53 +1132,28 @@ function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?:
 	});
 }
 
-function collectFiles(
+async function readIgnoreFile(cwd: string, ignoreFile?: string): Promise<string> {
+	try {
+		return await readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8');
+	} catch (err) {
+		if (err.code !== 'ENOENT' || ignoreFile) {
+			throw err;
+		}
+
+		return '';
+	}
+}
+
+async function collectFiles(
 	cwd: string,
 	useYarn?: boolean,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
-	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	const files = (await collectAllFiles(cwd, useYarn, dependencyEntryPoints)).filter(f => !/\r$/m.test(f));
+	const rawIgnore = await readIgnoreFile(cwd, ignoreFile);
 
-		return (
-			readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
-				.catch<string>(err =>
-					err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve('')
-				)
-
-				// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
-				.then(rawIgnore =>
-					rawIgnore
-						.split(/[\n\r]/)
-						.map(s => s.trim())
-						.filter(s => !!s)
-						.filter(i => !/^\s*#/.test(i))
-				)
-
-				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
-
-				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
-
-				// Split into ignore and negate list
-				.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
-				.then(r => ({ ignore: r[0], negate: r[1] }))
-
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
-					)
-				)
-		);
-	});
+	return ignore().add(defaultIgnore).add(rawIgnore).add(notIgnored).filter(files);
 }
 
 export function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
