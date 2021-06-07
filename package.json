@@ -30,7 +30,6 @@
 		"watch:build": "run-s copy-vsce \"compile -- --watch\"",
 		"test": "mocha",
 		"watch:test": "run-s copy-vsce \"test -- --watch\"",
-		"prepublishOnly": "run-s compile test",
 		"vsce": "out/vsce"
 	},
 	"engines": {
