@@ -804,18 +804,35 @@ export function isWebKind(manifest: Manifest): boolean {
 	return extensionKind.some(kind => kind === 'web');
 }
 
-const workspaceExtensionPoints: string[] = ['terminal', 'debuggers', 'jsonValidation'];
+const extensionPointExtensionKindsMap = new Map<string, ExtensionKind[]>();
+extensionPointExtensionKindsMap.set('jsonValidation', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('debuggers', ['workspace']);
+extensionPointExtensionKindsMap.set('terminal', ['workspace']);
 
 function getExtensionKind(manifest: Manifest): ExtensionKind[] {
+	
+	const deducedExtensionKind = deduceExtensionKind(manifest);
+	
 	// check the manifest
 	if (manifest.extensionKind) {
-		return Array.isArray(manifest.extensionKind)
+		const result: ExtensionKind[] = Array.isArray(manifest.extensionKind)
 			? manifest.extensionKind
 			: manifest.extensionKind === 'ui'
 			? ['ui', 'workspace']
-			: [manifest.extensionKind];
+				: [manifest.extensionKind];
+		
+		// Add web kind if the extension can run as web extension
+		if (deducedExtensionKind.indexOf('web') !== -1 && result.indexOf('web') === -1) {
+			result.push('web');
+		}
+
+		return result;
 	}
 
+	return deducedExtensionKind;
+}
+
+function deduceExtensionKind(manifest: Manifest): ExtensionKind[] {
 	// Not an UI extension if it has main
 	if (manifest.main) {
 		if (manifest.browser) {
@@ -828,22 +845,24 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 		return ['web'];
 	}
 
+	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
+	
 	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
-	// Not an UI nor web extension if it has dependencies or an extension pack
+	// Not an UI extension if extension has dependencies or an extension pack
 	if (isNonEmptyArray(manifest.extensionDependencies) || isNonEmptyArray(manifest.extensionPack)) {
-		return ['workspace'];
+		result = ['workspace', 'web'];
 	}
 
 	if (manifest.contributes) {
-		// Not an UI nor web extension if it has workspace contributions
 		for (const contribution of Object.keys(manifest.contributes)) {
-			if (workspaceExtensionPoints.indexOf(contribution) !== -1) {
-				return ['workspace'];
+			const supportedExtensionKinds = extensionPointExtensionKindsMap.get(contribution);
+			if (supportedExtensionKinds) {
+				result = result.filter(extensionKind => supportedExtensionKinds.indexOf(extensionKind) !== -1);
 			}
 		}
 	}
 
-	return ['ui', 'workspace', 'web'];
+	return result;
 }
 
 export class WebExtensionProcessor extends BaseProcessor {
