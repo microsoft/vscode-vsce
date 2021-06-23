@@ -803,7 +803,7 @@ extensionPointExtensionKindsMap.set('debuggers', ['workspace']);
 extensionPointExtensionKindsMap.set('terminal', ['workspace']);
 
 function getExtensionKind(manifest: Manifest): ExtensionKind[] {
-	const deducedExtensionKind = deduceExtensionKind(manifest);
+	const deduced = deduceExtensionKinds(manifest);
 
 	// check the manifest
 	if (manifest.extensionKind) {
@@ -814,17 +814,17 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 			: [manifest.extensionKind];
 
 		// Add web kind if the extension can run as web extension
-		if (deducedExtensionKind.indexOf('web') !== -1 && result.indexOf('web') === -1) {
+		if (deduced.includes('web') && !result.includes('web')) {
 			result.push('web');
 		}
 
 		return result;
 	}
 
-	return deducedExtensionKind;
+	return deduced;
 }
 
-function deduceExtensionKind(manifest: Manifest): ExtensionKind[] {
+function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 	// Not an UI extension if it has main
 	if (manifest.main) {
 		if (manifest.browser) {
