@@ -22,7 +22,6 @@ import {
 	validateVSCodeTypesCompatibility,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
-import { IExtensionsReport } from './publicgalleryapi';
 import ignore from 'ignore';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
@@ -93,7 +92,6 @@ export interface IPackageOptions {
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
-	readonly web?: boolean;
 }
 
 export interface IProcessor {
@@ -470,6 +468,8 @@ export class TagsProcessor extends BaseProcessor {
 			[]
 		);
 
+		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
+
 		const tags = [
 			...keywords,
 			...colorThemes,
@@ -485,6 +485,7 @@ export class TagsProcessor extends BaseProcessor {
 			...languageActivations,
 			...grammars,
 			...descriptionKeywords,
+			...webExensionTags,
 		];
 
 		this.tags = _(tags)
@@ -791,14 +792,6 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
-export function isSupportedWebExtension(manifest: Manifest, extensionsReport: IExtensionsReport): boolean {
-	const id = `${manifest.publisher}.${manifest.name}`;
-	return (
-		extensionsReport.web.publishers.some(publisher => manifest.publisher === publisher) ||
-		extensionsReport.web.extensions.some(extension => extension === id)
-	);
-}
-
 export function isWebKind(manifest: Manifest): boolean {
 	const extensionKind = getExtensionKind(manifest);
 	return extensionKind.some(kind => kind === 'web');
@@ -810,17 +803,16 @@ extensionPointExtensionKindsMap.set('debuggers', ['workspace']);
 extensionPointExtensionKindsMap.set('terminal', ['workspace']);
 
 function getExtensionKind(manifest: Manifest): ExtensionKind[] {
-	
 	const deducedExtensionKind = deduceExtensionKind(manifest);
-	
+
 	// check the manifest
 	if (manifest.extensionKind) {
 		const result: ExtensionKind[] = Array.isArray(manifest.extensionKind)
 			? manifest.extensionKind
 			: manifest.extensionKind === 'ui'
 			? ['ui', 'workspace']
-				: [manifest.extensionKind];
-		
+			: [manifest.extensionKind];
+
 		// Add web kind if the extension can run as web extension
 		if (deducedExtensionKind.indexOf('web') !== -1 && result.indexOf('web') === -1) {
 			result.push('web');
@@ -846,7 +838,7 @@ function deduceExtensionKind(manifest: Manifest): ExtensionKind[] {
 	}
 
 	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
-	
+
 	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
 	// Not an UI extension if extension has dependencies or an extension pack
 	if (isNonEmptyArray(manifest.extensionDependencies) || isNonEmptyArray(manifest.extensionPack)) {
@@ -863,41 +855,6 @@ function deduceExtensionKind(manifest: Manifest): ExtensionKind[] {
 	}
 
 	return result;
-}
-
-export class WebExtensionProcessor extends BaseProcessor {
-	private readonly isWebKind: boolean = false;
-
-	constructor(manifest: Manifest, options: IPackageOptions) {
-		super(manifest);
-		this.isWebKind = options.web && isWebKind(manifest);
-	}
-
-	onFile(file: IFile): Promise<IFile> {
-		if (this.isWebKind) {
-			const path = util.normalize(file.path);
-			if (/\.svg$/i.test(path)) {
-				throw new Error(`SVGs can't be used in a web extension: ${path}`);
-			}
-			this.assets.push({ type: `Microsoft.VisualStudio.Code.WebResources/${path}`, path });
-		}
-		return Promise.resolve(file);
-	}
-
-	async onEnd(): Promise<void> {
-		if (this.assets.length > 25) {
-			throw new Error(
-				'Cannot pack more than 25 files in a web extension. Use `vsce ls` to see all the files that will be packed and exclude those which are not needed in .vscodeignore.'
-			);
-		}
-		if (this.isWebKind) {
-			this.vsix = {
-				...this.vsix,
-				webExtension: true,
-			};
-			this.tags = ['__web_extension'];
-		}
-	}
 }
 
 export class NLSProcessor extends BaseProcessor {
@@ -1210,7 +1167,6 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),
-		new WebExtensionProcessor(manifest, options),
 		new ValidationProcessor(manifest),
 	];
 }

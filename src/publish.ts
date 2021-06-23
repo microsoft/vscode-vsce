@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, isWebKind, isSupportedWebExtension, versionBump } from './package';
+import { pack, readManifest, IPackage, versionBump } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getPublicGalleryAPI, getHubUrl } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
 import { Manifest } from './manifest';
 import * as denodeify from 'denodeify';
 import * as yauzl from 'yauzl';
@@ -120,7 +120,6 @@ export interface IPublishOptions {
 	readonly useYarn?: boolean;
 	readonly noVerify?: boolean;
 	readonly ignoreFile?: string;
-	readonly web?: boolean;
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
@@ -129,9 +128,6 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 	if (options.packagePath) {
 		if (options.version) {
 			return Promise.reject(`Not supported: packagePath and version.`);
-		}
-		if (options.web) {
-			return Promise.reject(`Not supported: packagePath and web.`);
 		}
 
 		promise = readManifestFromPackage(options.packagePath).then(manifest => ({
@@ -146,28 +142,17 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 		const baseImagesUrl = options.baseImagesUrl;
 		const useYarn = options.useYarn;
 		const ignoreFile = options.ignoreFile;
-		const web = options.web;
 
 		promise = versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion)
 			.then(() => tmpName())
 			.then(packagePath =>
-				pack({ packagePath, cwd, githubBranch, gitlabBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile, web })
+				pack({ packagePath, cwd, githubBranch, gitlabBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile })
 			);
 	}
 
 	return promise.then(async ({ manifest, packagePath }) => {
 		if (!options.noVerify && manifest.enableProposedApi) {
 			throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
-		}
-
-		if (options.web) {
-			if (!isWebKind(manifest)) {
-				throw new Error("Extensions which are not web kind can't be published to the Marketpalce as a web extension");
-			}
-			const extensionsReport = await getPublicGalleryAPI().getExtensionsReport();
-			if (!isSupportedWebExtension(manifest, extensionsReport)) {
-				throw new Error("Extensions which are not supported can't be published to the Marketpalce as a web extension");
-			}
 		}
 
 		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);

@@ -9,9 +9,6 @@ import {
 	toVsixManifest,
 	IFile,
 	validateManifest,
-	isSupportedWebExtension,
-	WebExtensionProcessor,
-	IAsset,
 	IPackageOptions,
 	ManifestProcessor,
 	versionBump,
@@ -24,7 +21,6 @@ import * as tmp from 'tmp';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
-import { IExtensionsReport } from '../publicgalleryapi';
 import { spawnSync } from 'child_process';
 
 // don't warn in tests
@@ -421,7 +417,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
-				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['']);
+				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['__web_extension']);
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public']);
 				assert.equal(result.PackageManifest.Installation.length, 1);
 				assert.equal(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
@@ -869,7 +865,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], '__web_extension'));
 	});
 
 	it('should automatically add color-theme tag', () => {
@@ -984,7 +980,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go,__web_extension'));
 	});
 
 	it('should automatically add language tag with language contribution', () => {
@@ -1000,7 +996,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go,__web_extension'));
 	});
 
 	it('should automatically add snippets tag', () => {
@@ -1016,7 +1012,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
@@ -1030,7 +1026,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme,__web_extension'));
 	});
 
 	it('should detect keybindings', () => {
@@ -1512,93 +1508,23 @@ describe('toVsixManifest', () => {
 		throw new Error('Should not reach here');
 	});
 
-	it('should expose web extension assets and properties', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-			extensionKind: ['web'],
-		});
-		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(
-			assets.some(
-				asset =>
-					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
-					asset.$.Path === 'extension/browser.js'
-			)
-		);
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 1);
-		assert.equal(webExtensionProps[0].$.Value, 'true');
-	});
-
-	it('should expose web extension assets and properties when extension kind is not provided', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-		});
-		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(
-			assets.some(
-				asset =>
-					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
-					asset.$.Path === 'extension/browser.js'
-			)
-		);
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 1);
-		assert.equal(webExtensionProps[0].$.Value, 'true');
-	});
-
-	it('should not expose web extension assets and properties for web extension when not asked for', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-			extensionKind: ['web'],
-		});
+	it('should automatically add web tag for web extensions', async () => {
+		const manifest = createManifest({ browser: 'browser.js' });
 		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
 
 		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
 
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 0);
+		assert.strictEqual(result.PackageManifest.Metadata[0].Tags[0], '__web_extension');
 	});
 
-	it('should not expose web extension assets and properties for non web extension', async () => {
-		const manifest = createManifest({
-			main: 'main.js',
-		});
-		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 0);
-	});
-
-	it('should expose extension kind properties when providedd', async () => {
+	it('should expose extension kind properties when provided', async () => {
 		const manifest = createManifest({
 			extensionKind: ['ui', 'workspace', 'web'],
 		});
 		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
+		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
@@ -1611,7 +1537,7 @@ describe('toVsixManifest', () => {
 		});
 		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
+		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
@@ -2504,174 +2430,6 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
-	});
-});
-
-describe('isSupportedWebExtension', () => {
-	it('should return true if extension report has extension', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: ['mocha.test'], publishers: [] } };
-		assert.ok(isSupportedWebExtension(manifest, extensionReport));
-	});
-
-	it('should return true if extension report has publisher', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: ['mocha'] } };
-		assert.ok(isSupportedWebExtension(manifest, extensionReport));
-	});
-
-	it('should return  false if extension report does not has extension', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: [] } };
-		assert.ok(!isSupportedWebExtension(manifest, extensionReport));
-	});
-});
-
-describe('WebExtensionProcessor', () => {
-	it('should include file', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
-
-		await processor.onFile(file);
-		await processor.onEnd();
-
-		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
-		assert.deepEqual(processor.assets, expected);
-	});
-
-	it('should include file when extension kind is not specified', async () => {
-		const manifest = createManifest({ browser: 'browser.js' });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
-
-		await processor.onFile(file);
-		await processor.onEnd();
-
-		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
-		assert.deepEqual(processor.assets, expected);
-	});
-
-	it('should not include file when not asked for', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: false });
-		const file = { path: 'extension/browser.js', contents: '' };
-
-		await processor.onFile(file);
-		await processor.onEnd();
-
-		assert.deepEqual(processor.assets, []);
-	});
-
-	it('should not include file for non web extension', async () => {
-		const manifest = createManifest({ extensionKind: ['ui'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
-
-		await processor.onFile(file);
-		await processor.onEnd();
-
-		assert.deepEqual(processor.assets, []);
-	});
-
-	it('should include manifest', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const manifestFile = { path: 'extension/package.json', contents: JSON.stringify(manifest) };
-
-		await processor.onFile(manifestFile);
-		await processor.onEnd();
-
-		const expected: IAsset[] = [
-			{ type: `Microsoft.VisualStudio.Code.WebResources/${manifestFile.path}`, path: manifestFile.path },
-		];
-		assert.deepEqual(processor.assets, expected);
-	});
-
-	it('should fail for svg file', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		try {
-			await processor.onFile({ path: 'extension/sample.svg', contents: '' });
-		} catch (error) {
-			return; // expected
-		}
-
-		assert.fail('Should fail');
-	});
-
-	it('should include max 25 files', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		const expected: IAsset[] = [];
-		for (let i = 1; i <= 25; i++) {
-			const file = { path: `extension/${i}.json`, contents: `${i}` };
-			await processor.onFile(file);
-			expected.push({ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path });
-		}
-
-		await processor.onEnd();
-
-		assert.deepEqual(processor.assets.length, 25);
-		assert.deepEqual(processor.assets, expected);
-	});
-
-	it('should throw an error if there are more than 25 files', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		for (let i = 1; i <= 26; i++) {
-			await processor.onFile({ path: `extension/${i}.json`, contents: `${i}` });
-		}
-
-		try {
-			await processor.onEnd();
-		} catch (error) {
-			return; // expected error
-		}
-		assert.fail('Should fail');
-	});
-
-	it('should include web extension property & tag', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, true);
-		assert.deepEqual(processor.tags, ['__web_extension']);
-	});
-
-	it('should include web extension property & tag when extension kind is not provided', async () => {
-		const manifest = createManifest({ browser: 'browser.js' });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, true);
-		assert.deepEqual(processor.tags, ['__web_extension']);
-	});
-
-	it('should not include web extension property & tag when not asked for', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: false });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, undefined);
-		assert.deepEqual(processor.tags, []);
-	});
-
-	it('should not include web extension property & tag for non web extension', async () => {
-		const manifest = createManifest({ extensionKind: ['ui'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, undefined);
-		assert.deepEqual(processor.tags, []);
 	});
 });
 

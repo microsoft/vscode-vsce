@@ -17,16 +17,7 @@ export interface ExtensionQuery {
 	readonly assetTypes?: string[];
 }
 
-export interface IExtensionsReport {
-	malicious: string[];
-	web: {
-		publishers: string[];
-		extensions: string[];
-	};
-}
-
 export class PublicGalleryAPI {
-	private readonly extensionsReportUrl = 'https://az764295.vo.msecnd.net/extensions/marketplace.json';
 	private readonly client = new HttpClient('vsce');
 
 	constructor(private baseUrl: string, private apiVersion = '3.0-preview.1') {}
@@ -68,14 +59,5 @@ export class PublicGalleryAPI {
 			({ publisher: { publisherName: publisher }, extensionName: name }) =>
 				extensionId.toLowerCase() === `${publisher}.${name}`.toLowerCase()
 		)[0];
-	}
-
-	async getExtensionsReport(): Promise<IExtensionsReport> {
-		const res = await this.client.get(this.extensionsReportUrl);
-		const raw = <Partial<IExtensionsReport>>JSON.parse(await res.readBody());
-		return {
-			malicious: raw.malicious || [],
-			web: raw.web || { publishers: [], extensions: [] },
-		};
 	}
 }

@@ -95,10 +95,6 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
-		.option(
-			'--web',
-			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
-		)
 		.action(
 			(
 				version,
@@ -114,7 +110,6 @@ module.exports = function (argv: string[]): void {
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
-					web,
 				}
 			) =>
 				main(
@@ -131,7 +126,6 @@ module.exports = function (argv: string[]): void {
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
-						web,
 					})
 				)
 		);
@@ -161,10 +155,6 @@ module.exports = function (argv: string[]): void {
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.option(
-			'--web',
-			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
-		)
 		.action(
 			(
 				version,
@@ -180,7 +170,6 @@ module.exports = function (argv: string[]): void {
 					yarn,
 					noVerify,
 					ignoreFile,
-					web,
 				}
 			) =>
 				main(
@@ -197,7 +186,6 @@ module.exports = function (argv: string[]): void {
 						useYarn: yarn,
 						noVerify,
 						ignoreFile,
-						web,
 					})
 				)
 		);
