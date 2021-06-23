@@ -799,8 +799,15 @@ export function isWebKind(manifest: Manifest): boolean {
 
 const extensionPointExtensionKindsMap = new Map<string, ExtensionKind[]>();
 extensionPointExtensionKindsMap.set('jsonValidation', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('localizations', ['ui', 'workspace']);
 extensionPointExtensionKindsMap.set('debuggers', ['workspace']);
 extensionPointExtensionKindsMap.set('terminal', ['workspace']);
+extensionPointExtensionKindsMap.set('typescriptServerPlugins', ['workspace']);
+extensionPointExtensionKindsMap.set('markdown.previewStyles', ['workspace']);
+extensionPointExtensionKindsMap.set('markdown.previewScripts', ['workspace']);
+extensionPointExtensionKindsMap.set('markdown.markdownItPlugins', ['workspace']);
+extensionPointExtensionKindsMap.set('html.customData', ['workspace']);
+extensionPointExtensionKindsMap.set('css.customData', ['workspace']);
 
 function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 	const deduced = deduceExtensionKinds(manifest);
@@ -840,9 +847,9 @@ function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
 
 	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
-	// Not an UI extension if extension has dependencies or an extension pack
-	if (isNonEmptyArray(manifest.extensionDependencies) || isNonEmptyArray(manifest.extensionPack)) {
-		result = ['workspace', 'web'];
+	// Extension pack defaults to workspace extensionKind
+	if (isNonEmptyArray(manifest.extensionPack) || isNonEmptyArray(manifest.extensionDependencies)) {
+		result = ['workspace'];
 	}
 
 	if (manifest.contributes) {
