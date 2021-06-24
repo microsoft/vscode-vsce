@@ -803,11 +803,11 @@ extensionPointExtensionKindsMap.set('localizations', ['ui', 'workspace']);
 extensionPointExtensionKindsMap.set('debuggers', ['workspace']);
 extensionPointExtensionKindsMap.set('terminal', ['workspace']);
 extensionPointExtensionKindsMap.set('typescriptServerPlugins', ['workspace']);
-extensionPointExtensionKindsMap.set('markdown.previewStyles', ['workspace']);
-extensionPointExtensionKindsMap.set('markdown.previewScripts', ['workspace']);
-extensionPointExtensionKindsMap.set('markdown.markdownItPlugins', ['workspace']);
-extensionPointExtensionKindsMap.set('html.customData', ['workspace']);
-extensionPointExtensionKindsMap.set('css.customData', ['workspace']);
+extensionPointExtensionKindsMap.set('markdown.previewStyles', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('markdown.previewScripts', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('markdown.markdownItPlugins', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('html.customData', ['workspace', 'web']);
+extensionPointExtensionKindsMap.set('css.customData', ['workspace', 'web']);
 
 function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 	const deduced = deduceExtensionKinds(manifest);
