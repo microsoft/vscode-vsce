@@ -150,14 +150,13 @@ describe('collect', function () {
 			});
 	});
 
-	it('should ignore content of .vscodeignore', () => {
+	it('should ignore content of .vscodeignore', async () => {
 		const cwd = fixture('vscodeignore');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd });
+		const names = files.map(f => f.path).sort();
 
-		return readManifest(cwd)
-			.then(manifest => collect(manifest, { cwd }))
-			.then(files => {
-				assert.equal(files.length, 3);
-			});
+		assert.deepStrictEqual(names, ['[Content_Types].xml', 'extension.vsixmanifest', 'extension/package.json']);
 	});
 
 	it('should ignore devDependencies', () => {
