@@ -36,7 +36,7 @@
 		"node": ">= 10"
 	},
 	"dependencies": {
-		"azure-devops-node-api": "^10.2.2",
+		"azure-devops-node-api": "^11.0.1",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.1.0",
