@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, versionBump } from './package';
+import { pack, readManifest, IPackage, versionBump, IPackageOptions } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
@@ -106,20 +106,9 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 	log.done(`Published ${fullName}.`);
 }
 
-export interface IPublishOptions {
-	readonly packagePath?: string;
-	readonly version?: string;
-	readonly commitMessage?: string;
-	readonly gitTagVersion?: boolean;
-	readonly cwd?: string;
+export interface IPublishOptions extends IPackageOptions {
 	readonly pat?: string;
-	readonly githubBranch?: string;
-	readonly gitlabBranch?: string;
-	readonly baseContentUrl?: string;
-	readonly baseImagesUrl?: string;
-	readonly useYarn?: boolean;
 	readonly noVerify?: boolean;
-	readonly ignoreFile?: string;
 }
 
 export function publish(options: IPublishOptions = {}): Promise<any> {
@@ -135,19 +124,9 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 			packagePath: options.packagePath,
 		}));
 	} else {
-		const cwd = options.cwd;
-		const githubBranch = options.githubBranch;
-		const gitlabBranch = options.gitlabBranch;
-		const baseContentUrl = options.baseContentUrl;
-		const baseImagesUrl = options.baseImagesUrl;
-		const useYarn = options.useYarn;
-		const ignoreFile = options.ignoreFile;
-
 		promise = versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion)
 			.then(() => tmpName())
-			.then(packagePath =>
-				pack({ packagePath, cwd, githubBranch, gitlabBranch, baseContentUrl, baseImagesUrl, useYarn, ignoreFile })
-			);
+			.then(packagePath => pack({ ...options, packagePath }));
 	}
 
 	return promise.then(async ({ manifest, packagePath }) => {
