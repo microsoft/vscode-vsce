@@ -78,6 +78,7 @@ module.exports = function (argv: string[]): void {
 		.command('package [<version>]')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
+		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
@@ -100,6 +101,7 @@ module.exports = function (argv: string[]): void {
 				version,
 				{
 					out,
+					target,
 					message,
 					gitTagVersion,
 					githubBranch,
@@ -116,6 +118,7 @@ module.exports = function (argv: string[]): void {
 					packageCommand({
 						packagePath: out,
 						version,
+						target,
 						commitMessage: message,
 						gitTagVersion,
 						githubBranch,
@@ -138,6 +141,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
+		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
@@ -160,6 +164,7 @@ module.exports = function (argv: string[]): void {
 				version,
 				{
 					pat,
+					target,
 					message,
 					gitTagVersion,
 					packagePath,
@@ -176,6 +181,7 @@ module.exports = function (argv: string[]): void {
 					publish({
 						pat,
 						version,
+						target,
 						commitMessage: message,
 						gitTagVersion,
 						packagePath,

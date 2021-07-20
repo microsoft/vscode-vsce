@@ -82,6 +82,7 @@ export interface IAsset {
 export interface IPackageOptions {
 	readonly packagePath?: string;
 	readonly version?: string;
+	readonly target?: string;
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly cwd?: string;
@@ -279,8 +280,20 @@ export async function versionBump(
 	}
 }
 
+const Targets = new Set([
+	'win32-x64',
+	'win32-ia32',
+	'win32-arm64',
+	'linux-x64',
+	'linux-arm64',
+	'linux-armhf',
+	'darwin-x64',
+	'darwin-arm64',
+	'alpine-x64',
+]);
+
 export class ManifestProcessor extends BaseProcessor {
-	constructor(manifest: Manifest) {
+	constructor(manifest: Manifest, options: IPackageOptions = {}) {
 		super(manifest);
 
 		const flags = ['Public'];
@@ -304,6 +317,11 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		const extensionKind = getExtensionKind(manifest);
+		const target = options.target;
+
+		if (typeof target === 'string' && !Targets.has(target)) {
+			throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+		}
 
 		this.vsix = {
 			...this.vsix,
@@ -311,6 +329,7 @@ export class ManifestProcessor extends BaseProcessor {
 			displayName: manifest.displayName || manifest.name,
 			version: manifest.version,
 			publisher: manifest.publisher,
+			target,
 			engine: manifest.engines['vscode'],
 			description: manifest.description || '',
 			categories: (manifest.categories || []).join(','),
@@ -1194,7 +1213,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 
 export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
 	return [
-		new ManifestProcessor(manifest),
+		new ManifestProcessor(manifest, options),
 		new TagsProcessor(manifest),
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),

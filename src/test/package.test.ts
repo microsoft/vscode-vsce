@@ -55,7 +55,7 @@ type XMLManifest = {
 		Metadata: {
 			Description: { _: string }[];
 			DisplayName: string[];
-			Identity: { $: { Id: string; Version: string; Publisher: string } }[];
+			Identity: { $: { Id: string; Version: string; Publisher: string; TargetPlatform?: string } }[];
 			Tags: string[];
 			GalleryFlags: string[];
 			License: string[];
@@ -108,7 +108,7 @@ function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	assert.equal(property.length, 0, `Property '${name}' should not exist`);
 }
 
-function createManifest(extra: Partial<Manifest>): Manifest {
+function createManifest(extra: Partial<Manifest> = {}): Manifest {
 	return {
 		name: 'test',
 		publisher: 'mocha',
@@ -1546,6 +1546,39 @@ describe('toVsixManifest', () => {
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
 		assert.equal(extensionKindProps[0].$.Value, 'workspace');
+	});
+
+	it('should not have target platform by default', async () => {
+		const manifest = createManifest();
+		const raw = await _toVsixManifest(manifest, []);
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, undefined);
+	});
+
+	it('should set the right target platform by default', async () => {
+		const manifest = createManifest();
+		const raw = await _toVsixManifest(manifest, [], { target: 'win32-x64' });
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
+	});
+
+	it('should throw when using an invalid target platform', async () => {
+		const manifest = createManifest();
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
+			throw new Error('oops');
+		} catch (err) {
+			assert(/not a valid VS Code target/.test(err.message));
+		}
 	});
 });
 
