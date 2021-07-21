@@ -48,7 +48,7 @@ function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 	});
 }
 
-async function _publish(packagePath: string, pat: string, manifest: Manifest): Promise<void> {
+async function _publish(packagePath: string, pat: string, manifest: Manifest, options: IPublishOptions): Promise<void> {
 	const api = await getGalleryAPI(pat);
 
 	const packageStream = fs.createReadStream(packagePath);
@@ -74,7 +74,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest): P
 			}
 		}
 
-		if (extension && extension.versions.some(v => v.version === manifest.version)) {
+		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
 			throw new Error(`${fullName} already exists. Version number cannot be the same.`);
 		}
 
@@ -136,7 +136,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);
 
-		return patPromise.then(pat => _publish(packagePath, pat, manifest));
+		return patPromise.then(pat => _publish(packagePath, pat, manifest, options));
 	});
 }
 
