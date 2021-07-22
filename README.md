@@ -2,7 +2,8 @@
 
 > _The Visual Studio Code Extension Manager_
 
-[![Build Status](https://dev.azure.com/vscode/VSCE/_apis/build/status/VSCE?branchName=main)](https://dev.azure.com/vscode/VSCE/_build/latest?definitionId=16&branchName=main) [![npm version](https://badge.fury.io/js/vsce.svg)](https://badge.fury.io/js/vsce)
+[![ci](https://github.com/microsoft/vsce/workflows/ci/badge.svg)](https://github.com/microsoft/vsce/actions?query=workflow%3Aci)
+[![Version](https://img.shields.io/npm/v/vsce.svg)](https://npmjs.org/package/vsce)
 
 ## Requirements
 
