@@ -9,17 +9,13 @@ steps:
     inputs:
       versionSpec: '10.x'
 
-  - task: geeklearningio.gl-vsts-tasks-yarn.yarn-installer-task.YarnInstaller@2
-    inputs:
-      versionSpec: '1.x'
-
-  - script: yarn
+  - script: npm install
     displayName: Install Dependencies
 
-  - script: yarn compile
-    displayName: Compile
+  - script: npm run build
+    displayName: Build
 
-  - script: yarn test
+  - script: npm run test
     displayName: Run Tests
 
   - task: Npm@1

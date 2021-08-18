@@ -6,3 +6,7 @@ out/
 
 # pattern of file name
 *.log
+
+# https://github.com/microsoft/vscode-vsce/issues/588
+foo
+!foo/bar/hello.txt

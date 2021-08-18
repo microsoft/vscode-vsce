@@ -9,21 +9,20 @@ import {
 	toVsixManifest,
 	IFile,
 	validateManifest,
-	isSupportedWebExtension,
-	WebExtensionProcessor,
-	IAsset,
 	IPackageOptions,
 	ManifestProcessor,
 	ILocalFile,
+	versionBump,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
+import * as tmp from 'tmp';
 import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
-import { IExtensionsReport } from '../publicgalleryapi';
+import { spawnSync } from 'child_process';
 
 // don't warn in tests
 console.warn = () => null;
@@ -57,7 +56,7 @@ type XMLManifest = {
 		Metadata: {
 			Description: { _: string }[];
 			DisplayName: string[];
-			Identity: { $: { Id: string; Version: string; Publisher: string } }[];
+			Identity: { $: { Id: string; Version: string; Publisher: string; TargetPlatform?: string } }[];
 			Tags: string[];
 			GalleryFlags: string[];
 			License: string[];
@@ -110,7 +109,7 @@ function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	assert.equal(property.length, 0, `Property '${name}' should not exist`);
 }
 
-function createManifest(extra: Partial<Manifest>): Manifest {
+function createManifest(extra: Partial<Manifest> = {}): Manifest {
 	return {
 		name: 'test',
 		publisher: 'mocha',
@@ -152,14 +151,18 @@ describe('collect', function () {
 			});
 	});
 
-	it('should ignore content of .vscodeignore', () => {
+	it('should ignore content of .vscodeignore', async () => {
 		const cwd = fixture('vscodeignore');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd });
+		const names = files.map(f => f.path).sort();
 
-		return readManifest(cwd)
-			.then(manifest => collect(manifest, { cwd }))
-			.then(files => {
-				assert.equal(files.length, 3);
-			});
+		assert.deepStrictEqual(names, [
+			'[Content_Types].xml',
+			'extension.vsixmanifest',
+			'extension/foo/bar/hello.txt',
+			'extension/package.json',
+		]);
 	});
 
 	it('should ignore devDependencies', () => {
@@ -470,7 +473,7 @@ describe('toVsixManifest', () => {
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
 				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
-				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['']);
+				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['__web_extension']);
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public']);
 				assert.equal(result.PackageManifest.Installation.length, 1);
 				assert.equal(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
@@ -918,7 +921,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], ''));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], '__web_extension'));
 	});
 
 	it('should automatically add color-theme tag', () => {
@@ -997,6 +1000,31 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should automatically add remote-menu tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				menus: {
+					'statusBar/remoteIndicator': [
+						{
+							command: 'remote-wsl.newWindow',
+						},
+					],
+				},
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
+				assert(tags.some(tag => tag === 'remote-menu'));
+			});
+	});
+
 	it('should automatically add language tag with activationEvent', () => {
 		const manifest = {
 			name: 'test',
@@ -1008,7 +1036,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go,__web_extension'));
 	});
 
 	it('should automatically add language tag with language contribution', () => {
@@ -1024,7 +1052,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'go,__web_extension'));
 	});
 
 	it('should automatically add snippets tag', () => {
@@ -1040,7 +1068,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
@@ -1054,7 +1082,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'theme,__web_extension'));
 	});
 
 	it('should detect keybindings', () => {
@@ -1536,93 +1564,23 @@ describe('toVsixManifest', () => {
 		throw new Error('Should not reach here');
 	});
 
-	it('should expose web extension assets and properties', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-			extensionKind: ['web'],
-		});
-		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(
-			assets.some(
-				asset =>
-					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
-					asset.$.Path === 'extension/browser.js'
-			)
-		);
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 1);
-		assert.equal(webExtensionProps[0].$.Value, 'true');
-	});
-
-	it('should expose web extension assets and properties when extension kind is not provided', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-		});
-		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(
-			assets.some(
-				asset =>
-					asset.$.Type === 'Microsoft.VisualStudio.Code.WebResources/extension/browser.js' &&
-					asset.$.Path === 'extension/browser.js'
-			)
-		);
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 1);
-		assert.equal(webExtensionProps[0].$.Value, 'true');
-	});
-
-	it('should not expose web extension assets and properties for web extension when not asked for', async () => {
-		const manifest = createManifest({
-			browser: 'browser.js',
-			extensionKind: ['web'],
-		});
+	it('should automatically add web tag for web extensions', async () => {
+		const manifest = createManifest({ browser: 'browser.js' });
 		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
 
 		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
 
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 0);
+		assert.strictEqual(result.PackageManifest.Metadata[0].Tags[0], '__web_extension');
 	});
 
-	it('should not expose web extension assets and properties for non web extension', async () => {
-		const manifest = createManifest({
-			main: 'main.js',
-		});
-		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
-
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
-		const result = await parseXmlManifest(vsixManifest);
-		const assets = result.PackageManifest.Assets[0].Asset;
-		assert(assets.every(asset => !asset.$.Type.startsWith('Microsoft.VisualStudio.Code.WebResources')));
-
-		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-		const webExtensionProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.WebExtension');
-		assert.equal(webExtensionProps.length, 0);
-	});
-
-	it('should expose extension kind properties when providedd', async () => {
+	it('should expose extension kind properties when provided', async () => {
 		const manifest = createManifest({
 			extensionKind: ['ui', 'workspace', 'web'],
 		});
 		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
+		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
@@ -1635,11 +1593,44 @@ describe('toVsixManifest', () => {
 		});
 		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
 
-		const vsixManifest = await _toVsixManifest(manifest, files, { web: true });
+		const vsixManifest = await _toVsixManifest(manifest, files);
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
 		assert.equal(extensionKindProps[0].$.Value, 'workspace');
+	});
+
+	it('should not have target platform by default', async () => {
+		const manifest = createManifest();
+		const raw = await _toVsixManifest(manifest, []);
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, undefined);
+	});
+
+	it('should set the right target platform by default', async () => {
+		const manifest = createManifest();
+		const raw = await _toVsixManifest(manifest, [], { target: 'win32-x64' });
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
+	});
+
+	it('should throw when using an invalid target platform', async () => {
+		const manifest = createManifest();
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
+			throw new Error('oops');
+		} catch (err) {
+			assert(/not a valid VS Code target/.test(err.message));
+		}
 	});
 });
 
@@ -1859,7 +1850,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1976,7 +1967,205 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a github repo (short format)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'github:username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo (.git)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should infer baseContentUrl if its a gitlab repo (short format)', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'gitlab:username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should replace relative links with GitLab URLs while respecting gitlabBranch', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should override image URLs with baseImagesUrl while also respecting gitlabBranch', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+			// Override image relative links to point to different base URL
+			baseImagesUrl: 'https://gitlab.com/base',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should override gitlabBranch setting with baseContentUrl', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {
+			gitlabBranch: 'main',
+			baseContentUrl: 'https://gitlab.com/base',
+		});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2051,7 +2240,7 @@ describe('MarkdownProcessor', () => {
 		};
 
 		const root = fixture('readme');
-		const processor = new ReadmeProcessor(manifest, { expandGitHubIssueLinks: false });
+		const processor = new ReadmeProcessor(manifest, { gitHubIssueLinking: false });
 		const readme = {
 			path: 'extension/readme.md',
 			localPath: path.join(root, 'readme.github.md'),
@@ -2089,6 +2278,60 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should replace issue links with urls if its a gitlab repo.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.gitlab.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
+					assert.equal(actual, expected);
+				});
+			});
+	});
+
+	it('should not replace issue links with urls if its a gitlab repo but issue link expansion is disabled.', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: 'https://gitlab.com/username/repository.git',
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, { gitLabIssueLinking: false });
+		const readme = {
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.gitlab.md'),
+		};
+
+		return processor
+			.onFile(readme)
+			.then(file => read(file))
+			.then(actual => {
+				return readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2155,7 +2398,7 @@ describe('MarkdownProcessor', () => {
 		assert(file);
 	});
 
-	it('should allow SVG from GitHub actions in image tag', async () => {
+	it('should allow SVG from GitHub actions in image tag (old url format)', async () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -2164,6 +2407,22 @@ describe('MarkdownProcessor', () => {
 			repository: 'https://github.com/username/repository',
 		};
 		const contents = `![title](https://github.com/fakeuser/fakerepo/workflows/fakeworkflowname/badge.svg)`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert(file);
+	});
+
+	it('should allow SVG from GitHub actions in image tag', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+		const contents = `![title](https://github.com/fakeuser/fakerepo/actions/workflows/fakeworkflowname/badge.svg)`;
 		const processor = new ReadmeProcessor(manifest, {});
 		const readme = { path: 'extension/readme.md', contents };
 
@@ -2263,170 +2522,88 @@ describe('MarkdownProcessor', () => {
 	});
 });
 
-describe('isSupportedWebExtension', () => {
-	it('should return true if extension report has extension', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: ['mocha.test'], publishers: [] } };
-		assert.ok(isSupportedWebExtension(manifest, extensionReport));
+describe('version', () => {
+	let dir: tmp.DirResult;
+	const fixtureFolder = fixture('vsixmanifest');
+	let cwd;
+
+	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8' });
+
+	beforeEach(() => {
+		dir = tmp.dirSync({ unsafeCleanup: true });
+		cwd = dir.name;
+		fs.copyFileSync(path.join(fixtureFolder, 'package.json'), path.join(cwd, 'package.json'));
+		git(['init']);
+		git(['config', '--local', 'user.name', 'Sample Name']);
+		git(['config', '--local', 'user.email', 'sample@email.com']);
 	});
 
-	it('should return true if extension report has publisher', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: ['mocha'] } };
-		assert.ok(isSupportedWebExtension(manifest, extensionReport));
+	afterEach(() => {
+		dir.removeCallback();
 	});
 
-	it('should return  false if extension report does not has extension', () => {
-		const manifest = createManifest({ name: 'test', publisher: 'mocha' });
-		const extensionReport: IExtensionsReport = { malicious: [], web: { extensions: [], publishers: [] } };
-		assert.ok(!isSupportedWebExtension(manifest, extensionReport));
-	});
-});
+	it('should bump patch version', async () => {
+		await versionBump(cwd, 'patch');
 
-describe('WebExtensionProcessor', () => {
-	it('should include file', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
+		const newManifest = await readManifest(cwd);
 
-		await processor.onFile(file);
-		await processor.onEnd();
-
-		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
-		assert.deepEqual(processor.assets, expected);
+		assert.strictEqual(newManifest.version, '1.0.1');
 	});
 
-	it('should include file when extension kind is not specified', async () => {
-		const manifest = createManifest({ browser: 'browser.js' });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
+	it('should bump minor version', async () => {
+		await versionBump(cwd, 'minor');
 
-		await processor.onFile(file);
-		await processor.onEnd();
+		const newManifest = await readManifest(cwd);
 
-		const expected: IAsset[] = [{ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path }];
-		assert.deepEqual(processor.assets, expected);
+		assert.strictEqual(newManifest.version, '1.1.0');
 	});
 
-	it('should not include file when not asked for', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: false });
-		const file = { path: 'extension/browser.js', contents: '' };
+	it('should bump major version', async () => {
+		await versionBump(cwd, 'major');
 
-		await processor.onFile(file);
-		await processor.onEnd();
+		const newManifest = await readManifest(cwd);
 
-		assert.deepEqual(processor.assets, []);
+		assert.strictEqual(newManifest.version, '2.0.0');
 	});
 
-	it('should not include file for non web extension', async () => {
-		const manifest = createManifest({ extensionKind: ['ui'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const file = { path: 'extension/browser.js', contents: '' };
+	it('should set custom version', async () => {
+		await versionBump(cwd, '1.1.1');
 
-		await processor.onFile(file);
-		await processor.onEnd();
+		const newManifest = await readManifest(cwd);
 
-		assert.deepEqual(processor.assets, []);
+		assert.strictEqual(newManifest.version, '1.1.1');
 	});
 
-	it('should include manifest', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-		const manifestFile = { path: 'extension/package.json', contents: JSON.stringify(manifest) };
-
-		await processor.onFile(manifestFile);
-		await processor.onEnd();
-
-		const expected: IAsset[] = [
-			{ type: `Microsoft.VisualStudio.Code.WebResources/${manifestFile.path}`, path: manifestFile.path },
-		];
-		assert.deepEqual(processor.assets, expected);
+	it('should fail with not allowed version bump', () => {
+		assert.rejects(versionBump(cwd, 'prepatch'));
+		assert.rejects(versionBump(cwd, 'preminor'));
+		assert.rejects(versionBump(cwd, 'premajor'));
+		assert.rejects(versionBump(cwd, 'prerelease'));
+		assert.rejects(versionBump(cwd, 'from-git'));
 	});
 
-	it('should fail for svg file', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		try {
-			await processor.onFile({ path: 'extension/sample.svg', contents: '' });
-		} catch (error) {
-			return; // expected
-		}
-
-		assert.fail('Should fail');
+	it('should fail with invalid version', () => {
+		assert.rejects(versionBump(cwd, 'a1.a.2'));
 	});
 
-	it('should include max 25 files', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
+	it('should create git tag and commit', async () => {
+		await versionBump(cwd, '1.1.1');
 
-		const expected: IAsset[] = [];
-		for (let i = 1; i <= 25; i++) {
-			const file = { path: `extension/${i}.json`, contents: `${i}` };
-			await processor.onFile(file);
-			expected.push({ type: `Microsoft.VisualStudio.Code.WebResources/${file.path}`, path: file.path });
-		}
-
-		await processor.onEnd();
-
-		assert.deepEqual(processor.assets.length, 25);
-		assert.deepEqual(processor.assets, expected);
+		assert.strictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
+		assert.strictEqual(git(['rev-parse', 'HEAD']).status, 0);
 	});
 
-	it('should throw an error if there are more than 25 files', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
+	it('should use custom commit message', async () => {
+		const commitMessage = 'test commit message';
+		await versionBump(cwd, '1.1.1', commitMessage);
 
-		for (let i = 1; i <= 26; i++) {
-			await processor.onFile({ path: `extension/${i}.json`, contents: `${i}` });
-		}
-
-		try {
-			await processor.onEnd();
-		} catch (error) {
-			return; // expected error
-		}
-		assert.fail('Should fail');
+		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
 	});
 
-	it('should include web extension property & tag', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
+	it('should not create git tag and commit', async () => {
+		await versionBump(cwd, '1.1.1', undefined, false);
 
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, true);
-		assert.deepEqual(processor.tags, ['__web_extension']);
-	});
-
-	it('should include web extension property & tag when extension kind is not provided', async () => {
-		const manifest = createManifest({ browser: 'browser.js' });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, true);
-		assert.deepEqual(processor.tags, ['__web_extension']);
-	});
-
-	it('should not include web extension property & tag when not asked for', async () => {
-		const manifest = createManifest({ extensionKind: ['web'] });
-		const processor = new WebExtensionProcessor(manifest, { web: false });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, undefined);
-		assert.deepEqual(processor.tags, []);
-	});
-
-	it('should not include web extension property & tag for non web extension', async () => {
-		const manifest = createManifest({ extensionKind: ['ui'] });
-		const processor = new WebExtensionProcessor(manifest, { web: true });
-
-		await processor.onEnd();
-
-		assert.equal(processor.vsix.webExtension, undefined);
-		assert.deepEqual(processor.tags, []);
+		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
+		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
 	});
 });

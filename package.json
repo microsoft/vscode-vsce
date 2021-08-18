@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.85.1",
+	"version": "1.96.1",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -24,21 +24,21 @@
 		"vsce": "out/vsce"
 	},
 	"scripts": {
-		"copy-vsce": "mkdir -p out && cp src/vsce out/vsce",
-		"compile": "tsc && yarn copy-vsce",
-		"watch": "yarn copy-vsce && tsc --watch",
-		"watch-test": "yarn copy-vsce && concurrently \"tsc --watch\" \"mocha --watch\"",
+		"copy-vsce": "mkdir -p out && cp -f src/vsce out/vsce",
+		"compile": "tsc",
+		"build": "run-s copy-vsce compile",
+		"watch:build": "run-s copy-vsce \"compile -- --watch\"",
 		"test": "mocha",
-		"prepublishOnly": "tsc && yarn copy-vsce && mocha",
+		"watch:test": "run-s copy-vsce \"test -- --watch\"",
 		"vsce": "out/vsce"
 	},
 	"engines": {
 		"node": ">= 10"
 	},
 	"dependencies": {
-		"azure-devops-node-api": "^7.2.0",
+		"azure-devops-node-api": "^11.0.1",
 		"chalk": "^2.4.2",
-		"cheerio": "^1.0.0-rc.1",
+		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.1.0",
 		"denodeify": "^1.2.1",
 		"find-yarn-workspace-root": "^2.0.0",
@@ -52,14 +52,14 @@
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
 		"semver": "^5.1.0",
-		"tmp": "0.0.29",
-		"typed-rest-client": "1.2.0",
+		"tmp": "^0.2.1",
+		"typed-rest-client": "^1.8.4",
 		"url-join": "^1.1.0",
 		"yauzl": "^2.3.1",
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
-		"@types/cheerio": "^0.22.1",
+		"@types/cheerio": "^0.22.29",
 		"@types/denodeify": "^1.2.31",
 		"@types/glob": "^7.1.1",
 		"@types/lodash": "^4.14.123",
@@ -67,7 +67,7 @@
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^8",
+		"@types/node": "^10.17.60",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
 		"@types/tmp": "^0.1.0",
@@ -75,17 +75,20 @@
 		"concurrently": "^5.1.0",
 		"husky": "^4.3.0",
 		"mocha": "^7.1.1",
+		"npm-run-all": "^4.1.5",
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
 		"source-map-support": "^0.4.2",
-		"typescript": "^3.4.3",
+		"ts-node": "^10.0.0",
+		"typescript": "^4.3.2",
 		"xml2js": "^0.4.12"
 	},
 	"mocha": {
 		"require": [
-			"source-map-support/register"
+			"ts-node/register"
 		],
-		"spec": "out/test"
+		"watch-files": "src/**,resources/**",
+		"spec": "src/test/**/*.ts"
 	},
 	"husky": {
 		"hooks": {

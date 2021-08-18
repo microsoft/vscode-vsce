@@ -75,36 +75,62 @@ module.exports = function (argv: string[]): void {
 		);
 
 	program
-		.command('package')
+		.command('package [<version>]')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Output .vsix extension file to [path] location')
+		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
+		.option('-t, --target <target>', 'Target architecture')
+		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
+		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
 			'--githubBranch [branch]',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+		)
+		.option(
+			'--gitlabBranch [branch]',
+			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.option('--noGitHubIssueLinking', 'Prevent automatic expansion of GitHub-style issue syntax into links')
-		.option(
-			'--web',
-			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
-		)
-		.action(({ out, githubBranch, baseContentUrl, baseImagesUrl, yarn, ignoreFile, noGitHubIssueLinking, web }) =>
-			main(
-				packageCommand({
-					packagePath: out,
+		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
+		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		.action(
+			(
+				version,
+				{
+					out,
+					target,
+					message,
+					gitTagVersion,
 					githubBranch,
+					gitlabBranch,
 					baseContentUrl,
 					baseImagesUrl,
-					useYarn: yarn,
+					yarn,
 					ignoreFile,
-					expandGitHubIssueLinks: noGitHubIssueLinking,
-					web,
-				})
-			)
+					gitHubIssueLinking,
+					gitLabIssueLinking,
+				}
+			) =>
+				main(
+					packageCommand({
+						packagePath: out,
+						version,
+						target,
+						commitMessage: message,
+						gitTagVersion,
+						githubBranch,
+						gitlabBranch,
+						baseContentUrl,
+						baseImagesUrl,
+						useYarn: yarn,
+						ignoreFile,
+						gitHubIssueLinking,
+						gitLabIssueLinking,
+					})
+				)
 		);
 
 	program
@@ -115,11 +141,17 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
+		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
+		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option(
 			'--githubBranch [branch]',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+		)
+		.option(
+			'--gitlabBranch [branch]',
+			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
@@ -127,28 +159,39 @@ module.exports = function (argv: string[]): void {
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.option(
-			'--web',
-			'Experimental flag to enable publishing web extensions. Note: This is supported only for selected extensions.'
-		)
 		.action(
 			(
 				version,
-				{ pat, message, packagePath, githubBranch, baseContentUrl, baseImagesUrl, yarn, noVerify, ignoreFile, web }
+				{
+					pat,
+					target,
+					message,
+					gitTagVersion,
+					packagePath,
+					githubBranch,
+					gitlabBranch,
+					baseContentUrl,
+					baseImagesUrl,
+					yarn,
+					noVerify,
+					ignoreFile,
+				}
 			) =>
 				main(
 					publish({
 						pat,
-						commitMessage: message,
 						version,
+						target,
+						commitMessage: message,
+						gitTagVersion,
 						packagePath,
 						githubBranch,
+						gitlabBranch,
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
 						noVerify,
 						ignoreFile,
-						web,
 					})
 				)
 		);
