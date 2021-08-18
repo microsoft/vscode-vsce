@@ -22,7 +22,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { detectYarn, getDependencies, SourceAndDestination } from './npm';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -1035,10 +1035,8 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+export function readNodeManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
-	const manifestNLSPath = path.join(cwd, 'package.nls.json');
-
 	const manifest = readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
 		.then<Manifest>(manifestStr => {
@@ -1047,13 +1045,19 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 			} catch (e) {
 				return Promise.reject(`Error parsing 'package.json' manifest file: not a valid JSON file.`);
 			}
-		})
+		});
+	return manifest;
+}
+
+export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+	const manifest = readNodeManifest(cwd)
 		.then(validateManifest);
 
 	if (!nls) {
 		return manifest;
 	}
 
+	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 	const manifestNLS = readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
 		.then<ITranslations>(raw => {
@@ -1127,12 +1131,17 @@ const defaultIgnore = [
 
 const notIgnored = ['!package.json', '!README.md'];
 
-function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<string[]> {
-	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
-		const promises: Promise<string[]>[] = deps.map(dep => {
-			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
-				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-			);
+function collectAllFiles(cwd: string, manifest: Manifest, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<SourceAndDestination[]> {
+	return getDependencies(cwd, manifest, useYarn, dependencyEntryPoints).then(deps => {
+		const promises: Promise<SourceAndDestination[]>[] = deps.map(dep => {
+			return glob('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+				files.map(f => {
+						return {
+							src: path.relative(cwd, path.join(dep.src, f.replace(/\\/g, '/'))),
+							dest: path.join(dep.dest, f).replace(/\\/g, '/')
+						}
+					})
+			)
 		});
 
 		return Promise.all(promises).then(util.flatten);
@@ -1141,12 +1150,9 @@ function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?:
 
 function collectFiles(
 	cwd: string,
-	useYarn?: boolean,
-	dependencyEntryPoints?: string[],
-	ignoreFile?: string
-): Promise<string[]> {
-	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	manifest: Manifest, useYarn?: boolean, dependencyEntryPoints?: string[], ignoreFile?: string): Promise<SourceAndDestination[]> {
+	return collectAllFiles(cwd, manifest, useYarn, dependencyEntryPoints).then(files => {
+		files = files.filter(f => !/\r$/m.test(f.src));
 
 		return (
 			readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
@@ -1180,8 +1186,8 @@ function collectFiles(
 				.then(({ ignore, negate }) =>
 					files.filter(
 						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
+							!ignore.some(i => minimatch(f.src, i, MinimatchOptions)) ||
+							negate.some(i => minimatch(f.src, i.substr(1), MinimatchOptions))
 					)
 				)
 		);
@@ -1230,8 +1236,8 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, options.useYarn, packagedDependencies, ignoreFile).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
+	return collectFiles(cwd, manifest, options.useYarn, packagedDependencies, ignoreFile).then(fileNames => {
+		const files = fileNames.map(f => ({ path: `extension/${f.dest}`, localPath: path.join(cwd, f.src) }));
 
 		return processFiles(processors, files);
 	});
@@ -1355,8 +1361,8 @@ export async function listFiles(
 	packagedDependencies?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
-	await readManifest(cwd);
-	return await collectFiles(cwd, useYarn, packagedDependencies, ignoreFile);
+	const manifest = await readManifest(cwd);
+	return (await collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile)).map(f => f.src);
 }
 
 /**
@@ -1369,7 +1375,7 @@ export function ls(
 	ignoreFile?: string
 ): Promise<void> {
 	return readManifest(cwd)
-		.then(manifest => prepublish(cwd, manifest, useYarn))
-		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
+		.then(manifest => prepublish(cwd, manifest, useYarn).then(() => manifest))
+		.then(manifest => collectFiles(cwd, manifest, useYarn, packagedDependencies, ignoreFile))
 		.then(files => files.forEach(f => console.log(`${f}`)));
 }

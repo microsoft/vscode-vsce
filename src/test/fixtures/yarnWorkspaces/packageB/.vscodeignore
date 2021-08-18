@@ -1,0 +1,5 @@
+# pattern of file name
+../node_modules/package-a/*.log
+
+# include files using negate
+!../node_modules/package-a/important

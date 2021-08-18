@@ -11,6 +11,7 @@ import {
 	validateManifest,
 	IPackageOptions,
 	ManifestProcessor,
+	ILocalFile,
 	versionBump,
 } from '../package';
 import { Manifest } from '../manifest';
@@ -256,6 +257,57 @@ describe('collect', function () {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});
 	});
+
+	it('should collect the right files when using yarn workspaces', async () => {
+		// PackageB will act as the extension here
+		const root = fixture('yarnWorkspaces');
+		const cwd = path.join(root, 'packageB');
+		const manifest = await readManifest(cwd);
+
+		assert.equal(manifest.name, 'package-b');
+
+		const files = await collect(manifest, { cwd }) as ILocalFile[];
+
+		[
+			{
+				path: 'extension/main.js',
+				localPath: path.resolve(cwd, 'main.js')
+			},
+			{
+				path: 'extension/package.json',
+				localPath: path.resolve(cwd, 'package.json')
+			},
+			{
+				path: 'extension/node_modules/package-a/main.js',
+				localPath: path.resolve(root, 'node_modules/package-a/main.js')
+			},
+			{
+				path: 'extension/node_modules/package-a/package.json',
+				localPath: path.resolve(root, 'node_modules/package-a/package.json')
+			},
+			{
+				path: 'extension/node_modules/package-a/important/prod.log',
+				localPath: path.resolve(root, 'node_modules/package-a/important/prod.log')
+			},
+			{
+				path: 'extension/node_modules/curry/curry.js',
+				localPath: path.resolve(root, 'node_modules/curry/curry.js')
+			},
+			{
+				path: 'extension/node_modules/curry/package.json',
+				localPath: path.resolve(root, 'node_modules/curry/package.json')
+			}
+		].forEach(expected => {
+			const found = files.find(f => f.path === expected.path || f.localPath === expected.localPath);
+			if (found) {
+				assert.equal(found.path, expected.path, 'path');
+				assert.equal(found.localPath, expected.localPath, 'localPath');
+			}
+		})
+		const ignoreFilename = 'extension/node_modules/package-a/logger.log';
+		const ignore = files.find(f => f.path === ignoreFilename);
+		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
+	})
 });
 
 describe('readManifest', () => {
