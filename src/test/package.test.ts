@@ -779,6 +779,43 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should detect short gitlab repositories', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'gitlab:Microsoft/vscode-spell-check',
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check.git'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Support' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check/issues'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check#readme'
+					)
+				);
+			});
+	});
+
 	it('should detect short github repositories', () => {
 		const manifest = {
 			name: 'test',

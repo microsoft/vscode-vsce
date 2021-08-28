@@ -121,23 +121,32 @@ export class BaseProcessor implements IProcessor {
 
 // https://github.com/npm/cli/blob/latest/lib/utils/hosted-git-info-from-manifest.js
 function getGitHost(manifest: Manifest): GitHost | null {
-	let url: string;
-	if (manifest.repository) {
-		if (typeof manifest.repository === 'string') {
-			url = manifest.repository;
-		} else if (typeof manifest.repository === 'object' && manifest.repository.url) {
-			url = manifest.repository.url;
-		}
-	}
-
+	const url = getRepositoryUrl(manifest);
 	if (!url) return null;
 
 	return GitHost.fromUrl(url, { noGitPlus: true });
 }
 
 // https://github.com/npm/cli/blob/latest/lib/repo.js
-function getRepositoryUrl(gitHost: GitHost | null): string | null {
-	return gitHost && gitHost.toString();
+function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string | null {
+	if (gitHost) {
+		return gitHost.https();
+	}
+
+	let url: string | null = null;
+	if (manifest.repository) {
+		if (typeof manifest.repository === 'string') {
+			url = manifest.repository;
+		} else if (
+			typeof manifest.repository === 'object' &&
+			manifest.repository.url &&
+			typeof manifest.repository.url === 'string'
+		) {
+			url = manifest.repository.url;
+		}
+	}
+
+	return url;
 }
 
 // https://github.com/npm/cli/blob/latest/lib/bugs.js
@@ -337,7 +346,7 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		const gitHost = getGitHost(manifest);
-		const repository = getRepositoryUrl(gitHost);
+		const repository = getRepositoryUrl(manifest, gitHost);
 		const isGitHub = isGitHubRepository(repository);
 
 		let enableMarketplaceQnA: boolean | undefined;
