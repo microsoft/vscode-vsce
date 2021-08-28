@@ -5,7 +5,7 @@ import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRo
 const limitVersions = 6;
 const isExtensionTag = /^__ext_(.*)$/;
 
-export interface ExtensionStatiticsMap {
+export interface ExtensionStatisticsMap {
 	install: number;
 	averagerating: number;
 	ratingcount: number;
@@ -54,7 +54,7 @@ function showOverview({
 
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName]: value }),
-		<ExtensionStatiticsMap>{}
+		<ExtensionStatisticsMap>{}
 	);
 
 	// Render

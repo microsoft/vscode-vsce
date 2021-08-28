@@ -140,9 +140,9 @@ function getRepositoryUrl(url: string | { url?: string }): string {
 	return result;
 }
 
-// Contributed by Mozilla develpoer authors
+// Contributed by Mozilla developer authors
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-function escapeRegExp(string) {
+function escapeRegExp(string: string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
@@ -489,7 +489,7 @@ export class TagsProcessor extends BaseProcessor {
 			[]
 		);
 
-		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
+		const webExtensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
 
 		const tags = [
 			...keywords,
@@ -506,12 +506,12 @@ export class TagsProcessor extends BaseProcessor {
 			...languageActivations,
 			...grammars,
 			...descriptionKeywords,
-			...webExensionTags,
+			...webExtensionTags,
 		];
 
 		this.tags = _(tags)
 			.uniq() // deduplicate
-			.compact() // remove falsey values
+			.compact() // remove falsy values
 			.value();
 
 		return Promise.resolve(null);
@@ -1196,7 +1196,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 			const assets = _.flatten(processors.map(p => p.assets));
 			const tags = _(_.flatten(processors.map(p => p.tags)))
 				.uniq() // deduplicate
-				.compact() // remove falsey values
+				.compact() // remove falsy values
 				.join(',');
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
