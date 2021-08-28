@@ -23,6 +23,7 @@ import {
 	validateVSCodeTypesCompatibility,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
+import GitHost = require('hosted-git-info');
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -118,26 +119,59 @@ export class BaseProcessor implements IProcessor {
 	}
 }
 
-function getUrl(url: string | { url?: string }): string {
-	if (!url) {
-		return null;
+// https://github.com/npm/cli/blob/latest/lib/utils/hosted-git-info-from-manifest.js
+function getGitHost(manifest: Manifest): GitHost | null {
+	let url: string;
+	if (manifest.repository) {
+		if (typeof manifest.repository === 'string') {
+			url = manifest.repository;
+		} else if (typeof manifest.repository === 'object' && manifest.repository.url) {
+			url = manifest.repository.url;
+		}
 	}
 
-	if (typeof url === 'string') {
-		return <string>url;
-	}
+	if (!url) return null;
 
-	return (<any>url).url;
+	return GitHost.fromUrl(url, { noGitPlus: true });
 }
 
-function getRepositoryUrl(url: string | { url?: string }): string {
-	const result = getUrl(url);
+// https://github.com/npm/cli/blob/latest/lib/repo.js
+function getRepositoryUrl(gitHost: GitHost | null): string | null {
+	return gitHost && gitHost.toString();
+}
 
-	if (/^[^\/]+\/[^\/]+$/.test(result)) {
-		return `https://github.com/${result}.git`;
+// https://github.com/npm/cli/blob/latest/lib/bugs.js
+function getBugsUrl(manifest: Manifest, gitHost: GitHost | null): string | null {
+	if (manifest.bugs) {
+		if (typeof manifest.bugs === 'string') {
+			return manifest.bugs;
+		}
+		if (typeof manifest.bugs === 'object' && manifest.bugs.url) {
+			return manifest.bugs.url;
+		}
+		if (typeof manifest.bugs === 'object' && manifest.bugs.email) {
+			return `mailto:${manifest.bugs.email}`;
+		}
 	}
 
-	return result;
+	if (gitHost) {
+		return gitHost.bugs();
+	}
+
+	return null;
+}
+
+// https://github.com/npm/cli/blob/latest/lib/docs.js
+function getHomepageUrl(manifest: Manifest, gitHost: GitHost | null): string | null {
+	if (manifest.homepage) {
+		return manifest.homepage;
+	}
+
+	if (gitHost) {
+		return gitHost.docs();
+	}
+
+	return null;
 }
 
 // Contributed by Mozilla developer authors
@@ -207,11 +241,11 @@ const TrustedSVGSources = [
 	'www.versioneye.com',
 ];
 
-function isGitHubRepository(repository: string): boolean {
+function isGitHubRepository(repository: string | null): boolean {
 	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
 }
 
-function isGitLabRepository(repository: string): boolean {
+function isGitLabRepository(repository: string | null): boolean {
 	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository || '');
 }
 
@@ -302,7 +336,8 @@ export class ManifestProcessor extends BaseProcessor {
 			flags.push('Preview');
 		}
 
-		const repository = getRepositoryUrl(manifest.repository);
+		const gitHost = getGitHost(manifest);
+		const repository = getRepositoryUrl(gitHost);
 		const isGitHub = isGitHubRepository(repository);
 
 		let enableMarketplaceQnA: boolean | undefined;
@@ -336,8 +371,8 @@ export class ManifestProcessor extends BaseProcessor {
 			flags: flags.join(' '),
 			links: {
 				repository,
-				bugs: getUrl(manifest.bugs),
-				homepage: manifest.homepage,
+				bugs: getBugsUrl(manifest, gitHost),
+				homepage: getHomepageUrl(manifest, gitHost),
 			},
 			galleryBanner: manifest.galleryBanner || {},
 			badges: manifest.badges,
