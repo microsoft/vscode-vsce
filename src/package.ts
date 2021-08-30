@@ -868,9 +868,9 @@ function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
 
 	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
-	// Extension pack defaults to workspace extensionKind
+	// Extension pack defaults to workspace,web extensionKind
 	if (isNonEmptyArray(manifest.extensionPack) || isNonEmptyArray(manifest.extensionDependencies)) {
-		result = ['workspace'];
+		result = ['workspace', 'web'];
 	}
 
 	if (manifest.contributes) {
