@@ -5,7 +5,7 @@ const fixedLocale = 'en-us';
 const format = {
 	date: { month: 'long', day: 'numeric', year: 'numeric' },
 	time: { hour: 'numeric', minute: 'numeric', second: 'numeric' },
-} as const;
+};
 
 const columns = process.stdout.columns ? process.stdout.columns : 80;
 
@@ -17,13 +17,13 @@ export const icons = useFallbackIcons
 	? { download: '\u{2193}', star: '\u{2665}', emptyStar: '\u{2022}' }
 	: { download: '\u{2913}', star: '\u{2605}', emptyStar: '\u{2606}' };
 
-export function formatDate(date: Date) {
+export function formatDate(date) {
 	return date.toLocaleString(fixedLocale, format.date);
 }
-export function formatTime(date: Date) {
+export function formatTime(date) {
 	return date.toLocaleString(fixedLocale, format.time);
 }
-export function formatDateTime(date: Date) {
+export function formatDateTime(date) {
 	return date.toLocaleString(fixedLocale, { ...format.date, ...format.time });
 }
 

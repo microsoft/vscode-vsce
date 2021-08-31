@@ -183,9 +183,9 @@ function getHomepageUrl(manifest: Manifest, gitHost: GitHost | null): string | n
 	return null;
 }
 
-// Contributed by Mozilla developer authors
+// Contributed by Mozilla develpoer authors
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-function escapeRegExp(string: string) {
+function escapeRegExp(string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
@@ -533,7 +533,7 @@ export class TagsProcessor extends BaseProcessor {
 			[]
 		);
 
-		const webExtensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
+		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
 
 		const tags = [
 			...keywords,
@@ -550,12 +550,12 @@ export class TagsProcessor extends BaseProcessor {
 			...languageActivations,
 			...grammars,
 			...descriptionKeywords,
-			...webExtensionTags,
+			...webExensionTags,
 		];
 
 		this.tags = _(tags)
 			.uniq() // deduplicate
-			.compact() // remove falsy values
+			.compact() // remove falsey values
 			.value();
 
 		return Promise.resolve(null);
@@ -1240,7 +1240,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 			const assets = _.flatten(processors.map(p => p.assets));
 			const tags = _(_.flatten(processors.map(p => p.tags)))
 				.uniq() // deduplicate
-				.compact() // remove falsy values
+				.compact() // remove falsey values
 				.join(',');
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
