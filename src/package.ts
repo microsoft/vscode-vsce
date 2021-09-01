@@ -813,6 +813,8 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
+const ValidExtensionKinds = new Set(['ui', 'workspace']);
+
 export function isWebKind(manifest: Manifest): boolean {
 	const extensionKind = getExtensionKind(manifest);
 	return extensionKind.some(kind => kind === 'web');
@@ -1033,12 +1035,18 @@ export function validateManifest(manifest: Manifest): Manifest {
 	});
 
 	if (manifest.extensionKind) {
-		const extensionKinds: ExtensionKind[] = Array.isArray(manifest.extensionKind)
-			? manifest.extensionKind
-			: [manifest.extensionKind];
-		const validExtensionKinds: ExtensionKind[] = ['ui', 'workspace'];
-		if (extensionKinds.some(extensionKind => !validExtensionKinds.includes(extensionKind))) {
-			throw new Error(`Manifest contains invalid value '${extensionKind}' in the 'extensionKind' property. Allowed values are 'ui', 'workspace'.`);
+		const extensionKinds = Array.isArray(manifest.extensionKind) ? manifest.extensionKind : [manifest.extensionKind];
+
+		for (const kind of extensionKinds) {
+			if (!ValidExtensionKinds.has(kind)) {
+				throw new Error(
+					`Manifest contains invalid value '${kind}' in the 'extensionKind' property. Allowed values are ${[
+						...ValidExtensionKinds,
+					]
+						.map(k => `'${k}'`)
+						.join(', ')}.`
+				);
+			}
 		}
 	}
 
