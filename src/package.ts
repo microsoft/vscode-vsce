@@ -1038,7 +1038,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 			: [manifest.extensionKind];
 		const validExtensionKinds: ExtensionKind[] = ['ui', 'workspace'];
 		if (extensionKinds.some(extensionKind => !validExtensionKinds.includes(extensionKind))) {
-			throw new Error(`Manifest has invalid values for 'extensionKind' property. Allowed values are 'ui', 'workspace'`);
+			throw new Error(`Manifest contains invalid value '${extensionKind}' in the 'extensionKind' property. Allowed values are 'ui', 'workspace'.`);
 		}
 	}
 
