@@ -393,11 +393,14 @@ describe('validateManifest', () => {
 
 	it('should validate extensionKind', () => {
 		assert.throws(() => validateManifest(createManifest({ extensionKind: ['web'] })));
+		assert.throws(() => validateManifest(createManifest({ extensionKind: 'web' })));
 		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'ui', 'web'] })));
 		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'web'] })));
 		assert.throws(() => validateManifest(createManifest({ extensionKind: ['ui', 'web'] })));
 		assert.throws(() => validateManifest(createManifest(<any>{ extensionKind: ['any'] })));
+		validateManifest(createManifest({ extensionKind: 'ui' }));
 		validateManifest(createManifest({ extensionKind: ['ui'] }));
+		validateManifest(createManifest({ extensionKind: 'workspace' }));
 		validateManifest(createManifest({ extensionKind: ['workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
