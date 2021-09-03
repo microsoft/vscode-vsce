@@ -3,12 +3,18 @@ import { ExtensionQueryFilterType, ExtensionQueryFlags } from 'azure-devops-node
 import { tableView, wordTrim } from './viewutils';
 
 const pageSize = 100;
+const installationTarget = 'Microsoft.VisualStudio.Code';
+const excludeFlags = '37888'; //Value to exclude un-published, locked or hidden extensions
 
 export async function search(searchText: string, json: boolean = false): Promise<any> {
 	const api = getPublicGalleryAPI();
 	const results = await api.extensionQuery({
 		pageSize,
-		criteria: [{ filterType: ExtensionQueryFilterType.SearchText, value: searchText }],
+		criteria: [
+			{ filterType: ExtensionQueryFilterType.SearchText, value: searchText },
+			{ filterType: ExtensionQueryFilterType.InstallationTarget, value: installationTarget },
+			{ filterType: ExtensionQueryFilterType.ExcludeWithFlags, value: excludeFlags },
+		],
 		flags: [ExtensionQueryFlags.ExcludeNonValidated, ExtensionQueryFlags.IncludeLatestVersionOnly],
 	});
 
