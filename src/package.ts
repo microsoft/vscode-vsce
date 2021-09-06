@@ -290,6 +290,7 @@ const Targets = new Set([
 	'darwin-x64',
 	'darwin-arm64',
 	'alpine-x64',
+	'web',
 ]);
 
 export class ManifestProcessor extends BaseProcessor {
