@@ -1329,7 +1329,11 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 		);
 }
 
-function getDefaultPackageName(manifest: Manifest): string {
+function getDefaultPackageName(manifest: Manifest, options: IPackageOptions): string {
+	if (options.target) {
+		return `${manifest.name}-${options.target}-${manifest.version}.vsix`;
+	}
+
 	return `${manifest.name}-${manifest.version}.vsix`;
 }
 
@@ -1354,14 +1358,14 @@ async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): P
 
 async function getPackagePath(cwd: string, manifest: Manifest, options: IPackageOptions = {}): Promise<string> {
 	if (!options.packagePath) {
-		return path.join(cwd, getDefaultPackageName(manifest));
+		return path.join(cwd, getDefaultPackageName(manifest, options));
 	}
 
 	try {
 		const _stat = await stat(options.packagePath);
 
 		if (_stat.isDirectory()) {
-			return path.join(options.packagePath, getDefaultPackageName(manifest));
+			return path.join(options.packagePath, getDefaultPackageName(manifest, options));
 		} else {
 			return options.packagePath;
 		}
