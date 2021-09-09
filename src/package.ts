@@ -333,6 +333,7 @@ const Targets = new Set([
 	'darwin-x64',
 	'darwin-arm64',
 	'alpine-x64',
+	'web',
 ]);
 
 export class ManifestProcessor extends BaseProcessor {
@@ -857,6 +858,8 @@ class IconProcessor extends BaseProcessor {
 	}
 }
 
+const ValidExtensionKinds = new Set(['ui', 'workspace']);
+
 export function isWebKind(manifest: Manifest): boolean {
 	const extensionKind = getExtensionKind(manifest);
 	return extensionKind.some(kind => kind === 'web');
@@ -912,9 +915,9 @@ function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
 
 	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
-	// Extension pack defaults to workspace extensionKind
+	// Extension pack defaults to workspace,web extensionKind
 	if (isNonEmptyArray(manifest.extensionPack) || isNonEmptyArray(manifest.extensionDependencies)) {
-		result = ['workspace'];
+		result = ['workspace', 'web'];
 	}
 
 	if (manifest.contributes) {
@@ -1075,6 +1078,22 @@ export function validateManifest(manifest: Manifest): Manifest {
 			);
 		}
 	});
+
+	if (manifest.extensionKind) {
+		const extensionKinds = Array.isArray(manifest.extensionKind) ? manifest.extensionKind : [manifest.extensionKind];
+
+		for (const kind of extensionKinds) {
+			if (!ValidExtensionKinds.has(kind)) {
+				throw new Error(
+					`Manifest contains invalid value '${kind}' in the 'extensionKind' property. Allowed values are ${[
+						...ValidExtensionKinds,
+					]
+						.map(k => `'${k}'`)
+						.join(', ')}.`
+				);
+			}
+		}
+	}
 
 	return manifest;
 }
