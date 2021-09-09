@@ -18,10 +18,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
-import { parseString } from 'xml2js';
 import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 import { spawnSync } from 'child_process';
+import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 
 // don't warn in tests
 console.warn = () => null;
@@ -45,39 +45,6 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 const readFile = denodeify<string, string, string>(fs.readFile);
-function createXMLParser<T>(): (raw: string) => Promise<T> {
-	return denodeify<string, T>(parseString);
-}
-
-type XMLManifest = {
-	PackageManifest: {
-		$: { Version: string; xmlns: string };
-		Metadata: {
-			Description: { _: string }[];
-			DisplayName: string[];
-			Identity: { $: { Id: string; Version: string; Publisher: string; TargetPlatform?: string } }[];
-			Tags: string[];
-			GalleryFlags: string[];
-			License: string[];
-			Icon: string[];
-			Properties: { Property: { $: { Id: string; Value: string } }[] }[];
-			Categories: string[];
-			Badges: { Badge: { $: { Link: string; ImgUri: string; Description: string } }[] }[];
-		}[];
-		Installation: { InstallationTarget: { $: { Id: string } }[] }[];
-		Dependencies: string[];
-		Assets: { Asset: { $: { Type: string; Path: string } }[] }[];
-	};
-};
-
-type ContentTypes = {
-	Types: {
-		Default: { $: { Extension: string; ContentType } }[];
-	};
-};
-
-const parseXmlManifest = createXMLParser<XMLManifest>();
-const parseContentTypes = createXMLParser<ContentTypes>();
 
 function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
