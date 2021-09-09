@@ -23,7 +23,7 @@ import {
 	validateVSCodeTypesCompatibility,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
-import GitHost = require('hosted-git-info');
+import * as GitHost from 'hosted-git-info';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -122,7 +122,10 @@ export class BaseProcessor implements IProcessor {
 // https://github.com/npm/cli/blob/latest/lib/utils/hosted-git-info-from-manifest.js
 function getGitHost(manifest: Manifest): GitHost | null {
 	const url = getRepositoryUrl(manifest);
-	if (!url) return null;
+
+	if (!url) {
+		return null;
+	}
 
 	return GitHost.fromUrl(url, { noGitPlus: true });
 }
