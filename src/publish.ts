@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, versionBump, IPackageOptions } from './package';
+import { pack, readManifest, versionBump, IPackageOptions } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
@@ -48,11 +48,36 @@ function readManifestFromPackage(packagePath: string): Promise<Manifest> {
 	});
 }
 
-async function _publish(packagePath: string, pat: string, manifest: Manifest, options: IPublishOptions): Promise<void> {
+export interface IPublishOptions extends IPackageOptions {
+	readonly pat?: string;
+	readonly noVerify?: boolean;
+}
+
+export async function publish(options: IPublishOptions = {}): Promise<any> {
+	let packagePath: string;
+	let manifest: Manifest;
+
+	if (options.packagePath) {
+		if (options.version) {
+			return Promise.reject(`Both options not supported simultaneously: packagePath and version.`);
+		}
+
+		packagePath = options.packagePath;
+		manifest = await readManifestFromPackage(options.packagePath);
+	} else {
+		await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
+
+		packagePath = await tmpName();
+		manifest = (await pack({ ...options, packagePath })).manifest;
+	}
+
+	if (!options.noVerify && manifest.enableProposedApi) {
+		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	}
+
+	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
 	const api = await getGalleryAPI(pat);
-
 	const packageStream = fs.createReadStream(packagePath);
-
 	const name = `${manifest.publisher}.${manifest.name}`;
 	const description = options.target ? `${name}-${options.target}@${manifest.version}` : `${name}@${manifest.version}`;
 
@@ -107,40 +132,6 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 	log.done(`Published ${description}.`);
 }
 
-export interface IPublishOptions extends IPackageOptions {
-	readonly pat?: string;
-	readonly noVerify?: boolean;
-}
-
-export function publish(options: IPublishOptions = {}): Promise<any> {
-	let promise: Promise<IPackage>;
-
-	if (options.packagePath) {
-		if (options.version) {
-			return Promise.reject(`Not supported: packagePath and version.`);
-		}
-
-		promise = readManifestFromPackage(options.packagePath).then(manifest => ({
-			manifest,
-			packagePath: options.packagePath,
-		}));
-	} else {
-		promise = versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion)
-			.then(() => tmpName())
-			.then(packagePath => pack({ ...options, packagePath }));
-	}
-
-	return promise.then(async ({ manifest, packagePath }) => {
-		if (!options.noVerify && manifest.enableProposedApi) {
-			throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
-		}
-
-		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);
-
-		return patPromise.then(pat => _publish(packagePath, pat, manifest, options));
-	});
-}
-
 export interface IUnpublishOptions extends IPublishOptions {
 	id?: string;
 	force?: boolean;
@@ -167,7 +158,7 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 		}
 	}
 
-	const pat = options.pat || (await getPublisher(publisher).then(p => p.pat));
+	const pat = options.pat ?? (await getPublisher(publisher)).pat;
 	const api = await getGalleryAPI(pat);
 
 	await api.deleteExtension(publisher, name);
