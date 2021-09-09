@@ -54,8 +54,9 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 	const packageStream = fs.createReadStream(packagePath);
 
 	const name = `${manifest.publisher}.${manifest.name}`;
-	const fullName = `${name}@${manifest.version}`;
-	console.log(`Publishing ${fullName}...`);
+	const description = options.target ? `${name}-${options.target}@${manifest.version}` : `${name}@${manifest.version}`;
+
+	console.log(`Publishing '${description}'...`);
 
 	let extension: PublishedExtension | null = null;
 
@@ -75,7 +76,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 		}
 
 		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
-			throw new Error(`${fullName} already exists. Version number cannot be the same.`);
+			throw new Error(`${description} already exists. Version number cannot be the same.`);
 		}
 
 		if (extension) {
@@ -83,7 +84,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
 			} catch (err) {
 				if (err.statusCode === 409) {
-					throw new Error(`${fullName} already exists.`);
+					throw new Error(`${description} already exists.`);
 				} else {
 					throw err;
 				}
@@ -103,7 +104,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 
 	log.info(`Extension URL (might take a few minutes): ${getPublishedUrl(name)}`);
 	log.info(`Hub URL: ${getHubUrl(manifest.publisher, manifest.name)}`);
-	log.done(`Published ${fullName}.`);
+	log.done(`Published ${description}.`);
 }
 
 export interface IPublishOptions extends IPackageOptions {
