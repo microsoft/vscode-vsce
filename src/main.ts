@@ -56,7 +56,7 @@ function main(task: Promise<any>): void {
 }
 
 module.exports = function (argv: string[]): void {
-	program.version(pkg.version).usage('<command> [options]');
+	program.version(pkg.version).usage('<command>');
 
 	program
 		.command('ls')
@@ -69,7 +69,7 @@ module.exports = function (argv: string[]): void {
 			(val, all) => (all ? all.concat(val) : [val]),
 			undefined
 		)
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.action(({ yarn, packagedDependencies, ignoreFile }) =>
 			main(ls(undefined, yarn, packagedDependencies, ignoreFile))
 		);
@@ -77,23 +77,23 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('package [version]')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
+		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
-			'--githubBranch [branch]',
+			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
-			'--gitlabBranch [branch]',
+			'--gitlabBranch <branch>',
 			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
-		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
 		.action(
@@ -144,21 +144,21 @@ module.exports = function (argv: string[]): void {
 		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
-		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
+		.option('--packagePath <path>', 'Publish the VSIX package located at the specified path.')
 		.option(
-			'--githubBranch [branch]',
+			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
-			'--gitlabBranch [branch]',
+			'--gitlabBranch <branch>',
 			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
-		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.action(
 			(
 				version,
@@ -224,7 +224,7 @@ module.exports = function (argv: string[]): void {
 		.action(name => main(logoutPublisher(name)));
 
 	program
-		.command('verify-pat [<publisher>]')
+		.command('verify-pat [publisher]')
 		.option(
 			'-p, --pat <token>',
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
