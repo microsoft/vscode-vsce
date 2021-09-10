@@ -75,7 +75,7 @@ module.exports = function (argv: string[]): void {
 		);
 
 	program
-		.command('package [<version>]')
+		.command('package [version]')
 		.description('Packages an extension')
 		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', 'Target architecture')
@@ -134,7 +134,7 @@ module.exports = function (argv: string[]): void {
 		);
 
 	program
-		.command('publish [<version>]')
+		.command('publish [version]')
 		.description('Publishes an extension')
 		.option(
 			'-p, --pat <token>',
@@ -197,7 +197,7 @@ module.exports = function (argv: string[]): void {
 		);
 
 	program
-		.command('unpublish [<extensionid>]')
+		.command('unpublish [extensionid]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('-f, --force', 'Forces Unpublished Extension')
