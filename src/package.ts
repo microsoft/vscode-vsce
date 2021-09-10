@@ -24,6 +24,7 @@ import {
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
+import * as parseSemver from 'parse-semver';
 
 const readFile = denodeify<string, string, string>(fs.readFile);
 const unlink = denodeify<string, void>(fs.unlink as any);
@@ -367,8 +368,25 @@ export class ManifestProcessor extends BaseProcessor {
 		const extensionKind = getExtensionKind(manifest);
 		const target = options.target;
 
-		if (typeof target === 'string' && !Targets.has(target)) {
-			throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+		if (target) {
+			let engineVersion: string;
+
+			try {
+				const engineSemver = parseSemver(`vscode@${manifest.engines['vscode']}`);
+				engineVersion = engineSemver.version;
+			} catch (err) {
+				throw new Error('Failed to parse semver of engines.vscode');
+			}
+
+			if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61')) {
+				throw new Error(
+					`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
+				);
+			}
+
+			if (!Targets.has(target)) {
+				throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+			}
 		}
 
 		this.vsix = {

@@ -1589,15 +1589,40 @@ describe('toVsixManifest', () => {
 		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
 	});
 
+	it('should fail when target is invalid', async () => {
+		const manifest = createManifest();
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'what' });
+		} catch (err) {
+			return assert(/is not a valid VS Code target/i.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
+	});
+
 	it('should throw when using an invalid target platform', async () => {
 		const manifest = createManifest();
 
 		try {
 			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
-			throw new Error('oops');
 		} catch (err) {
-			assert(/not a valid VS Code target/.test(err.message));
+			return assert(/not a valid VS Code target/.test(err.message));
 		}
+
+		throw new Error('Should not reach here');
+	});
+
+	it('should throw when targeting an old VS Code version with platform specific', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.60.0' } });
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
+		} catch (err) {
+			return assert(/>=1.61/.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
 	});
 });
 
