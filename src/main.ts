@@ -144,7 +144,7 @@ module.exports = function (argv: string[]): void {
 		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
-		.option('--packagePath <path>', 'Publish the VSIX package located at the specified path.')
+		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'

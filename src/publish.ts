@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, versionBump, IPackageOptions } from './package';
+import { pack, readManifest, versionBump } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
@@ -10,16 +10,25 @@ import { readVSIXPackage } from './zip';
 
 const tmpName = denodeify<string>(tmp.tmpName);
 
-export interface IPublishOptions extends IPackageOptions {
+export interface IPublishOptions {
+	readonly packagePath?: string[];
+	readonly version?: string;
+	readonly target?: string;
+	readonly commitMessage?: string;
+	readonly gitTagVersion?: boolean;
+	readonly cwd?: string;
+	readonly githubBranch?: string;
+	readonly gitlabBranch?: string;
+	readonly baseContentUrl?: string;
+	readonly baseImagesUrl?: string;
+	readonly useYarn?: boolean;
+	readonly dependencyEntryPoints?: string[];
+	readonly ignoreFile?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
-	let packagePath: string;
-	let manifest: Manifest;
-	let target: string | undefined;
-
 	if (options.packagePath) {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
@@ -27,24 +36,28 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'target'.`);
 		}
 
-		const vsix = await readVSIXPackage(options.packagePath);
+		for (const packagePath of options.packagePath) {
+			const vsix = await readVSIXPackage(packagePath);
+			let target: string | undefined;
 
-		try {
-			target = vsix.xmlManifest.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform ?? undefined;
-		} catch (err) {
-			throw new Error(`Invalid extension VSIX manifest. ${err}`);
+			try {
+				target = vsix.xmlManifest.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform ?? undefined;
+			} catch (err) {
+				throw new Error(`Invalid extension VSIX manifest. ${err}`);
+			}
+
+			await _publish(packagePath, vsix.manifest, { ...options, target });
 		}
-
-		packagePath = options.packagePath;
-		manifest = vsix.manifest;
 	} else {
 		await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
 
-		packagePath = await tmpName();
-		manifest = (await pack({ ...options, packagePath })).manifest;
-		target = options.target;
+		const packagePath = await tmpName();
+		const packageResult = await pack({ ...options, packagePath });
+		await _publish(packagePath, packageResult.manifest, options);
 	}
+}
 
+async function _publish(packagePath: string, manifest: Manifest, options: IPublishOptions) {
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 	}
@@ -53,7 +66,9 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 	const api = await getGalleryAPI(pat);
 	const packageStream = fs.createReadStream(packagePath);
 	const name = `${manifest.publisher}.${manifest.name}`;
-	const description = target ? `${name} (${target}) v${manifest.version}` : `${name} v${manifest.version}`;
+	const description = options.target
+		? `${name} (${options.target}) v${manifest.version}`
+		: `${name} v${manifest.version}`;
 
 	log.info(`Publishing '${description}'...`);
 
@@ -74,7 +89,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			}
 		}
 
-		if (!target && extension && extension.versions.some(v => v.version === manifest.version)) {
+		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
 			throw new Error(`${description} already exists. Version number cannot be the same.`);
 		}
 

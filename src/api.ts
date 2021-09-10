@@ -150,6 +150,6 @@ export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
 /**
  * Publishes a pre-build VSIX.
  */
-export function publishVSIX(packagePath: string, options: IPublishVSIXOptions = {}): Promise<any> {
-	return _publish({ packagePath, ...options });
+export function publishVSIX(packagePath: string | string[], options: IPublishVSIXOptions = {}): Promise<any> {
+	return _publish({ packagePath: typeof packagePath === 'string' ? [packagePath] : packagePath, ...options });
 }
