@@ -251,8 +251,7 @@ const TrustedSVGSources = [
 	'visualstudio.com',
 	'vsmarketplacebadge.apphb.com',
 	'www.bithound.io',
-	'www.versioneye.com',
-	'open.vscode.dev'
+	'www.versioneye.com'
 ];
 
 function isGitHubRepository(repository: string | null): boolean {
