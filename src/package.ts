@@ -252,6 +252,7 @@ const TrustedSVGSources = [
 	'vsmarketplacebadge.apphb.com',
 	'www.bithound.io',
 	'www.versioneye.com',
+	'open.vscode.dev'
 ];
 
 function isGitHubRepository(repository: string | null): boolean {
@@ -1184,6 +1185,7 @@ const defaultIgnore = [
 	'.vscodeignore',
 	'package-lock.json',
 	'yarn.lock',
+	'yarn-error.log',
 	'npm-shrinkwrap.json',
 	'.editorconfig',
 	'.npmrc',
@@ -1193,7 +1195,9 @@ const defaultIgnore = [
 	'tslint.yaml',
 	'.eslintrc*',
 	'.babelrc*',
-	'.prettierrc',
+	'.prettierrc*',
+	'.cz-config.js',
+    '.commitlintrc*',
 	'webpack.config.js',
 	'ISSUE_TEMPLATE.md',
 	'CONTRIBUTING.md',
