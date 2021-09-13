@@ -1197,7 +1197,7 @@ const defaultIgnore = [
 	'.babelrc*',
 	'.prettierrc*',
 	'.cz-config.js',
-    '.commitlintrc*',
+        '.commitlintrc*',
 	'webpack.config.js',
 	'ISSUE_TEMPLATE.md',
 	'CONTRIBUTING.md',
