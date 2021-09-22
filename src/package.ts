@@ -1207,6 +1207,7 @@ const defaultIgnore = [
 	'**/.DS_Store',
 	'**/*.vsixmanifest',
 	'**/.vscode-test/**',
+	'**/.vscode-test-web/**',
 ];
 
 const notIgnored = ['!package.json', '!README.md'];
