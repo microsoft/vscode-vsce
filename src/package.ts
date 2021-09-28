@@ -337,6 +337,7 @@ const Targets = new Set([
 	'darwin-x64',
 	'darwin-arm64',
 	'alpine-x64',
+	'alpine-arm64',
 	'web',
 ]);
 
