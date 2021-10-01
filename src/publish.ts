@@ -1,5 +1,9 @@
 import * as fs from 'fs';
-import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import {
+	ExtensionQueryFlags,
+	PublishedExtension,
+	PublishedExtensionFlags,
+} from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
@@ -126,7 +130,7 @@ export interface IUnpublishOptions extends IPublishOptions {
 	force?: boolean;
 }
 
-export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+export async function unpublishExtension(options: IUnpublishOptions = {}): Promise<any> {
 	let publisher: string, name: string;
 
 	if (options.id) {
@@ -140,7 +144,37 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	const fullName = `${publisher}.${name}`;
 
 	if (!options.force) {
-		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+		const answer = await read(
+			`This will unpublish '${fullName}'. It will still be on the Marketplace but users won't be able to downlaod it. Do you want to continue? [y/N] `
+		);
+
+		if (!/^y$/i.test(answer)) {
+			throw new Error('Aborted');
+		}
+	}
+
+	const pat = options.pat ?? (await getPublisher(publisher)).pat;
+	const api = await getGalleryAPI(pat);
+
+	await api.updateExtensionProperties(publisher, name, PublishedExtensionFlags.Unpublished);
+	log.done(`Unpublished extension: ${fullName}`);
+}
+
+export async function deleteExtension(options: IUnpublishOptions = {}): Promise<any> {
+	let publisher: string, name: string;
+
+	if (options.id) {
+		[publisher, name] = options.id.split('.');
+	} else {
+		const manifest = await readManifest(options.cwd);
+		publisher = manifest.publisher;
+		name = manifest.name;
+	}
+
+	const fullName = `${publisher}.${name}`;
+
+	if (!options.force) {
+		const answer = await read(`This will FOREVER delete '${fullName}'! Do you want to continue? [y/N] `);
 
 		if (!/^y$/i.test(answer)) {
 			throw new Error('Aborted');
@@ -151,5 +185,5 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	const api = await getGalleryAPI(pat);
 
 	await api.deleteExtension(publisher, name);
-	log.done(`Deleted extension: ${fullName}!`);
+	log.done(`Deleted extension: ${fullName}`);
 }

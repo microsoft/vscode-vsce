@@ -2,7 +2,7 @@ import * as program from 'commander';
 import * as leven from 'leven';
 
 import { packageCommand, ls } from './package';
-import { publish, unpublish } from './publish';
+import { deleteExtension, publish, unpublishExtension } from './publish';
 import { show } from './show';
 import { search } from './search';
 import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
@@ -200,8 +200,15 @@ module.exports = function (argv: string[]): void {
 		.command('unpublish [extensionid]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.option('-f, --force', 'Forces Unpublished Extension')
-		.action((id, { pat, force }) => main(unpublish({ id, pat, force })));
+		.option('-f, --force', 'Skip user prompt')
+		.action((id, { pat, force }) => main(unpublishExtension({ id, pat, force })));
+
+	program
+		.command('delete [extensionid]')
+		.description('Deletes an extension. Example extension id: microsoft.csharp.')
+		.option('-p, --pat <token>', 'Personal Access Token')
+		.option('-f, --force', 'Skip user prompt')
+		.action((id, { pat, force }) => main(deleteExtension({ id, pat, force })));
 
 	program
 		.command('ls-publishers')
