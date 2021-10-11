@@ -54,13 +54,13 @@ First clone this repository, then:
 
 ```sh
 npm i
-npm run watch # or `watch-test` to also run tests
+npm run watch:build # or `watch:test` to also build tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
 ```sh
-npm run vsce
+node vsce
 ```
 
 ### Publish to NPM
