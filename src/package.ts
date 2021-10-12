@@ -823,8 +823,7 @@ class LicenseProcessor extends BaseProcessor {
 
 		if (!match || !match[1]) {
 			this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
-			const matchLicenseName = new RegExp('^extension\\/' + this.expectedLicenseName + '(\\.(md|txt))?$', 'i');
-			this.filter = name => matchLicenseName.test(name);
+			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
 		} else {
 			this.expectedLicenseName = match[1];
 			const regexp = new RegExp('^extension/' + this.expectedLicenseName + '$');
@@ -846,6 +845,7 @@ class LicenseProcessor extends BaseProcessor {
 
 				this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
 				this.vsix.license = normalizedPath;
+				this.didFindLicense = true;
 				this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
 			}
 		}
