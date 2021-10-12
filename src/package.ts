@@ -813,6 +813,7 @@ export class ChangelogProcessor extends MarkdownProcessor {
 
 class LicenseProcessor extends BaseProcessor {
 	private didFindLicense = false;
+	private expectedLicenseName: string;
 	filter: (name: string) => boolean;
 
 	constructor(manifest: Manifest) {
@@ -821,9 +822,12 @@ class LicenseProcessor extends BaseProcessor {
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
 
 		if (!match || !match[1]) {
-			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
+			this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
+			const matchLicenseName = new RegExp('^extension\\/' + this.expectedLicenseName + '(\\.(md|txt))?$', 'i');
+			this.filter = name => matchLicenseName.test(name);
 		} else {
-			const regexp = new RegExp('^extension/' + match[1] + '$');
+			this.expectedLicenseName = match[1];
+			const regexp = new RegExp('^extension/' + this.expectedLicenseName + '$');
 			this.filter = regexp.test.bind(regexp);
 		}
 
@@ -842,7 +846,7 @@ class LicenseProcessor extends BaseProcessor {
 
 				this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
 				this.vsix.license = normalizedPath;
-				this.didFindLicense = true;
+				this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
 			}
 		}
 
@@ -850,17 +854,8 @@ class LicenseProcessor extends BaseProcessor {
 	}
 
 	async onEnd(): Promise<void> {
-		const match = /^SEE LICENSE IN (.*)$/.exec(this.manifest.license || '');
-		let licenseName = '';
-
-		if (!match || !match[1]) {
-			licenseName = 'LICENSE';
-		} else {
-			licenseName = match[1];
-		}
-
 		if (!this.didFindLicense) {
-			util.log.warn(`${licenseName} not found`);
+			util.log.warn(`${this.expectedLicenseName} not found`);
 
 			if (!/^Y$/i.test(await util.read('Do you want to continue? [Y/N] '))) {
 				throw new Error('Aborted');
