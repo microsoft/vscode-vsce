@@ -848,6 +848,25 @@ class LicenseProcessor extends BaseProcessor {
 
 		return Promise.resolve(file);
 	}
+
+	async onEnd(): Promise<void> {
+		const match = /^SEE LICENSE IN (.*)$/.exec(this.manifest.license || '');
+		let licenseName = '';
+
+		if (!match || !match[1]) {
+			licenseName = 'LICENSE';
+		} else {
+			licenseName = match[1];
+		}
+
+		if (!this.didFindLicense) {
+			util.log.warn(`${licenseName} not found`);
+
+			if (!/^Y$/i.test(await util.read('Do you want to continue? [Y/N] '))) {
+				throw new Error('Aborted');
+			}
+		}
+	}
 }
 
 class IconProcessor extends BaseProcessor {
