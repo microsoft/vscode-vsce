@@ -856,7 +856,7 @@ class LicenseProcessor extends BaseProcessor {
 		if (!this.didFindLicense) {
 			util.log.warn(`${this.expectedLicenseName} not found`);
 
-			if (!/^y$/i.test(await util.read('Do you want to continue? [Y/n] '))) {
+			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
 			}
 		}
