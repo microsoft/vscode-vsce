@@ -826,7 +826,7 @@ class LicenseProcessor extends BaseProcessor {
 			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
 		} else {
 			this.expectedLicenseName = match[1];
-			const regexp = new RegExp('^extension/' + this.expectedLicenseName + '$');
+			const regexp = new RegExp('^extension/' + match[1] + '$');
 			this.filter = regexp.test.bind(regexp);
 		}
 
