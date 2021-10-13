@@ -846,7 +846,6 @@ class LicenseProcessor extends BaseProcessor {
 				this.assets.push({ type: 'Microsoft.VisualStudio.Services.Content.License', path: normalizedPath });
 				this.vsix.license = normalizedPath;
 				this.didFindLicense = true;
-				this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
 			}
 		}
 
