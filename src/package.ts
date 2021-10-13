@@ -813,6 +813,7 @@ export class ChangelogProcessor extends MarkdownProcessor {
 
 class LicenseProcessor extends BaseProcessor {
 	private didFindLicense = false;
+	private expectedLicenseName: string;
 	filter: (name: string) => boolean;
 
 	constructor(manifest: Manifest) {
@@ -821,8 +822,10 @@ class LicenseProcessor extends BaseProcessor {
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
 
 		if (!match || !match[1]) {
+			this.expectedLicenseName = 'LICENSE.md or LICENSE.txt';
 			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
 		} else {
+			this.expectedLicenseName = match[1];
 			const regexp = new RegExp('^extension/' + match[1] + '$');
 			this.filter = regexp.test.bind(regexp);
 		}
@@ -847,6 +850,16 @@ class LicenseProcessor extends BaseProcessor {
 		}
 
 		return Promise.resolve(file);
+	}
+
+	async onEnd(): Promise<void> {
+		if (!this.didFindLicense) {
+			util.log.warn(`${this.expectedLicenseName} not found`);
+
+			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
+				throw new Error('Aborted');
+			}
+		}
 	}
 }
 
