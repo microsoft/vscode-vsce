@@ -85,6 +85,7 @@ export interface IPackageOptions {
 	readonly packagePath?: string;
 	readonly version?: string;
 	readonly target?: string;
+	readonly listTargets?: boolean;
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly cwd?: string;
@@ -1434,6 +1435,10 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	if (options.listTargets) {
+		return printTargets();
+	}
+
 	await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
 
 	const { packagePath, files } = await pack(options);
@@ -1451,6 +1456,12 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	}
 
 	util.log.done(`Packaged: ${packagePath} (${files.length} files, ${size}${unit})`);
+}
+
+function printTargets(): Promise<any> {
+	return new Promise(() => {
+		Targets.forEach(target => console.log(`${target}`));
+	});
 }
 
 /**

@@ -79,6 +79,7 @@ module.exports = function (argv: string[]): void {
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', 'Target architecture')
+		.option('--list-targets', 'List supported target architectures')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
@@ -102,6 +103,7 @@ module.exports = function (argv: string[]): void {
 				{
 					out,
 					target,
+					listTargets,
 					message,
 					gitTagVersion,
 					githubBranch,
@@ -119,6 +121,7 @@ module.exports = function (argv: string[]): void {
 						packagePath: out,
 						version,
 						target,
+						listTargets,
 						commitMessage: message,
 						gitTagVersion,
 						githubBranch,
