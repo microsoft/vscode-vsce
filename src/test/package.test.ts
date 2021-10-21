@@ -2566,16 +2566,13 @@ describe('version', () => {
 		assert.strictEqual(newManifest.version, '1.1.1');
 	});
 
-	it('should fail with not allowed version bump', () => {
-		assert.rejects(versionBump(cwd, 'prepatch'));
-		assert.rejects(versionBump(cwd, 'preminor'));
-		assert.rejects(versionBump(cwd, 'premajor'));
-		assert.rejects(versionBump(cwd, 'prerelease'));
-		assert.rejects(versionBump(cwd, 'from-git'));
-	});
-
-	it('should fail with invalid version', () => {
-		assert.rejects(versionBump(cwd, 'a1.a.2'));
+	it('should fail with invalid version', async () => {
+		await assert.rejects(versionBump(cwd, 'a1.a.2'));
+		await assert.rejects(versionBump(cwd, 'prepatch'));
+		await assert.rejects(versionBump(cwd, 'preminor'));
+		await assert.rejects(versionBump(cwd, 'premajor'));
+		await assert.rejects(versionBump(cwd, 'prerelease'));
+		await assert.rejects(versionBump(cwd, 'from-git'));
 	});
 
 	it('should create git tag and commit', async () => {
