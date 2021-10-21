@@ -89,11 +89,23 @@ async function _publish(packagePath: string, manifest: Manifest, options: IPubli
 			}
 		}
 
-		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
-			throw new Error(`${description} already exists. Version number cannot be the same.`);
-		}
-
 		if (extension) {
+			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
+
+			if (sameVersion.length > 0) {
+				if (!options.target) {
+					throw new Error(`${description} already exists.`);
+				}
+
+				if (sameVersion.some(v => !v.targetPlatform)) {
+					throw new Error(`${name} (no target) v${manifest.version} already exists.`);
+				}
+
+				if (sameVersion.some(v => v.targetPlatform === options.target)) {
+					throw new Error(`${description} already exists.`);
+				}
+			}
+
 			try {
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
 			} catch (err) {
