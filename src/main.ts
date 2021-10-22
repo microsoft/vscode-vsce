@@ -141,7 +141,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-t, --target <targets...>', 'Target architectures')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
@@ -181,7 +181,7 @@ module.exports = function (argv: string[]): void {
 					publish({
 						pat,
 						version,
-						target,
+						targets: target,
 						commitMessage: message,
 						gitTagVersion,
 						packagePath,

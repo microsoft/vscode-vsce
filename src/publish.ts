@@ -13,7 +13,7 @@ const tmpName = denodeify<string>(tmp.tmpName);
 export interface IPublishOptions {
 	readonly packagePath?: string[];
 	readonly version?: string;
-	readonly target?: string;
+	readonly targets?: string[];
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly cwd?: string;
@@ -32,7 +32,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 	if (options.packagePath) {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
-		} else if (options.target) {
+		} else if (options.targets) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'target'.`);
 		}
 
@@ -51,13 +51,27 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 	} else {
 		await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
 
-		const packagePath = await tmpName();
-		const packageResult = await pack({ ...options, packagePath });
-		await _publish(packagePath, packageResult.manifest, options);
+		if (options.targets) {
+			for (const target of options.targets) {
+				const packagePath = await tmpName();
+				const packageResult = await pack({ ...options, target, packagePath });
+				await _publish(packagePath, packageResult.manifest, { ...options, target });
+			}
+		} else {
+			const packagePath = await tmpName();
+			const packageResult = await pack({ ...options, packagePath });
+			await _publish(packagePath, packageResult.manifest, options);
+		}
 	}
 }
 
-async function _publish(packagePath: string, manifest: Manifest, options: IPublishOptions) {
+export interface IInternalPublishOptions {
+	readonly target?: string;
+	readonly pat?: string;
+	readonly noVerify?: boolean;
+}
+
+async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 	}
