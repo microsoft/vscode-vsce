@@ -202,7 +202,7 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 }
 
 export async function detectYarn(cwd: string) {
-	for (const file of ['yarn.lock', '.yarnrc']) {
+	for (const file of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs']) {
 		if (await exists(path.join(cwd, file))) {
 			if (!process.env['VSCE_TESTS']) {
 				log.info(
