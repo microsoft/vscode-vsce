@@ -83,6 +83,7 @@ export async function verifyPat(pat: string, publisherName?: string): Promise<vo
 }
 
 async function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
+	console.log('https://marketplace.visualstudio.com/manage/publishers/');
 	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
 
 	await verifyPat(pat, publisherName);
