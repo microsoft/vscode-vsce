@@ -463,6 +463,16 @@ export class ManifestProcessor extends BaseProcessor {
 				throw new Error('Aborted');
 			}
 		}
+
+		if (this.manifest.activationEvents?.some(e => e === '*')) {
+			util.log.warn(
+				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
+			);
+
+			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
+				throw new Error('Aborted');
+			}
+		}
 	}
 }
 
