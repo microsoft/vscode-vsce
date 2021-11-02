@@ -21,9 +21,9 @@ export interface IStore extends Iterable<IPublisher> {
 }
 
 class FileStore implements IStore {
-	static readonly DefaultPath = path.join(home(), '.vsce');
+	private static readonly DefaultPath = path.join(home(), '.vsce');
 
-	static async open(path: string): Promise<FileStore> {
+	static async open(path: string = FileStore.DefaultPath): Promise<FileStore> {
 		try {
 			const rawStore = await readFile(FileStore.DefaultPath, 'utf8');
 			return new FileStore(path, JSON.parse(rawStore).publishers);
@@ -102,7 +102,7 @@ async function requestPAT(publisherName: string): Promise<string> {
 export async function getPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open(FileStore.DefaultPath);
+	const store = await FileStore.open();
 	let publisher = store.get(publisherName);
 
 	if (publisher) {
@@ -119,7 +119,7 @@ export async function getPublisher(publisherName: string): Promise<IPublisher> {
 export async function loginPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open(FileStore.DefaultPath);
+	const store = await FileStore.open();
 	let publisher = store.get(publisherName);
 
 	if (publisher) {
@@ -141,7 +141,7 @@ export async function loginPublisher(publisherName: string): Promise<IPublisher>
 export async function logoutPublisher(publisherName: string): Promise<void> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open(FileStore.DefaultPath);
+	const store = await FileStore.open();
 	const publisher = store.get(publisherName);
 
 	if (!publisher) {
@@ -162,13 +162,13 @@ export async function deletePublisher(publisherName: string): Promise<void> {
 	const api = await getGalleryAPI(publisher.pat);
 	await api.deletePublisher(publisherName);
 
-	const store = await FileStore.open(FileStore.DefaultPath);
+	const store = await FileStore.open();
 	await store.delete(publisherName);
 	log.done(`Deleted publisher '${publisherName}'.`);
 }
 
 export async function listPublishers(): Promise<void> {
-	const store = await FileStore.open(FileStore.DefaultPath);
+	const store = await FileStore.open();
 
 	for (const publisher of store) {
 		console.log(publisher.name);
