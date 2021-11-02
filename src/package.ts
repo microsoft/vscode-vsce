@@ -1429,7 +1429,7 @@ function getDefaultPackageName(manifest: Manifest, options: IPackageOptions): st
 	return `${manifest.name}-${version}.vsix`;
 }
 
-async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): Promise<void> {
+export async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
@@ -1468,11 +1468,7 @@ async function getPackagePath(cwd: string, manifest: Manifest, options: IPackage
 
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
-
 	const manifest = await readManifest(cwd);
-
-	await prepublish(cwd, manifest, options.useYarn);
-
 	const files = await collect(manifest, options);
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 
@@ -1489,6 +1485,9 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	const cwd = options.cwd || process.cwd();
+	const manifest = await readManifest(cwd);
+	await prepublish(cwd, manifest, options.useYarn);
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);

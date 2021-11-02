@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, versionBump } from './package';
+import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
@@ -51,6 +51,9 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			await _publish(packagePath, vsix.manifest, { ...options, target });
 		}
 	} else {
+		const cwd = options.cwd || process.cwd();
+		const manifest = await readManifest(cwd);
+		await prepublish(cwd, manifest, options.useYarn);
 		await versionBump(options);
 
 		if (options.targets) {
