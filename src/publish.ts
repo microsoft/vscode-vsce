@@ -26,6 +26,7 @@ export interface IPublishOptions {
 	readonly ignoreFile?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly dependencies?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {

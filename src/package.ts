@@ -97,6 +97,7 @@ export interface IPackageOptions {
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
+	readonly dependencies?: boolean;
 }
 
 export interface IProcessor {
@@ -1240,8 +1241,12 @@ const defaultIgnore = [
 
 const notIgnored = ['!package.json', '!README.md'];
 
-function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?: string[]): Promise<string[]> {
-	return getDependencies(cwd, useYarn, dependencyEntryPoints).then(deps => {
+function collectAllFiles(
+	cwd: string,
+	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencyEntryPoints?: string[]
+): Promise<string[]> {
+	return getDependencies(cwd, dependencies, dependencyEntryPoints).then(deps => {
 		const promises: Promise<string[]>[] = deps.map(dep => {
 			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1254,11 +1259,11 @@ function collectAllFiles(cwd: string, useYarn?: boolean, dependencyEntryPoints?:
 
 function collectFiles(
 	cwd: string,
-	useYarn?: boolean,
+	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
-	return collectAllFiles(cwd, useYarn, dependencyEntryPoints).then(files => {
+	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return (
@@ -1337,13 +1342,31 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
+function getDependenciesOption(options: {
+	readonly dependencies?: boolean;
+	readonly useYarn?: boolean;
+}): 'npm' | 'yarn' | 'none' | undefined {
+	if (options.dependencies === false) {
+		return 'none';
+	}
+
+	switch (options.useYarn) {
+		case true:
+			return 'yarn';
+		case false:
+			return 'npm';
+		default:
+			return undefined;
+	}
+}
+
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, options.useYarn, packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1463,30 +1486,36 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	util.log.done(`Packaged: ${packagePath} (${files.length} files, ${size}${unit})`);
 }
 
+export interface IListFilesOptions {
+	readonly cwd?: string;
+	readonly useYarn?: boolean;
+	readonly packagedDependencies?: string[];
+	readonly ignoreFile?: string;
+	readonly dependencies?: boolean;
+	readonly prepublish?: boolean;
+}
+
 /**
- * Lists the files included in the extension's package. Does not run prepublish.
+ * Lists the files included in the extension's package.
  */
-export async function listFiles(
-	cwd = process.cwd(),
-	useYarn?: boolean,
-	packagedDependencies?: string[],
-	ignoreFile?: string
-): Promise<string[]> {
-	await readManifest(cwd);
-	return await collectFiles(cwd, useYarn, packagedDependencies, ignoreFile);
+export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+	const cwd = options.cwd ?? process.cwd();
+	const manifest = await readManifest(cwd);
+
+	if (options.prepublish) {
+		await prepublish(cwd, manifest, options.useYarn);
+	}
+
+	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile);
 }
 
 /**
  * Lists the files included in the extension's package. Runs prepublish.
  */
-export function ls(
-	cwd = process.cwd(),
-	useYarn?: boolean,
-	packagedDependencies?: string[],
-	ignoreFile?: string
-): Promise<void> {
-	return readManifest(cwd)
-		.then(manifest => prepublish(cwd, manifest, useYarn))
-		.then(() => collectFiles(cwd, useYarn, packagedDependencies, ignoreFile))
-		.then(files => files.forEach(f => console.log(`${f}`)));
+export async function ls(options: IListFilesOptions = {}): Promise<void> {
+	const files = await listFiles({ ...options, prepublish: true });
+
+	for (const file of files) {
+		console.log(`${file}`);
+	}
 }

@@ -201,7 +201,7 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return _.uniq(result);
 }
 
-export async function detectYarn(cwd: string) {
+export async function detectYarn(cwd: string): Promise<boolean> {
 	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
 		if (await exists(path.join(cwd, name))) {
 			if (!process.env['VSCE_TESTS']) {
@@ -217,12 +217,16 @@ export async function detectYarn(cwd: string) {
 
 export async function getDependencies(
 	cwd: string,
-	useYarn?: boolean,
+	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
-	return (useYarn !== undefined ? useYarn : await detectYarn(cwd))
-		? await getYarnDependencies(cwd, packagedDependencies)
-		: await getNpmDependencies(cwd);
+	if (dependencies === 'none') {
+		return [cwd];
+	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
+		return await getYarnDependencies(cwd, packagedDependencies);
+	} else {
+		return await getNpmDependencies(cwd);
+	}
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {

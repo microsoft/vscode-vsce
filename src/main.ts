@@ -70,8 +70,9 @@ module.exports = function (argv: string[]): void {
 			undefined
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.action(({ yarn, packagedDependencies, ignoreFile }) =>
-			main(ls(undefined, yarn, packagedDependencies, ignoreFile))
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
+			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
 
 	program
@@ -96,6 +97,7 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.action(
 			(
 				version,
@@ -112,6 +114,7 @@ module.exports = function (argv: string[]): void {
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
+					dependencies,
 				}
 			) =>
 				main(
@@ -129,6 +132,7 @@ module.exports = function (argv: string[]): void {
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
+						dependencies,
 					})
 				)
 		);
@@ -159,6 +163,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.action(
 			(
 				version,
@@ -175,6 +180,7 @@ module.exports = function (argv: string[]): void {
 					yarn,
 					noVerify,
 					ignoreFile,
+					dependencies,
 				}
 			) =>
 				main(
@@ -192,6 +198,7 @@ module.exports = function (argv: string[]): void {
 						useYarn: yarn,
 						noVerify,
 						ignoreFile,
+						dependencies,
 					})
 				)
 		);

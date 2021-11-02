@@ -83,6 +83,7 @@ export interface IPublishOptions {
 export enum PackageManager {
 	Npm,
 	Yarn,
+	None,
 }
 
 export interface IListFilesOptions {
@@ -138,12 +139,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(
-		options.cwd,
-		options.packageManager === PackageManager.Yarn,
-		options.packagedDependencies,
-		options.ignoreFile
-	);
+	return _listFiles(options);
 }
 
 /**

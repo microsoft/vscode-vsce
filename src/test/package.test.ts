@@ -223,6 +223,18 @@ describe('collect', function () {
 				files.forEach(file => assert.ok(file.path.indexOf('/node_modules/which/') < 0, file.path));
 			});
 	});
+
+	it('should skip all dependencies when using --no-dependencies', async () => {
+		const cwd = fixture('devDependencies');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd, dependencies: false });
+
+		assert.strictEqual(files.length, 3);
+
+		for (const file of files) {
+			assert.ok(!/\bnode_modules\b/i.test(file.path));
+		}
+	});
 });
 
 describe('readManifest', () => {
