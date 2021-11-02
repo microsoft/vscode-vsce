@@ -681,7 +681,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				return `${isImage}[${title}](${link})`;
 			}
 
-			return `${isImage}[${title}](${urljoin(prefix, path.normalize(link))})`;
+			return `${isImage}[${title}](${urljoin(prefix, path.posix.normalize(link))})`;
 		};
 
 		// Replace Markdown links with urls
@@ -702,7 +702,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				return all;
 			}
 
-			return all.replace(link, urljoin(prefix, path.normalize(link)));
+			return all.replace(link, urljoin(prefix, path.posix.normalize(link)));
 		});
 
 		if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
