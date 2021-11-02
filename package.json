@@ -78,6 +78,7 @@
 		"npm-run-all": "^4.1.5",
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
+		"semantic-release": "^18.0.0",
 		"source-map-support": "^0.4.2",
 		"ts-node": "^10.0.0",
 		"typescript": "^4.3.2"
@@ -99,5 +100,10 @@
 		"printWidth": 120,
 		"singleQuote": true,
 		"arrowParens": "avoid"
+	},
+	"release": {
+		"branches": [
+			"main"
+		]
 	}
 }
