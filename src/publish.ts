@@ -137,7 +137,9 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 	} catch (err) {
 		const message = (err && err.message) || '';
 
-		if (/Invalid Resource/.test(message)) {
+		if (/Personal Access Token used has expired/.test(message)) {
+			err.message = `${err.message}\n\nYou're using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		} else if (/Invalid Resource/.test(message)) {
 			err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
 		}
 
