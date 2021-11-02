@@ -64,14 +64,7 @@ Once the watcher is up and running, you can run out of sources with:
 node vsce
 ```
 
-### Publish to NPM
-
-Simply push a new tag and the CI will automatically publish to NPM. The usual flow is:
-
-```sh
-npm version [minor|patch]
-git push --follow-tags
-```
+This project uses [semantic-release](https://semantic-release.gitbook.io/semantic-release/) and commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) spec. This allows us to effortlessly automate releases.
 
 ## About
 
