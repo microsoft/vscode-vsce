@@ -41,6 +41,7 @@
 		"denodeify": "^1.2.1",
 		"glob": "^7.0.6",
 		"hosted-git-info": "^4.0.2",
+		"keytar": "^7.7.0",
 		"leven": "^3.1.0",
 		"lodash": "^4.17.15",
 		"markdown-it": "^10.0.0",

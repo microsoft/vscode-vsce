@@ -5,6 +5,7 @@ import { home } from 'osenv';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
+import * as keytar from 'keytar';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -30,7 +31,7 @@ export class FileStore implements IStore {
 		} catch (err) {
 			if (err.code === 'ENOENT') {
 				return new FileStore(path, []);
-			} else if (/SyntaxError/.test(err.message)) {
+			} else if (/SyntaxError/.test(err)) {
 				throw new Error(`Error parsing file store: ${path}`);
 			}
 
@@ -59,6 +60,37 @@ export class FileStore implements IStore {
 	}
 
 	[Symbol.iterator]() {
+		return this.publishers[Symbol.iterator]();
+	}
+}
+
+export class KeytarStore implements IStore {
+	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
+		const creds = await keytar.findCredentials(serviceName);
+
+		return new KeytarStore(
+			serviceName,
+			creds.map(({ account, password }) => ({ name: account, pat: password }))
+		);
+	}
+
+	private constructor(private readonly serviceName: string, private publishers: IPublisher[]) {}
+
+	get(name: string): IPublisher {
+		return this.publishers.filter(p => p.name === name)[0];
+	}
+
+	async add(publisher: IPublisher): Promise<void> {
+		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
+		await keytar.setPassword(this.serviceName, publisher.name, publisher.pat);
+	}
+
+	async delete(name: string): Promise<void> {
+		this.publishers = this.publishers.filter(p => p.name !== name);
+		await keytar.deletePassword(this.serviceName, name);
+	}
+
+	[Symbol.iterator](): Iterator<IPublisher, any, undefined> {
 		return this.publishers[Symbol.iterator]();
 	}
 }
