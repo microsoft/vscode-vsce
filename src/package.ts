@@ -626,13 +626,13 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	async onFile(file: IFile): Promise<IFile> {
-		const path = util.normalize(file.path);
+		const filePath = util.normalize(file.path);
 
-		if (!this.regexp.test(path)) {
+		if (!this.regexp.test(filePath)) {
 			return Promise.resolve(file);
 		}
 
-		this.assets.push({ type: this.assetType, path });
+		this.assets.push({ type: this.assetType, path: filePath });
 
 		let contents = await read(file);
 
@@ -665,7 +665,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				return `${isImage}[${title}](${link})`;
 			}
 
-			return `${isImage}[${title}](${urljoin(prefix, link)})`;
+			return `${isImage}[${title}](${urljoin(prefix, path.normalize(link))})`;
 		};
 
 		// Replace Markdown links with urls
@@ -686,7 +686,7 @@ export class MarkdownProcessor extends BaseProcessor {
 				return all;
 			}
 
-			return all.replace(link, urljoin(prefix, link));
+			return all.replace(link, urljoin(prefix, path.normalize(link)));
 		});
 
 		if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
