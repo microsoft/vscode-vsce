@@ -87,6 +87,7 @@ export interface IPackageOptions {
 	readonly target?: string;
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
+	readonly updatePackageJson?: boolean;
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
@@ -271,23 +272,31 @@ function isHostTrusted(url: url.UrlWithStringQuery): boolean {
 	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
 }
 
-export async function versionBump(
-	cwd: string = process.cwd(),
-	version?: string,
-	commitMessage?: string,
-	gitTagVersion: boolean = true
-): Promise<void> {
-	if (!version) {
-		return Promise.resolve(null);
+export interface IVersionBumpOptions {
+	readonly cwd?: string;
+	readonly version?: string;
+	readonly commitMessage?: string;
+	readonly gitTagVersion?: boolean;
+	readonly updatePackageJson?: boolean;
+}
+
+export async function versionBump(options: IVersionBumpOptions): Promise<void> {
+	if (!options.version) {
+		return;
 	}
 
+	if (!(options.updatePackageJson ?? true)) {
+		return;
+	}
+
+	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
 
-	if (manifest.version === version) {
+	if (manifest.version === options.version) {
 		return null;
 	}
 
-	switch (version) {
+	switch (options.version) {
 		case 'major':
 		case 'minor':
 		case 'patch':
@@ -297,20 +306,20 @@ export async function versionBump(
 		case 'prepatch':
 		case 'prerelease':
 		case 'from-git':
-			return Promise.reject(`Not supported: ${version}`);
+			return Promise.reject(`Not supported: ${options.version}`);
 		default:
-			if (!semver.valid(version)) {
-				return Promise.reject(`Invalid version ${version}`);
+			if (!semver.valid(options.version)) {
+				return Promise.reject(`Invalid version ${options.version}`);
 			}
 	}
 
-	let command = `npm version ${version}`;
+	let command = `npm version ${options.version}`;
 
-	if (commitMessage) {
-		command = `${command} -m "${commitMessage}"`;
+	if (options.commitMessage) {
+		command = `${command} -m "${options.commitMessage}"`;
 	}
 
-	if (!gitTagVersion) {
+	if (!(options.gitTagVersion ?? true)) {
 		command = `${command} --no-git-tag-version`;
 	}
 
@@ -343,7 +352,7 @@ const Targets = new Set([
 ]);
 
 export class ManifestProcessor extends BaseProcessor {
-	constructor(manifest: Manifest, options: IPackageOptions = {}) {
+	constructor(manifest: Manifest, private readonly options: IPackageOptions = {}) {
 		super(manifest);
 
 		const flags = ['Public'];
@@ -395,7 +404,7 @@ export class ManifestProcessor extends BaseProcessor {
 			...this.vsix,
 			id: manifest.name,
 			displayName: manifest.displayName || manifest.name,
-			version: manifest.version,
+			version: options.version && !(options.updatePackageJson ?? true) ? options.version : manifest.version,
 			publisher: manifest.publisher,
 			target,
 			engine: manifest.engines['vscode'],
@@ -437,6 +446,13 @@ export class ManifestProcessor extends BaseProcessor {
 
 		if (!/^extension\/package.json$/i.test(path)) {
 			return Promise.resolve(file);
+		}
+
+		if (this.options.version && !(this.options.updatePackageJson ?? true)) {
+			const contents = await read(file);
+			const packageJson = JSON.parse(contents);
+			packageJson.version = this.options.version;
+			file = { ...file, contents: JSON.stringify(packageJson, undefined, 2) };
 		}
 
 		// Ensure that package.json is writable as VS Code needs to
@@ -1400,11 +1416,17 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 }
 
 function getDefaultPackageName(manifest: Manifest, options: IPackageOptions): string {
-	if (options.target) {
-		return `${manifest.name}-${options.target}-${manifest.version}.vsix`;
+	let version = manifest.version;
+
+	if (options.version && !(options.updatePackageJson ?? true)) {
+		version = options.version;
 	}
 
-	return `${manifest.name}-${manifest.version}.vsix`;
+	if (options.target) {
+		return `${manifest.name}-${options.target}-${version}.vsix`;
+	}
+
+	return `${manifest.name}-${version}.vsix`;
 }
 
 async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): Promise<void> {
@@ -1467,7 +1489,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
-	await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
+	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
 	const stats = await stat(packagePath);

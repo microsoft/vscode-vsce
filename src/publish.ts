@@ -16,6 +16,7 @@ export interface IPublishOptions {
 	readonly targets?: string[];
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
+	readonly updatePackageJson?: boolean;
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
@@ -50,7 +51,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			await _publish(packagePath, vsix.manifest, { ...options, target });
 		}
 	} else {
-		await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
+		await versionBump(options);
 
 		if (options.targets) {
 			for (const target of options.targets) {

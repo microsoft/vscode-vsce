@@ -81,7 +81,11 @@ module.exports = function (argv: string[]): void {
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
+		.option(
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option(
 			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
@@ -106,6 +110,7 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					githubBranch,
 					gitlabBranch,
 					baseContentUrl,
@@ -124,6 +129,7 @@ module.exports = function (argv: string[]): void {
 						target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						githubBranch,
 						gitlabBranch,
 						baseContentUrl,
@@ -147,7 +153,11 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('-t, --target <targets...>', 'Target architectures')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
+		.option(
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
@@ -172,6 +182,7 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					packagePath,
 					githubBranch,
 					gitlabBranch,
@@ -190,6 +201,7 @@ module.exports = function (argv: string[]): void {
 						targets: target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						packagePath,
 						githubBranch,
 						gitlabBranch,

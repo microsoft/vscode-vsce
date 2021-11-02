@@ -1774,6 +1774,46 @@ describe('ManifestProcessor', () => {
 		const outPackageJson = await processor.onFile(packageJson);
 		assert.ok(outPackageJson.mode & 0o200);
 	});
+
+	it('should bump package.json version in-memory when using --no-update-package-json', async () => {
+		const root = fixture('uuid');
+
+		let manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+
+		const processor = new ManifestProcessor(manifest, { version: '1.1.1', updatePackageJson: false });
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
+		assert.deepStrictEqual(manifest.version, '1.1.1');
+		assert.deepStrictEqual(processor.vsix.version, '1.1.1');
+
+		manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+	});
+
+	it('should not bump package.json version in-memory when not using --no-update-package-json', async () => {
+		const root = fixture('uuid');
+
+		let manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+
+		const processor = new ManifestProcessor(manifest, { version: '1.1.1' });
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(processor.vsix.version, '1.0.0');
+
+		manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+	});
 });
 
 describe('MarkdownProcessor', () => {
@@ -2547,7 +2587,7 @@ describe('version', () => {
 	});
 
 	it('should bump patch version', async () => {
-		await versionBump(cwd, 'patch');
+		await versionBump({ cwd, version: 'patch' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2555,7 +2595,7 @@ describe('version', () => {
 	});
 
 	it('should bump minor version', async () => {
-		await versionBump(cwd, 'minor');
+		await versionBump({ cwd, version: 'minor' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2563,7 +2603,7 @@ describe('version', () => {
 	});
 
 	it('should bump major version', async () => {
-		await versionBump(cwd, 'major');
+		await versionBump({ cwd, version: 'major' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2571,7 +2611,7 @@ describe('version', () => {
 	});
 
 	it('should set custom version', async () => {
-		await versionBump(cwd, '1.1.1');
+		await versionBump({ cwd, version: '1.1.1' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2579,16 +2619,16 @@ describe('version', () => {
 	});
 
 	it('should fail with invalid version', async () => {
-		await assert.rejects(versionBump(cwd, 'a1.a.2'));
-		await assert.rejects(versionBump(cwd, 'prepatch'));
-		await assert.rejects(versionBump(cwd, 'preminor'));
-		await assert.rejects(versionBump(cwd, 'premajor'));
-		await assert.rejects(versionBump(cwd, 'prerelease'));
-		await assert.rejects(versionBump(cwd, 'from-git'));
+		await assert.rejects(versionBump({ cwd, version: 'a1.a.2' }));
+		await assert.rejects(versionBump({ cwd, version: 'prepatch' }));
+		await assert.rejects(versionBump({ cwd, version: 'preminor' }));
+		await assert.rejects(versionBump({ cwd, version: 'premajor' }));
+		await assert.rejects(versionBump({ cwd, version: 'prerelease' }));
+		await assert.rejects(versionBump({ cwd, version: 'from-git' }));
 	});
 
 	it('should create git tag and commit', async () => {
-		await versionBump(cwd, '1.1.1');
+		await versionBump({ cwd, version: '1.1.1' });
 
 		assert.strictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
 		assert.strictEqual(git(['rev-parse', 'HEAD']).status, 0);
@@ -2596,15 +2636,21 @@ describe('version', () => {
 
 	it('should use custom commit message', async () => {
 		const commitMessage = 'test commit message';
-		await versionBump(cwd, '1.1.1', commitMessage);
+		await versionBump({ cwd, version: '1.1.1', commitMessage });
 
 		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
 	});
 
 	it('should not create git tag and commit', async () => {
-		await versionBump(cwd, '1.1.1', undefined, false);
+		await versionBump({ cwd, version: '1.1.1', gitTagVersion: false });
 
 		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
 		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
+	});
+
+	it('should not write to package.json with --no-update-package-json', async () => {
+		await versionBump({ cwd, version: '1.1.1', updatePackageJson: false });
+		const newManifest = await readManifest(cwd);
+		assert.strictEqual(newManifest.version, '1.0.0');
 	});
 });
