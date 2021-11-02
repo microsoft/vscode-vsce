@@ -20,12 +20,12 @@ export interface IStore extends Iterable<IPublisher> {
 	delete(name: string): Promise<void>;
 }
 
-class FileStore implements IStore {
+export class FileStore implements IStore {
 	private static readonly DefaultPath = path.join(home(), '.vsce');
 
 	static async open(path: string = FileStore.DefaultPath): Promise<FileStore> {
 		try {
-			const rawStore = await readFile(FileStore.DefaultPath, 'utf8');
+			const rawStore = await readFile(path, 'utf8');
 			return new FileStore(path, JSON.parse(rawStore).publishers);
 		} catch (err) {
 			if (err.code === 'ENOENT') {
