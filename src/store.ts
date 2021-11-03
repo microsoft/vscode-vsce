@@ -1,14 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { promisify } from 'util';
 import { home } from 'osenv';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
 import * as keytar from 'keytar';
-
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
 
 export interface IPublisher {
 	readonly name: string;
@@ -16,6 +12,7 @@ export interface IPublisher {
 }
 
 export interface IStore extends Iterable<IPublisher> {
+	readonly size: number;
 	get(name: string): IPublisher | undefined;
 	add(publisher: IPublisher): Promise<void>;
 	delete(name: string): Promise<void>;
@@ -26,7 +23,7 @@ export class FileStore implements IStore {
 
 	static async open(path: string = FileStore.DefaultPath): Promise<FileStore> {
 		try {
-			const rawStore = await readFile(path, 'utf8');
+			const rawStore = await fs.promises.readFile(path, 'utf8');
 			return new FileStore(path, JSON.parse(rawStore).publishers);
 		} catch (err) {
 			if (err.code === 'ENOENT') {
@@ -39,10 +36,22 @@ export class FileStore implements IStore {
 		}
 	}
 
-	private constructor(private readonly path: string, private publishers: IPublisher[]) {}
+	get size(): number {
+		return this.publishers.length;
+	}
+
+	private constructor(readonly path: string, private publishers: IPublisher[]) {}
 
 	private async save(): Promise<void> {
-		await writeFile(this.path, JSON.stringify({ publishers: this.publishers }), { mode: '0600' });
+		await fs.promises.writeFile(this.path, JSON.stringify({ publishers: this.publishers }), { mode: '0600' });
+	}
+
+	async deleteStore(): Promise<void> {
+		try {
+			await fs.promises.unlink(this.path);
+		} catch {
+			// noop
+		}
 	}
 
 	get(name: string): IPublisher | undefined {
@@ -72,6 +81,10 @@ export class KeytarStore implements IStore {
 			serviceName,
 			creds.map(({ account, password }) => ({ name: account, pat: password }))
 		);
+	}
+
+	get size(): number {
+		return this.publishers.length;
 	}
 
 	private constructor(private readonly serviceName: string, private publishers: IPublisher[]) {}
@@ -131,10 +144,33 @@ async function requestPAT(publisherName: string): Promise<string> {
 	return pat;
 }
 
+async function openDefaultStore(): Promise<IStore> {
+	if (/^file$/i.test(process.env['VSCE_STORE'] ?? '')) {
+		return await FileStore.open();
+	}
+
+	const keytarStore = await KeytarStore.open();
+	const fileStore = await FileStore.open();
+
+	// migrate from file store
+	if (fileStore.size) {
+		for (const publisher of fileStore) {
+			await keytarStore.add(publisher);
+		}
+
+		await fileStore.deleteStore();
+		log.info(
+			`Migrated ${fileStore.size} publishers to system credential manager. Deleted local store '${fileStore.path}'.`
+		);
+	}
+
+	return keytarStore;
+}
+
 export async function getPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open();
+	const store = await openDefaultStore();
 	let publisher = store.get(publisherName);
 
 	if (publisher) {
@@ -151,7 +187,7 @@ export async function getPublisher(publisherName: string): Promise<IPublisher> {
 export async function loginPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open();
+	const store = await openDefaultStore();
 	let publisher = store.get(publisherName);
 
 	if (publisher) {
@@ -173,7 +209,7 @@ export async function loginPublisher(publisherName: string): Promise<IPublisher>
 export async function logoutPublisher(publisherName: string): Promise<void> {
 	validatePublisher(publisherName);
 
-	const store = await FileStore.open();
+	const store = await openDefaultStore();
 	const publisher = store.get(publisherName);
 
 	if (!publisher) {
@@ -194,13 +230,13 @@ export async function deletePublisher(publisherName: string): Promise<void> {
 	const api = await getGalleryAPI(publisher.pat);
 	await api.deletePublisher(publisherName);
 
-	const store = await FileStore.open();
+	const store = await openDefaultStore();
 	await store.delete(publisherName);
 	log.done(`Deleted publisher '${publisherName}'.`);
 }
 
 export async function listPublishers(): Promise<void> {
-	const store = await FileStore.open();
+	const store = await openDefaultStore();
 
 	for (const publisher of store) {
 		console.log(publisher.name);
