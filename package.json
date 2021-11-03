@@ -31,14 +31,13 @@
 		"watch:test": "npm run test -- --watch"
 	},
 	"engines": {
-		"node": ">= 10"
+		"node": ">= 14"
 	},
 	"dependencies": {
 		"azure-devops-node-api": "^11.0.1",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.1.0",
-		"denodeify": "^1.2.1",
 		"glob": "^7.0.6",
 		"hosted-git-info": "^4.0.2",
 		"keytar": "^7.7.0",
@@ -60,7 +59,6 @@
 	},
 	"devDependencies": {
 		"@types/cheerio": "^0.22.29",
-		"@types/denodeify": "^1.2.31",
 		"@types/glob": "^7.1.1",
 		"@types/hosted-git-info": "^3.0.2",
 		"@types/lodash": "^4.14.123",
@@ -68,10 +66,10 @@
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^10.17.60",
+		"@types/node": "^14.17.32",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
-		"@types/tmp": "^0.1.0",
+		"@types/tmp": "^0.2.2",
 		"@types/xml2js": "^0.4.4",
 		"@types/yauzl": "^2.9.2",
 		"husky": "^4.3.0",

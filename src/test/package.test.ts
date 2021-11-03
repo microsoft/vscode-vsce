@@ -18,7 +18,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
-import * as denodeify from 'denodeify';
 import * as _ from 'lodash';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
@@ -44,7 +43,6 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 }
 
 const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
-const readFile = denodeify<string, string, string>(fs.readFile);
 
 function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
@@ -1764,7 +1762,7 @@ describe('toContentTypes', () => {
 describe('ManifestProcessor', () => {
 	it('should ensure that package.json is writable', async () => {
 		const root = fixture('uuid');
-		const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		const processor = new ManifestProcessor(manifest);
 		const packageJson = {
 			path: 'extension/package.json',
@@ -1778,7 +1776,7 @@ describe('ManifestProcessor', () => {
 	it('should bump package.json version in-memory when using --no-update-package-json', async () => {
 		const root = fixture('uuid');
 
-		let manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1', updatePackageJson: false });
@@ -1791,14 +1789,14 @@ describe('ManifestProcessor', () => {
 		assert.deepStrictEqual(manifest.version, '1.1.1');
 		assert.deepStrictEqual(processor.vsix.version, '1.1.1');
 
-		manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
 
 	it('should not bump package.json version in-memory when not using --no-update-package-json', async () => {
 		const root = fixture('uuid');
 
-		let manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1' });
@@ -1811,7 +1809,7 @@ describe('ManifestProcessor', () => {
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 		assert.deepStrictEqual(processor.vsix.version, '1.0.0');
 
-		manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
 });
@@ -1867,7 +1865,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1894,7 +1892,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1923,7 +1921,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -1954,9 +1952,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
 			});
 	});
 
@@ -1984,9 +1984,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
 			});
 	});
 
@@ -2011,7 +2013,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2038,7 +2040,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2065,7 +2067,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2092,7 +2094,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2119,7 +2121,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2148,7 +2150,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2179,9 +2181,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
 			});
 	});
 
@@ -2209,9 +2213,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8')
+					.then(expected => {
+						assert.equal(actual, expected);
+					});
 			});
 	});
 
@@ -2240,7 +2246,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2267,7 +2273,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2294,7 +2300,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2321,7 +2327,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2348,7 +2354,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});
@@ -2375,7 +2381,7 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
 					assert.equal(actual, expected);
 				});
 			});

@@ -1,14 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { promisify } from 'util';
 import * as cp from 'child_process';
 import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import * as _glob from 'glob';
+import * as glob from 'glob';
 import * as minimatch from 'minimatch';
-import * as denodeify from 'denodeify';
 import * as markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
 import * as url from 'url';
@@ -25,15 +25,6 @@ import {
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import * as parseSemver from 'parse-semver';
-
-const readFile = denodeify<string, string, string>(fs.readFile);
-const unlink = denodeify<string, void>(fs.unlink as any);
-const stat = denodeify(fs.stat);
-const glob = denodeify<string, _glob.IOptions, string[]>(_glob);
-const exec = denodeify<string, { cwd?: string; env?: any }, { stdout: string; stderr: string }>(
-	cp.exec as any,
-	(err, stdout, stderr) => [err, { stdout, stderr }]
-);
 
 const resourcesPath = path.join(path.dirname(__dirname), 'resources');
 const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
@@ -63,7 +54,7 @@ export function read(file: IFile): Promise<string> {
 	if (isInMemoryFile(file)) {
 		return Promise.resolve(file.contents).then(b => (typeof b === 'string' ? b : b.toString('utf8')));
 	} else {
-		return readFile(file.localPath, 'utf8');
+		return fs.promises.readFile(file.localPath, 'utf8');
 	}
 }
 
@@ -325,7 +316,8 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 
 	try {
 		// call `npm version` to do our dirty work
-		const { stdout, stderr } = await exec(command, { cwd });
+		cp.exec;
+		const { stdout, stderr } = await promisify(cp.exec)(command, { cwd });
 
 		if (!process.env['VSCE_TESTS']) {
 			process.stdout.write(stdout);
@@ -1164,7 +1156,8 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 	const manifestPath = path.join(cwd, 'package.json');
 	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
-	const manifest = readFile(manifestPath, 'utf8')
+	const manifest = fs.promises
+		.readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
 		.then<Manifest>(manifestStr => {
 			try {
@@ -1179,7 +1172,8 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 		return manifest;
 	}
 
-	const manifestNLS = readFile(manifestNLSPath, 'utf8')
+	const manifestNLS = fs.promises
+		.readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
 		.then<ITranslations>(raw => {
 			try {
@@ -1195,7 +1189,8 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 }
 
 export function toVsixManifest(vsix: any): Promise<string> {
-	return readFile(vsixManifestTemplatePath, 'utf8')
+	return fs.promises
+		.readFile(vsixManifestTemplatePath, 'utf8')
 		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
 		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
 }
@@ -1216,7 +1211,8 @@ export function toContentTypes(files: IFile[]): Promise<string> {
 		contentType: allExtensions[extension],
 	}));
 
-	return readFile(contentTypesTemplatePath, 'utf8')
+	return fs.promises
+		.readFile(contentTypesTemplatePath, 'utf8')
 		.then(contentTypesTemplateStr => _.template(contentTypesTemplateStr))
 		.then(contentTypesTemplate => contentTypesTemplate({ contentTypes }));
 }
@@ -1264,7 +1260,7 @@ function collectAllFiles(
 ): Promise<string[]> {
 	return getDependencies(cwd, dependencies, dependencyEntryPoints).then(deps => {
 		const promises: Promise<string[]>[] = deps.map(dep => {
-			return glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+			return promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 			);
 		});
@@ -1283,7 +1279,8 @@ function collectFiles(
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return (
-			readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
+			fs.promises
+				.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
 				.catch<string>(err =>
 					err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve('')
 				)
@@ -1390,7 +1387,8 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 }
 
 function writeVsix(files: IFile[], packagePath: string): Promise<void> {
-	return unlink(packagePath)
+	return fs.promises
+		.unlink(packagePath)
 		.catch(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null)))
 		.then(
 			() =>
@@ -1454,7 +1452,7 @@ async function getPackagePath(cwd: string, manifest: Manifest, options: IPackage
 	}
 
 	try {
-		const _stat = await stat(options.packagePath);
+		const _stat = await fs.promises.stat(options.packagePath);
 
 		if (_stat.isDirectory()) {
 			return path.join(options.packagePath, getDefaultPackageName(manifest, options));
@@ -1491,7 +1489,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
-	const stats = await stat(packagePath);
+	const stats = await fs.promises.stat(packagePath);
 
 	let size = 0;
 	let unit = '';

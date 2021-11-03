@@ -1,14 +1,14 @@
 import * as fs from 'fs';
+import { promisify } from 'util';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
 import { Manifest } from './manifest';
-import * as denodeify from 'denodeify';
 import { readVSIXPackage } from './zip';
 
-const tmpName = denodeify<string>(tmp.tmpName);
+const tmpName = promisify(tmp.tmpName);
 
 export interface IPublishOptions {
 	readonly packagePath?: string[];

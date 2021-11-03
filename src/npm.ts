@@ -1,14 +1,12 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as denodeify from 'denodeify';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
 import * as _ from 'lodash';
 import { CancellationToken, log } from './util';
 
-const stat = denodeify(fs.stat);
 const exists = (file: string) =>
-	stat(file).then(
+	fs.promises.stat(file).then(
 		_ => true,
 		_ => false
 	);

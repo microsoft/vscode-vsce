@@ -1,8 +1,8 @@
+import { promisify } from 'util';
 import { parseString } from 'xml2js';
-import * as denodeify from 'denodeify';
 
 function createXMLParser<T>(): (raw: string) => Promise<T> {
-	return denodeify<string, T>(parseString);
+	return promisify<string, T>(parseString);
 }
 
 export type XMLManifest = {

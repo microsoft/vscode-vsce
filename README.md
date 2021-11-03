@@ -7,7 +7,7 @@
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `10.x.x`
+- [Node.js](https://nodejs.org/en/) at least `14.x.x`
 
 Or simply [Docker](#via-docker).
 
