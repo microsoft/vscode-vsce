@@ -11,6 +11,17 @@
 
 Or simply [Docker](#via-docker).
 
+### Linux
+
+In order to save credentials safely, this project uses [keytar](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using keytar.
+
+Depending on your distribution, you will need to run the following command:
+
+- Debian/Ubuntu: `sudo apt-get install libsecret-1-dev`
+- Alpine: `apk add libsecret`
+- Red Hat-based: `sudo yum install libsecret-devel`
+- Arch Linux: `sudo pacman -S libsecret`
+
 ## Usage
 
 Install vsce globally:
