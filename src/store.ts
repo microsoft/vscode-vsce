@@ -4,7 +4,6 @@ import { home } from 'osenv';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
-import * as keytar from 'keytar';
 
 export interface IPublisher {
 	readonly name: string;
@@ -75,9 +74,11 @@ export class FileStore implements IStore {
 
 export class KeytarStore implements IStore {
 	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
+		const keytar = await import('keytar');
 		const creds = await keytar.findCredentials(serviceName);
 
 		return new KeytarStore(
+			keytar,
 			serviceName,
 			creds.map(({ account, password }) => ({ name: account, pat: password }))
 		);
@@ -87,7 +88,11 @@ export class KeytarStore implements IStore {
 		return this.publishers.length;
 	}
 
-	private constructor(private readonly serviceName: string, private publishers: IPublisher[]) {}
+	private constructor(
+		private readonly keytar: typeof import('keytar'),
+		private readonly serviceName: string,
+		private publishers: IPublisher[]
+	) {}
 
 	get(name: string): IPublisher {
 		return this.publishers.filter(p => p.name === name)[0];
@@ -95,12 +100,12 @@ export class KeytarStore implements IStore {
 
 	async add(publisher: IPublisher): Promise<void> {
 		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
-		await keytar.setPassword(this.serviceName, publisher.name, publisher.pat);
+		await this.keytar.setPassword(this.serviceName, publisher.name, publisher.pat);
 	}
 
 	async delete(name: string): Promise<void> {
 		this.publishers = this.publishers.filter(p => p.name !== name);
-		await keytar.deletePassword(this.serviceName, name);
+		await this.keytar.deletePassword(this.serviceName, name);
 	}
 
 	[Symbol.iterator](): Iterator<IPublisher, any, undefined> {
