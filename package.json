@@ -28,7 +28,8 @@
 		"build": "tsc",
 		"watch:build": "npm run compile -- --watch",
 		"test": "mocha",
-		"watch:test": "npm run test -- --watch"
+		"watch:test": "npm run test -- --watch",
+		"prepare": "husky install"
 	},
 	"engines": {
 		"node": ">= 14"
@@ -57,6 +58,8 @@
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
+		"@commitlint/cli": "^14.1.0",
+		"@commitlint/config-conventional": "^14.1.0",
 		"@types/cheerio": "^0.22.29",
 		"@types/glob": "^7.1.1",
 		"@types/hosted-git-info": "^3.0.2",
@@ -70,7 +73,7 @@
 		"@types/tmp": "^0.2.2",
 		"@types/xml2js": "^0.4.4",
 		"@types/yauzl": "^2.9.2",
-		"husky": "^4.3.0",
+		"husky": "^7.0.4",
 		"mocha": "^7.1.1",
 		"npm-run-all": "^4.1.5",
 		"prettier": "2.1.2",
@@ -87,11 +90,6 @@
 		"watch-files": "src/**,resources/**",
 		"spec": "src/test/**/*.ts"
 	},
-	"husky": {
-		"hooks": {
-			"pre-commit": "pretty-quick --staged"
-		}
-	},
 	"prettier": {
 		"useTabs": true,
 		"printWidth": 120,
@@ -101,6 +99,11 @@
 	"release": {
 		"branches": [
 			"main"
+		]
+	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
 		]
 	}
 }
