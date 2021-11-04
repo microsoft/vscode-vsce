@@ -13,7 +13,7 @@ Or simply [Docker](#via-docker).
 
 ### Linux
 
-This project uses [keytar](https://www.npmjs.com/package/keytar) that uses `libsecret`, so you may need to install it before running `vsce`.
+In order to save credentials safely, this project uses [keytar](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using keytar.
 
 Depending on your distribution, you will need to run the following command:
 
