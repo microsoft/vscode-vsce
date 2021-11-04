@@ -77,6 +77,7 @@ export interface IPackageOptions {
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
+	readonly rewriteRelativeLinks?: boolean;
 	readonly baseContentUrl?: string;
 	readonly baseImagesUrl?: string;
 	readonly useYarn?: boolean;
@@ -614,6 +615,7 @@ export class TagsProcessor extends BaseProcessor {
 export class MarkdownProcessor extends BaseProcessor {
 	private baseContentUrl: string | undefined;
 	private baseImagesUrl: string | undefined;
+	private rewriteRelativeLinks: boolean;
 	private isGitHub: boolean;
 	private isGitLab: boolean;
 	private repositoryUrl: string | undefined;
@@ -633,6 +635,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
+		this.rewriteRelativeLinks = options.rewriteRelativeLinks ?? true;
 		this.repositoryUrl = guess && guess.repository;
 		this.isGitHub = isGitHubRepository(this.repositoryUrl);
 		this.isGitLab = isGitLabRepository(this.repositoryUrl);
@@ -655,121 +658,125 @@ export class MarkdownProcessor extends BaseProcessor {
 			throw new Error(`Make sure to edit the README.md file before you package or publish your extension.`);
 		}
 
-		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
-		const urlReplace = (_: string, isImage: string, title: string, link: string) => {
-			if (/^mailto:/i.test(link)) {
-				return `${isImage}[${title}](${link})`;
-			}
+		if (this.rewriteRelativeLinks) {
+			const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
+			const urlReplace = (_: string, isImage: string, title: string, link: string) => {
+				if (/^mailto:/i.test(link)) {
+					return `${isImage}[${title}](${link})`;
+				}
 
-			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
-			if (!this.baseContentUrl && !this.baseImagesUrl) {
-				const asset = isImage ? 'image' : 'link';
+				if (!this.baseContentUrl && !this.baseImagesUrl) {
+					const asset = isImage ? 'image' : 'link';
 
-				if (isLinkRelative) {
+					if (isLinkRelative) {
+						throw new Error(
+							`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+						);
+					}
+				}
+
+				title = title.replace(markdownPathRegex, urlReplace);
+				const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
+
+				if (!prefix || !isLinkRelative) {
+					return `${isImage}[${title}](${link})`;
+				}
+
+				return `${isImage}[${title}](${urljoin(prefix, path.posix.normalize(link))})`;
+			};
+
+			// Replace Markdown links with urls
+			contents = contents.replace(markdownPathRegex, urlReplace);
+
+			// Replace <img> links with urls
+			contents = contents.replace(/<img.+?src=["']([/.\w\s-]+)['"].*?>/g, (all, link) => {
+				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+
+				if (!this.baseImagesUrl && isLinkRelative) {
 					throw new Error(
-						`Couldn't detect the repository where this extension is published. The ${asset} '${link}' will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
+						`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
 					);
 				}
-			}
+				const prefix = this.baseImagesUrl;
 
-			title = title.replace(markdownPathRegex, urlReplace);
-			const prefix = isImage ? this.baseImagesUrl : this.baseContentUrl;
-
-			if (!prefix || !isLinkRelative) {
-				return `${isImage}[${title}](${link})`;
-			}
-
-			return `${isImage}[${title}](${urljoin(prefix, path.posix.normalize(link))})`;
-		};
-
-		// Replace Markdown links with urls
-		contents = contents.replace(markdownPathRegex, urlReplace);
-
-		// Replace <img> links with urls
-		contents = contents.replace(/<img.+?src=["']([/.\w\s-]+)['"].*?>/g, (all, link) => {
-			const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
-
-			if (!this.baseImagesUrl && isLinkRelative) {
-				throw new Error(
-					`Couldn't detect the repository where this extension is published. The image will be broken in ${this.name}. GitHub/GitLab repositories will be automatically detected. Otherwise, please provide the repository URL in package.json or use the --baseContentUrl and --baseImagesUrl options.`
-				);
-			}
-			const prefix = this.baseImagesUrl;
-
-			if (!prefix || !isLinkRelative) {
-				return all;
-			}
-
-			return all.replace(link, urljoin(prefix, path.posix.normalize(link)));
-		});
-
-		if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
-			const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
-			const issueReplace = (
-				all: string,
-				prefix: string,
-				ownerAndRepositoryName: string,
-				issueNumber: string
-			): string => {
-				let result = all;
-				let owner: string | undefined;
-				let repositoryName: string | undefined;
-
-				if (ownerAndRepositoryName) {
-					[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
+				if (!prefix || !isLinkRelative) {
+					return all;
 				}
 
-				if (owner && repositoryName && issueNumber) {
-					// Issue in external repository
-					const issueUrl = this.isGitHub
-						? urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber)
-						: urljoin('https://gitlab.com', owner, repositoryName, '-', 'issues', issueNumber);
-					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
-				} else if (!owner && !repositoryName && issueNumber && this.repositoryUrl) {
-					// Issue in own repository
-					result =
-						prefix +
-						`[#${issueNumber}](${
-							this.isGitHub
-								? urljoin(this.repositoryUrl, 'issues', issueNumber)
-								: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
-						})`;
-				}
+				return all.replace(link, urljoin(prefix, path.posix.normalize(link)));
+			});
 
-				return result;
-			};
-			// Replace Markdown issue references with urls
-			contents = contents.replace(markdownIssueRegex, issueReplace);
+			if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
+				const markdownIssueRegex = /(\s|\n)([\w\d_-]+\/[\w\d_-]+)?#(\d+)\b/g;
+				const issueReplace = (
+					all: string,
+					prefix: string,
+					ownerAndRepositoryName: string,
+					issueNumber: string
+				): string => {
+					let result = all;
+					let owner: string | undefined;
+					let repositoryName: string | undefined;
+
+					if (ownerAndRepositoryName) {
+						[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
+					}
+
+					if (owner && repositoryName && issueNumber) {
+						// Issue in external repository
+						const issueUrl = this.isGitHub
+							? urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber)
+							: urljoin('https://gitlab.com', owner, repositoryName, '-', 'issues', issueNumber);
+						result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
+					} else if (!owner && !repositoryName && issueNumber && this.repositoryUrl) {
+						// Issue in own repository
+						result =
+							prefix +
+							`[#${issueNumber}](${
+								this.isGitHub
+									? urljoin(this.repositoryUrl, 'issues', issueNumber)
+									: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
+							})`;
+					}
+
+					return result;
+				};
+				// Replace Markdown issue references with urls
+				contents = contents.replace(markdownIssueRegex, issueReplace);
+			}
 		}
 
 		const html = markdownit({ html: true }).render(contents);
 		const $ = cheerio.load(html);
 
-		$('img').each((_, img) => {
-			const rawSrc = $(img).attr('src');
+		if (this.rewriteRelativeLinks) {
+			$('img').each((_, img) => {
+				const rawSrc = $(img).attr('src');
 
-			if (!rawSrc) {
-				throw new Error(`Images in ${this.name} must have a source.`);
-			}
+				if (!rawSrc) {
+					throw new Error(`Images in ${this.name} must have a source.`);
+				}
 
-			const src = decodeURI(rawSrc);
-			const srcUrl = new url.URL(src);
+				const src = decodeURI(rawSrc);
+				const srcUrl = new url.URL(src);
 
-			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.pathname)) {
-				throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
-			}
+				if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.pathname)) {
+					throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
+				}
 
-			if (!/^https:$/i.test(srcUrl.protocol)) {
-				throw new Error(`Images in ${this.name} must come from an HTTPS source: ${src}`);
-			}
+				if (!/^https:$/i.test(srcUrl.protocol)) {
+					throw new Error(`Images in ${this.name} must come from an HTTPS source: ${src}`);
+				}
 
-			if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl)) {
-				throw new Error(
-					`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`
-				);
-			}
-		});
+				if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl)) {
+					throw new Error(
+						`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`
+					);
+				}
+			});
+		}
 
 		$('svg').each(() => {
 			throw new Error(`SVG tags are not allowed in ${this.name}.`);

@@ -93,6 +93,7 @@ module.exports = function (argv: string[]): void {
 			'--gitlabBranch <branch>',
 			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
+		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
@@ -112,6 +113,7 @@ module.exports = function (argv: string[]): void {
 					updatePackageJson,
 					githubBranch,
 					gitlabBranch,
+					rewriteRelativeLinks,
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
@@ -131,6 +133,7 @@ module.exports = function (argv: string[]): void {
 						updatePackageJson,
 						githubBranch,
 						gitlabBranch,
+						rewriteRelativeLinks,
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
