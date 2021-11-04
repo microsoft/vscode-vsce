@@ -4,6 +4,7 @@
 
 [![ci](https://github.com/microsoft/vsce/workflows/ci/badge.svg)](https://github.com/microsoft/vsce/actions?query=workflow%3Aci)
 [![Version](https://img.shields.io/npm/v/vsce.svg)](https://npmjs.org/package/vsce)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
 ## Requirements
 
