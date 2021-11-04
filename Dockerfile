@@ -1,4 +1,7 @@
 FROM node:12-alpine
+RUN apk add --update-cache \
+    libsecret \
+  && rm -rf /var/cache/apk/*
 WORKDIR /opt/vsce
 COPY package.json package-lock.json ./
 RUN npm install
