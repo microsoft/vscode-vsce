@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as parseSemver from 'parse-semver';
-import * as _ from 'lodash';
 import { CancellationToken, log } from './util';
 
 const exists = (file: string) =>
@@ -185,18 +184,18 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 }
 
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
-	const result: string[] = [cwd];
+	const result = new Set([cwd]);
 
 	if (await exists(path.join(cwd, 'yarn.lock'))) {
 		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 		const flatten = (dep: YarnDependency) => {
-			result.push(dep.path);
+			result.add(dep.path);
 			dep.children.forEach(flatten);
 		};
 		deps.forEach(flatten);
 	}
 
-	return _.uniq(result);
+	return [...result];
 }
 
 export async function detectYarn(cwd: string): Promise<boolean> {

@@ -18,9 +18,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
-import * as _ from 'lodash';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
+import { flatten } from '../util';
 
 // don't warn in tests
 console.warn = () => null;
@@ -47,8 +47,8 @@ const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 
 function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
-		const assets = _.flatten(processors.map(p => p.assets));
-		const tags = _(_.flatten(processors.map(p => p.tags))).join(',');
+		const assets = flatten(processors.map(p => p.assets));
+		const tags = flatten(processors.map(p => p.tags)).join(',');
 		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
 		return toVsixManifest(vsix);
@@ -445,10 +445,10 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], name);
-				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, description);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], name);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Description[0]._, description);
 			});
 	});
 
@@ -1157,7 +1157,7 @@ describe('toVsixManifest', () => {
 					tags.some(tag => tag === 'javascript'),
 					'detect javascript'
 				);
-				assert(!_.includes(tags, 'java'), "don't detect java");
+				assert(!tags.includes('java'), "don't detect java");
 			});
 	});
 
@@ -1392,6 +1392,7 @@ describe('toVsixManifest', () => {
 						path: './syntaxes/Babel Language.json',
 					},
 					{
+						language: 'regex',
 						scopeName: 'source.regexp.babel',
 						path: './syntaxes/Babel Regex.json',
 					},

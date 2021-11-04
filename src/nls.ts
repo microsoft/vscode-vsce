@@ -1,5 +1,4 @@
 import { Manifest } from './manifest';
-import { cloneDeepWith } from 'lodash';
 
 export interface ITranslations {
 	[key: string]: string;
@@ -7,22 +6,23 @@ export interface ITranslations {
 
 const regex = /^%([\w\d.]+)%$/i;
 
-function patcher(translations: ITranslations) {
-	return value => {
+function createPatcher(translations: ITranslations): <T>(value: T) => T {
+	return <T>(value: T): T => {
 		if (typeof value !== 'string') {
-			return;
+			return value;
 		}
 
 		const match = regex.exec(value);
 
 		if (!match) {
-			return;
+			return value;
 		}
 
-		return translations[match[1]] || value;
+		return ((translations[match[1]] as unknown) ?? value) as T;
 	};
 }
 
 export function patchNLS(manifest: Manifest, translations: ITranslations): Manifest {
-	return cloneDeepWith(manifest, patcher(translations)) as Manifest;
+	const patcher = createPatcher(translations);
+	return JSON.parse(JSON.stringify(manifest, (_, value: any) => patcher(value)));
 }

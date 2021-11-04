@@ -16,9 +16,23 @@ export interface Localization {
 	translations: Translation[];
 }
 
+export interface Language {
+	readonly id: string;
+	readonly aliases?: string[];
+	readonly extensions?: string[];
+}
+
+export interface Grammar {
+	readonly language: string;
+	readonly scopeName: string;
+	readonly path: string;
+}
+
 export interface Contributions {
-	localizations?: Localization[];
-	[contributionType: string]: any;
+	readonly localizations?: Localization[];
+	readonly languages?: Language[];
+	readonly grammars?: Grammar[];
+	readonly [contributionType: string]: any;
 }
 
 export type ExtensionKind = 'ui' | 'workspace' | 'web';

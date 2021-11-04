@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as cp from 'child_process';
-import * as _ from 'lodash';
 import * as yazl from 'yazl';
 import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
@@ -25,10 +24,6 @@ import {
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import * as parseSemver from 'parse-semver';
-
-const resourcesPath = path.join(path.dirname(__dirname), 'resources');
-const vsixManifestTemplatePath = path.join(resourcesPath, 'extension.vsixmanifest');
-const contentTypesTemplatePath = path.join(resourcesPath, '[Content_Types].xml');
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -100,11 +95,42 @@ export interface IProcessor {
 	vsix: any;
 }
 
+export interface VSIX {
+	id: string;
+	displayName: string;
+	version: string;
+	publisher: string;
+	target?: string;
+	engine: string;
+	description: string;
+	categories: string;
+	flags: string;
+	icon?: string;
+	license?: string;
+	assets: IAsset[];
+	tags: string;
+	links: {
+		repository?: string;
+		bugs?: string;
+		homepage?: string;
+		github?: string;
+	};
+	galleryBanner: NonNullable<Manifest['galleryBanner']>;
+	badges?: Manifest['badges'];
+	githubMarkdown: boolean;
+	enableMarketplaceQnA?: boolean;
+	customerQnALink?: Manifest['qna'];
+	extensionDependencies: string;
+	extensionPack: string;
+	extensionKind: string;
+	localizedLanguages: string;
+}
+
 export class BaseProcessor implements IProcessor {
 	constructor(protected manifest: Manifest) {}
 	assets: IAsset[] = [];
 	tags: string[] = [];
-	vsix: any = Object.create(null);
+	vsix: VSIX = Object.create(null);
 	onFile(file: IFile): Promise<IFile> {
 		return Promise.resolve(file);
 	}
@@ -194,7 +220,7 @@ function toExtensionTags(extensions: string[]): string[] {
 }
 
 function toLanguagePackTags(translations: { id: string }[], languageId: string): string[] {
-	return (translations || [])
+	return (translations ?? [])
 		.map(({ id }) => [`__lp_${id}`, `__lp-${languageId}_${id}`])
 		.reduce((r, t) => [...r, ...t], []);
 }
@@ -395,35 +421,31 @@ export class ManifestProcessor extends BaseProcessor {
 		this.vsix = {
 			...this.vsix,
 			id: manifest.name,
-			displayName: manifest.displayName || manifest.name,
+			displayName: manifest.displayName ?? manifest.name,
 			version: options.version && !(options.updatePackageJson ?? true) ? options.version : manifest.version,
 			publisher: manifest.publisher,
 			target,
 			engine: manifest.engines['vscode'],
-			description: manifest.description || '',
-			categories: (manifest.categories || []).join(','),
+			description: manifest.description ?? '',
+			categories: (manifest.categories ?? []).join(','),
 			flags: flags.join(' '),
 			links: {
 				repository,
 				bugs: getBugsUrl(manifest, gitHost),
 				homepage: getHomepageUrl(manifest, gitHost),
 			},
-			galleryBanner: manifest.galleryBanner || {},
+			galleryBanner: manifest.galleryBanner ?? {},
 			badges: manifest.badges,
 			githubMarkdown: manifest.markdown !== 'standard',
 			enableMarketplaceQnA,
 			customerQnALink,
-			extensionDependencies: _(manifest.extensionDependencies || [])
-				.uniq()
-				.join(','),
-			extensionPack: _(manifest.extensionPack || [])
-				.uniq()
-				.join(','),
+			extensionDependencies: [...new Set(manifest.extensionDependencies ?? [])].join(','),
+			extensionPack: [...new Set(manifest.extensionPack ?? [])].join(','),
 			extensionKind: extensionKind.join(','),
 			localizedLanguages:
 				manifest.contributes && manifest.contributes.localizations
 					? manifest.contributes.localizations
-							.map(loc => loc.localizedLanguageName || loc.languageName || loc.languageId)
+							.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
 							.join(',')
 					: '',
 		};
@@ -526,9 +548,9 @@ export class TagsProcessor extends BaseProcessor {
 	};
 
 	onEnd(): Promise<void> {
-		const keywords = this.manifest.keywords || [];
+		const keywords = this.manifest.keywords ?? [];
 		const contributes = this.manifest.contributes;
-		const activationEvents = this.manifest.activationEvents || [];
+		const activationEvents = this.manifest.activationEvents ?? [];
 		const doesContribute = (...properties: string[]) => {
 			let obj = contributes;
 			for (const property of properties) {
@@ -549,13 +571,13 @@ export class TagsProcessor extends BaseProcessor {
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
 
-		const localizationContributions = ((contributes && contributes['localizations']) || []).reduce(
+		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
 			[]
 		);
 
-		const languageContributions = ((contributes && contributes['languages']) || []).reduce(
-			(r, l) => [...r, l.id, ...(l.aliases || []), ...toExtensionTags(l.extensions || [])],
+		const languageContributions = ((contributes && contributes['languages']) ?? []).reduce<string[]>(
+			(r, l) => [...r, l.id, ...(l.aliases ?? []), ...toExtensionTags(l.extensions ?? [])],
 			[]
 		);
 
@@ -564,10 +586,10 @@ export class TagsProcessor extends BaseProcessor {
 			.filter(r => !!r)
 			.map(r => r[1]);
 
-		const grammars = ((contributes && contributes['grammars']) || []).map(g => g.language);
+		const grammars = ((contributes && contributes['grammars']) ?? []).map(g => g.language);
 
 		const description = this.manifest.description || '';
-		const descriptionKeywords = Object.keys(TagsProcessor.Keywords).reduce(
+		const descriptionKeywords = Object.keys(TagsProcessor.Keywords).reduce<string[]>(
 			(r, k) =>
 				r.concat(
 					new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []
@@ -577,7 +599,7 @@ export class TagsProcessor extends BaseProcessor {
 
 		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
 
-		const tags = [
+		const tags = new Set([
 			...keywords,
 			...colorThemes,
 			...iconThemes,
@@ -593,12 +615,9 @@ export class TagsProcessor extends BaseProcessor {
 			...grammars,
 			...descriptionKeywords,
 			...webExensionTags,
-		];
+		]);
 
-		this.tags = _(tags)
-			.uniq() // deduplicate
-			.compact() // remove falsey values
-			.value();
+		this.tags = [...tags].filter(tag => !!tag);
 
 		return Promise.resolve(null);
 	}
@@ -849,7 +868,7 @@ class LicenseProcessor extends BaseProcessor {
 			this.filter = regexp.test.bind(regexp);
 		}
 
-		this.vsix.license = null;
+		delete this.vsix.license;
 	}
 
 	onFile(file: IFile): Promise<IFile> {
@@ -890,7 +909,7 @@ class IconProcessor extends BaseProcessor {
 		super(manifest);
 
 		this.icon = manifest.icon ? `extension/${manifest.icon}` : null;
-		this.vsix.icon = null;
+		delete this.vsix.icon;
 	}
 
 	onFile(file: IFile): Promise<IFile> {
@@ -1112,7 +1131,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 		throw new Error(`SVGs can't be used as icons: ${manifest.icon}`);
 	}
 
-	(manifest.badges || []).forEach(badge => {
+	(manifest.badges ?? []).forEach(badge => {
 		const decodedUrl = decodeURI(badge.url);
 		const srcUrl = url.parse(decodedUrl);
 
@@ -1188,33 +1207,141 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 	});
 }
 
-export function toVsixManifest(vsix: any): Promise<string> {
-	return fs.promises
-		.readFile(vsixManifestTemplatePath, 'utf8')
-		.then(vsixManifestTemplateStr => _.template(vsixManifestTemplateStr))
-		.then(vsixManifestTemplate => vsixManifestTemplate(vsix));
+const escapeChars = new Map([
+	["'", '&apos;'],
+	['"', '&quot;'],
+	['<', '&lt;'],
+	['>', '&gt;'],
+	['&', '&amp;'],
+]);
+
+function escape(value: any): string {
+	return String(value).replace(/(['"<>&])/g, (_, char) => escapeChars.get(char));
 }
 
-const defaultExtensions = {
-	'.json': 'application/json',
-	'.vsixmanifest': 'text/xml',
-};
+export async function toVsixManifest(vsix: VSIX): Promise<string> {
+	return `<?xml version="1.0" encoding="utf-8"?>
+	<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+		<Metadata>
+			<Identity Language="en-US" Id="${escape(vsix.id)}" Version="${escape(vsix.version)}" Publisher="${escape(
+		vsix.publisher
+	)}" ${vsix.target ? `TargetPlatform="${escape(vsix.target)}"` : ''}/>
+			<DisplayName>${escape(vsix.displayName)}</DisplayName>
+			<Description xml:space="preserve">${escape(vsix.description)}</Description>
+			<Tags>${escape(vsix.tags)}</Tags>
+			<Categories>${escape(vsix.categories)}</Categories>
+			<GalleryFlags>${escape(vsix.flags)}</GalleryFlags>
+			${
+				!vsix.badges
+					? ''
+					: `<Badges>${vsix.badges
+							.map(
+								badge =>
+									`<Badge Link="${escape(badge.href)}" ImgUri="${escape(badge.url)}" Description="${escape(
+										badge.description
+									)}" />`
+							)
+							.join('\n')}</Badges>`
+			}
+			<Properties>
+				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="${escape(vsix.engine)}" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="${escape(vsix.extensionDependencies)}" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="${escape(vsix.extensionPack)}" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="${escape(vsix.extensionKind)}" />
+				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
+				${
+					!vsix.links.repository
+						? ''
+						: `<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escape(vsix.links.repository)}" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${escape(vsix.links.repository)}" />
+				${
+					vsix.links.github
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${escape(vsix.links.github)}" />`
+						: `<Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${escape(
+								vsix.links.repository
+						  )}" />`
+				}`
+				}
+				${
+					vsix.links.bugs
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escape(vsix.links.bugs)}" />`
+						: ''
+				}
+				${
+					vsix.links.homepage
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${escape(vsix.links.homepage)}" />`
+						: ''
+				}
+				${
+					vsix.galleryBanner.color
+						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${escape(
+								vsix.galleryBanner.color
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.galleryBanner.theme
+						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${escape(
+								vsix.galleryBanner.theme
+						  )}" />`
+						: ''
+				}
+				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="${escape(vsix.githubMarkdown)}" />
+				${
+					vsix.enableMarketplaceQnA !== undefined
+						? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
+								vsix.enableMarketplaceQnA
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.customerQnALink !== undefined
+						? `<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="${escape(
+								vsix.customerQnALink
+						  )}" />`
+						: ''
+				}
+			</Properties>
+			${vsix.license ? `<License>${escape(vsix.license)}</License>` : ''}
+			${vsix.icon ? `<Icon>${escape(vsix.icon)}</Icon>` : ''}
+		</Metadata>
+		<Installation>
+			<InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+		</Installation>
+		<Dependencies/>
+		<Assets>
+			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+			${vsix.assets
+				.map(asset => `<Asset Type="${escape(asset.type)}" Path="${escape(asset.path)}" Addressable="true" />`)
+				.join('\n')}
+		</Assets>
+	</PackageManifest>`;
+}
 
-export function toContentTypes(files: IFile[]): Promise<string> {
-	const extensions = Object.keys(_.keyBy(files, f => path.extname(f.path).toLowerCase()))
-		.filter(e => !!e)
-		.reduce((r, e) => ({ ...r, [e]: lookup(e) }), {});
+const defaultMimetypes = new Map<string, string>([
+	['.json', 'application/json'],
+	['.vsixmanifest', 'text/xml'],
+]);
 
-	const allExtensions = { ...extensions, ...defaultExtensions };
-	const contentTypes = Object.keys(allExtensions).map(extension => ({
-		extension,
-		contentType: allExtensions[extension],
-	}));
+export async function toContentTypes(files: IFile[]): Promise<string> {
+	const mimetypes = new Map<string, string>(defaultMimetypes);
 
-	return fs.promises
-		.readFile(contentTypesTemplatePath, 'utf8')
-		.then(contentTypesTemplateStr => _.template(contentTypesTemplateStr))
-		.then(contentTypesTemplate => contentTypesTemplate({ contentTypes }));
+	for (const file of files) {
+		const ext = path.extname(file.path).toLowerCase();
+
+		if (ext) {
+			mimetypes.set(ext, lookup(ext));
+		}
+	}
+
+	const contentTypes: string[] = [];
+	for (const [extension, contentType] of mimetypes) {
+		contentTypes.push(`<Default Extension="${extension}" ContentType="${contentType}"/>`);
+	}
+
+	return `<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${contentTypes.join('')}</Types>
+`;
 }
 
 const defaultIgnore = [
@@ -1304,7 +1431,9 @@ function collectFiles(
 				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
 
 				// Split into ignore and negate list
-				.then(ignore => _.partition(ignore, i => !/^\s*!/.test(i)))
+				.then(ignore =>
+					ignore.reduce((r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]), [[], []])
+				)
 				.then(r => ({ ignore: r[0], negate: r[1] }))
 
 				// Filter out files
@@ -1324,11 +1453,17 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 
 	return Promise.all(processedFiles).then(files => {
 		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
-			const assets = _.flatten(processors.map(p => p.assets));
-			const tags = _(_.flatten(processors.map(p => p.tags)))
-				.uniq() // deduplicate
-				.compact() // remove falsey values
-				.join(',');
+			const assets = processors.reduce<IAsset[]>((r, p) => [...r, ...p.assets], []);
+			const tags = [
+				...processors.reduce<Set<string>>((r, p) => {
+					for (const tag of p.tags) {
+						if (tag) {
+							r.add(tag);
+						}
+					}
+					return r;
+				}, new Set()),
+			].join(',');
 			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
