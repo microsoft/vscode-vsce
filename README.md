@@ -11,7 +11,7 @@
 
 Or simply [Docker](#via-docker).
 
-### On Linux
+### Linux
 
 This project uses [keytar](https://www.npmjs.com/package/keytar) that uses `libsecret`, so you may need to install it before running `vsce`.
 
