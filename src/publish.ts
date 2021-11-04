@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { promisify } from 'util';
+import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
@@ -79,6 +80,10 @@ export interface IInternalPublishOptions {
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	}
+
+	if (semver.prerelease(manifest.version)) {
+		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'`);
 	}
 
 	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
