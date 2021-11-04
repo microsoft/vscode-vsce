@@ -1,5 +1,5 @@
 import * as semver from 'semver';
-import * as parseSemver from 'parse-semver';
+import parseSemver from 'parse-semver';
 
 const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 

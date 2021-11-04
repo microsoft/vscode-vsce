@@ -1,12 +1,11 @@
-import { Entry, open, Options, ZipFile } from 'yauzl';
+import { Entry, open, ZipFile } from 'yauzl';
 import { Manifest } from './manifest';
 import { parseXmlManifest, XMLManifest } from './xml';
-import { promisify } from 'util';
 import { Readable } from 'stream';
 
 async function bufferStream(stream: Readable): Promise<Buffer> {
 	return await new Promise((c, e) => {
-		const buffers = [];
+		const buffers: Buffer[] = [];
 		stream.on('data', buffer => buffers.push(buffer));
 		stream.once('error', e);
 		stream.once('end', () => c(Buffer.concat(buffers)));
@@ -14,7 +13,9 @@ async function bufferStream(stream: Readable): Promise<Buffer> {
 }
 
 export async function readZip(packagePath: string, filter: (name: string) => boolean): Promise<Map<string, Buffer>> {
-	const zipfile = await promisify<string, Options, ZipFile>(open)(packagePath, { lazyEntries: true });
+	const zipfile = await new Promise<ZipFile>((c, e) =>
+		open(packagePath, { lazyEntries: true }, (err, zipfile) => (err ? e(err) : c(zipfile!)))
+	);
 
 	return await new Promise((c, e) => {
 		const result = new Map<string, Buffer>();
@@ -32,7 +33,7 @@ export async function readZip(packagePath: string, filter: (name: string) => boo
 						return e(err);
 					}
 
-					bufferStream(stream).then(buffer => {
+					bufferStream(stream!).then(buffer => {
 						result.set(name, buffer);
 						zipfile.readEntry();
 					});

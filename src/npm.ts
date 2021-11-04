@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import * as parseSemver from 'parse-semver';
-import { CancellationToken, log } from './util';
+import parseSemver from 'parse-semver';
+import { CancellationToken, log, nonnull } from './util';
 
 const exists = (file: string) =>
 	fs.promises.stat(file).then(
@@ -30,7 +30,7 @@ function exec(
 	cancellationToken?: CancellationToken
 ): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((c, e) => {
-		let disposeCancellationListener: Function = null;
+		let disposeCancellationListener: Function | null = null;
 
 		const child = cp.exec(command, { ...options, encoding: 'utf8' } as any, (err, stdout: string, stderr: string) => {
 			if (disposeCancellationListener) {
@@ -45,7 +45,7 @@ function exec(
 		});
 
 		if (cancellationToken) {
-			disposeCancellationListener = cancellationToken.subscribe(err => {
+			disposeCancellationListener = cancellationToken.subscribe((err: any) => {
 				child.kill();
 				e(err);
 			});
@@ -53,14 +53,13 @@ function exec(
 	});
 }
 
-function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
-	return exec('npm -v', {}, cancellationToken).then(({ stdout }) => {
-		const version = stdout.trim();
+async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
+	const { stdout } = await exec('npm -v', {}, cancellationToken);
+	const version = stdout.trim();
 
-		if (/^3\.7\.[0123]$/.test(version)) {
-			return Promise.reject(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
-		}
-	});
+	if (/^3\.7\.[0123]$/.test(version)) {
+		throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
+	}
 }
 
 function getNpmDependencies(cwd: string): Promise<string[]> {
@@ -174,10 +173,10 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 
 	let result = trees
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
-		.filter(dep => !!dep);
+		.filter(nonnull);
 
 	if (usingPackagedDependencies) {
-		result = selectYarnDependencies(result, packagedDependencies);
+		result = selectYarnDependencies(result, packagedDependencies!);
 	}
 
 	return result;

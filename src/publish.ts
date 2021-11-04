@@ -99,16 +99,16 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 				null,
 				manifest.publisher,
 				manifest.name,
-				null,
+				undefined,
 				ExtensionQueryFlags.IncludeVersions
 			);
-		} catch (err) {
+		} catch (err: any) {
 			if (err.statusCode !== 404) {
 				throw err;
 			}
 		}
 
-		if (extension) {
+		if (extension && extension.versions) {
 			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
 
 			if (sameVersion.length > 0) {
@@ -127,7 +127,7 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 
 			try {
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
-			} catch (err) {
+			} catch (err: any) {
 				if (err.statusCode === 409) {
 					throw new Error(`${description} already exists.`);
 				} else {
@@ -137,7 +137,7 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 		} else {
 			await api.createExtension(undefined, packageStream);
 		}
-	} catch (err) {
+	} catch (err: any) {
 		const message = (err && err.message) || '';
 
 		if (/Personal Access Token used has expired/.test(message)) {

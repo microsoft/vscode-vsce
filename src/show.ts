@@ -11,6 +11,10 @@ export interface ExtensionStatiticsMap {
 	ratingcount: number;
 }
 
+interface VSCodePublishedExtension extends PublishedExtension {
+	publisher: { displayName: string; publisherName: string };
+}
+
 export function show(extensionId: string, json: boolean = false): Promise<any> {
 	const flags = [
 		ExtensionQueryFlags.IncludeCategoryAndTags,
@@ -27,7 +31,7 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 				if (extension === undefined) {
 					log.error(`Extension "${extensionId}" not found.`);
 				} else {
-					showOverview(extension);
+					showOverview(extension as VSCodePublishedExtension);
 				}
 			}
 		});
@@ -44,16 +48,16 @@ function showOverview({
 	statistics = [],
 	publishedDate,
 	lastUpdated,
-}: PublishedExtension) {
+}: VSCodePublishedExtension) {
 	const [{ version = 'unknown' } = {}] = versions;
 
 	// Create formatted table list of versions
 	const versionList = <ViewTable>(
-		versions.slice(0, limitVersions).map(({ version, lastUpdated }) => [version, formatDate(lastUpdated)])
+		versions.slice(0, limitVersions).map(({ version, lastUpdated }) => [version, formatDate(lastUpdated!)])
 	);
 
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
-		(map, { statisticName, value }) => ({ ...map, [statisticName]: value }),
+		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
 		<ExtensionStatiticsMap>{}
 	);
 
@@ -80,9 +84,9 @@ function showOverview({
 			...tableView([
 				['Unique identifier:', `${publisherName}.${extensionName}`],
 				['Version:', version],
-				['Last updated:', formatDateTime(lastUpdated)],
+				['Last updated:', formatDateTime(lastUpdated!)],
 				['Publisher:', publisherDisplayName],
-				['Published at:', formatDate(publishedDate)],
+				['Published at:', formatDate(publishedDate!)],
 			]).map(indentRow),
 			'',
 			'Statistics:',

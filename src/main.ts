@@ -1,6 +1,5 @@
-import * as program from 'commander';
-import * as leven from 'leven';
-
+import program from 'commander';
+import leven from 'leven';
 import { packageCommand, ls } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
@@ -32,7 +31,7 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 }
 
 function main(task: Promise<any>): void {
-	let latestVersion: string = null;
+	let latestVersion: string | null = null;
 
 	const token = new CancellationToken();
 
@@ -63,7 +62,7 @@ module.exports = function (argv: string[]): void {
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option(
+		.option<string[]>(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
 			(val, all) => (all ? all.concat(val) : [val]),

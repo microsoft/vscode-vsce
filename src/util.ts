@@ -1,5 +1,5 @@
 import { promisify } from 'util';
-import * as _read from 'read';
+import _read from 'read';
 import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import chalk from 'chalk';
@@ -61,7 +61,11 @@ export function chain<T, P>(initial: T, processors: P[], process: (a: T, b: P) =
 }
 
 export function flatten<T>(arr: T[][]): T[] {
-	return [].concat.apply([], arr) as T[];
+	return ([] as T[]).concat.apply([], arr) as T[];
+}
+
+export function nonnull<T>(arg: T | null | undefined): arg is T {
+	return !!arg;
 }
 
 const CancelledError = 'Cancelled';

@@ -3,8 +3,8 @@ export type ViewTable = ViewTableRow[];
 
 const fixedLocale = 'en-us';
 const format = {
-	date: { month: 'long', day: 'numeric', year: 'numeric' },
-	time: { hour: 'numeric', minute: 'numeric', second: 'numeric' },
+	date: { month: 'long', day: 'numeric', year: 'numeric' } as Intl.DateTimeFormatOptions,
+	time: { hour: 'numeric', minute: 'numeric', second: 'numeric' } as Intl.DateTimeFormatOptions,
 };
 
 const columns = process.stdout.columns ? process.stdout.columns : 80;
@@ -17,13 +17,13 @@ export const icons = useFallbackIcons
 	? { download: '\u{2193}', star: '\u{2665}', emptyStar: '\u{2022}' }
 	: { download: '\u{2913}', star: '\u{2605}', emptyStar: '\u{2606}' };
 
-export function formatDate(date) {
+export function formatDate(date: Date) {
 	return date.toLocaleString(fixedLocale, format.date);
 }
-export function formatTime(date) {
+export function formatTime(date: Date) {
 	return date.toLocaleString(fixedLocale, format.time);
 }
-export function formatDateTime(date) {
+export function formatDateTime(date: Date) {
 	return date.toLocaleString(fixedLocale, { ...format.date, ...format.time });
 }
 
@@ -41,7 +41,7 @@ export function ratingStars(rating: number, total = 5): string {
 }
 
 export function tableView(table: ViewTable, spacing: number = 2): string[] {
-	const maxLen = {};
+	const maxLen: Record<number, number> = {};
 	table.forEach(row => row.forEach((cell, i) => (maxLen[i] = Math.max(maxLen[i] || 0, cell.length))));
 	return table.map(row =>
 		row.map((cell, i) => `${cell}${repeatString(' ', maxLen[i] - cell.length + spacing)}`).join('')

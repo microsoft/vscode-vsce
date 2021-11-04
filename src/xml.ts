@@ -7,7 +7,7 @@ function createXMLParser<T>(): (raw: string) => Promise<T> {
 
 export type XMLManifest = {
 	PackageManifest: {
-		$: { Version: string; xmlns: string };
+		$: { Version: string; xmlns: string; 'xmlns:d': string };
 		Metadata: {
 			Description: { _: string }[];
 			DisplayName: string[];
@@ -28,7 +28,7 @@ export type XMLManifest = {
 
 export type ContentTypes = {
 	Types: {
-		Default: { $: { Extension: string; ContentType } }[];
+		Default: { $: { Extension: string; ContentType: string } }[];
 	};
 };
 

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { home } from 'osenv';
+import { homedir } from 'os';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
@@ -18,13 +18,13 @@ export interface IStore extends Iterable<IPublisher> {
 }
 
 export class FileStore implements IStore {
-	private static readonly DefaultPath = path.join(home(), '.vsce');
+	private static readonly DefaultPath = path.join(homedir(), '.vsce');
 
 	static async open(path: string = FileStore.DefaultPath): Promise<FileStore> {
 		try {
 			const rawStore = await fs.promises.readFile(path, 'utf8');
 			return new FileStore(path, JSON.parse(rawStore).publishers);
-		} catch (err) {
+		} catch (err: any) {
 			if (err.code === 'ENOENT') {
 				return new FileStore(path, []);
 			} else if (/SyntaxError/.test(err)) {

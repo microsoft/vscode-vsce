@@ -12,6 +12,7 @@ import {
 	IPackageOptions,
 	ManifestProcessor,
 	versionBump,
+	VSIX,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -33,7 +34,7 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 	try {
 		await fn();
-	} catch (err) {
+	} catch (err: any) {
 		didThrow = true;
 	}
 
@@ -42,14 +43,14 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 	}
 }
 
-const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
+const fixture = (name: string) => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 
 function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
 		const assets = flatten(processors.map(p => p.assets));
 		const tags = flatten(processors.map(p => p.tags)).join(',');
-		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
 
 		return toVsixManifest(vsix);
 	});
@@ -62,15 +63,15 @@ async function toXMLManifest(manifest: Manifest, files: IFile[] = []): Promise<X
 
 function assertProperty(manifest: XMLManifest, name: string, value: string): void {
 	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
-	assert.equal(property.length, 1, `Property '${name}' should exist`);
+	assert.strictEqual(property.length, 1, `Property '${name}' should exist`);
 
 	const enableMarketplaceQnA = property[0].$.Value;
-	assert.equal(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
+	assert.strictEqual(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
 }
 
 function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
-	assert.equal(property.length, 0, `Property '${name}' should not exist`);
+	assert.strictEqual(property.length, 0, `Property '${name}' should not exist`);
 }
 
 function createManifest(extra: Partial<Manifest> = {}): Manifest {
@@ -93,7 +94,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 3);
+				assert.strictEqual(files.length, 3);
 			});
 	});
 
@@ -111,7 +112,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 3);
+				assert.strictEqual(files.length, 3);
 			});
 	});
 
@@ -145,7 +146,7 @@ describe('collect', function () {
 				// extension/node_modules/real_sub/package.json
 				// extension/node_modules/real/node_modules/real_sub/dependency.js
 				// extension/node_modules/real/node_modules/real_sub/package.json
-				assert.equal(files.length, 11);
+				assert.strictEqual(files.length, 11);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});
@@ -157,7 +158,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
+				assert.strictEqual(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
 			});
 	});
 
@@ -167,14 +168,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, false);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, false);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -184,14 +185,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, false);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, false);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -201,14 +202,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, true);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, true);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -242,9 +243,9 @@ describe('readManifest', () => {
 		const translations = require(path.join(cwd, 'package.nls.json'));
 
 		return readManifest(cwd).then((manifest: any) => {
-			assert.equal(manifest.name, raw.name);
-			assert.equal(manifest.description, translations['extension.description']);
-			assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
+			assert.strictEqual(manifest.name, raw.name);
+			assert.strictEqual(manifest.description, translations['extension.description']);
+			assert.strictEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
 		});
 	});
 
@@ -254,7 +255,7 @@ describe('readManifest', () => {
 		const translations = require(path.join(cwd, 'package.nls.json'));
 
 		return readManifest(cwd, false).then((manifest: any) => {
-			assert.equal(manifest.name, raw.name);
+			assert.strictEqual(manifest.name, raw.name);
 			assert.notEqual(manifest.description, translations['extension.description']);
 			assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
 		});
@@ -263,29 +264,29 @@ describe('readManifest', () => {
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
+		assert.ok(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
 		assert.throws(() => {
-			validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } });
+			validateManifest({ publisher: undefined!, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' } });
+			validateManifest({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' } });
+			validateManifest({ publisher: 'demo', name: 'demo', version: null!, engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
 			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null });
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null! });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } });
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } as any });
 		});
 	});
 
 	it('should prevent SVG icons', () => {
-		assert(validateManifest(createManifest({ icon: 'icon.png' })));
+		assert.ok(validateManifest(createManifest({ icon: 'icon.png' })));
 		assert.throws(() => {
 			validateManifest(createManifest({ icon: 'icon.svg' }));
 		});
@@ -312,7 +313,7 @@ describe('validateManifest', () => {
 	});
 
 	it('should allow non SVG badges', () => {
-		assert(
+		assert.ok(
 			validateManifest(
 				createManifest({
 					badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -322,7 +323,7 @@ describe('validateManifest', () => {
 	});
 
 	it('should allow SVG badges from trusted sources', () => {
-		assert(
+		assert.ok(
 			validateManifest(
 				createManifest({
 					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -333,7 +334,7 @@ describe('validateManifest', () => {
 
 	it('should prevent SVG badges from non trusted sources', () => {
 		assert.throws(() => {
-			assert(
+			assert.ok(
 				validateManifest(
 					createManifest({
 						badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -342,7 +343,7 @@ describe('validateManifest', () => {
 			);
 		});
 		assert.throws(() => {
-			assert(
+			assert.ok(
 				validateManifest(
 					createManifest({
 						badges: [
@@ -400,29 +401,32 @@ describe('toVsixManifest', () => {
 				assert.ok(result);
 				assert.ok(result.PackageManifest);
 				assert.ok(result.PackageManifest.$);
-				assert.equal(result.PackageManifest.$.Version, '2.0.0');
-				assert.equal(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.$.Version, '2.0.0');
+				assert.strictEqual(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
+				assert.strictEqual(
 					result.PackageManifest.$['xmlns:d'],
 					'http://schemas.microsoft.com/developer/vsx-schema-design/2011'
 				);
 				assert.ok(result.PackageManifest.Metadata);
-				assert.equal(result.PackageManifest.Metadata.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, 'test extension');
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'test');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+				assert.strictEqual(result.PackageManifest.Metadata.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Description[0]._, 'test extension');
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
 				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['__web_extension']);
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public']);
-				assert.equal(result.PackageManifest.Installation.length, 1);
-				assert.equal(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
-				assert.equal(result.PackageManifest.Installation[0].InstallationTarget[0].$.Id, 'Microsoft.VisualStudio.Code');
+				assert.strictEqual(result.PackageManifest.Installation.length, 1);
+				assert.strictEqual(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
+				assert.strictEqual(
+					result.PackageManifest.Installation[0].InstallationTarget[0].$.Id,
+					'Microsoft.VisualStudio.Code'
+				);
 				assert.deepEqual(result.PackageManifest.Dependencies, ['']);
-				assert.equal(result.PackageManifest.Assets.length, 1);
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 1);
-				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
-				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
+				assert.strictEqual(result.PackageManifest.Assets.length, 1);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 1);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
 			});
 	});
 
@@ -466,12 +470,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Details'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
 
@@ -489,12 +493,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Changelog'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
 
@@ -510,8 +514,8 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
 			});
 	});
 
@@ -530,12 +534,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
 			});
 	});
 
@@ -555,8 +559,8 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
-				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -575,14 +579,14 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
-				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
 			});
 	});
 
@@ -606,9 +610,9 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
-				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -655,9 +659,9 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
-				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -881,7 +885,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'theme'));
+				assert.ok(tags.some(tag => tag === 'theme'));
 			});
 	});
 
@@ -916,7 +920,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'color-theme'));
+				assert.ok(tags.some(tag => tag === 'color-theme'));
 			});
 	});
 
@@ -935,7 +939,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'theme'));
+				assert.ok(tags.some(tag => tag === 'theme'));
 			});
 	});
 
@@ -954,7 +958,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'icon-theme'));
+				assert.ok(tags.some(tag => tag === 'icon-theme'));
 			});
 	});
 
@@ -973,7 +977,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'product-icon-theme'));
+				assert.ok(tags.some(tag => tag === 'product-icon-theme'));
 			});
 	});
 
@@ -998,7 +1002,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'remote-menu'));
+				assert.ok(tags.some(tag => tag === 'remote-menu'));
 			});
 	});
 
@@ -1077,7 +1081,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'keybindings'));
+				assert.ok(tags.some(tag => tag === 'keybindings'));
 			});
 	});
 
@@ -1104,7 +1108,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'debuggers'));
+				assert.ok(tags.some(tag => tag === 'debuggers'));
 			});
 	});
 
@@ -1128,7 +1132,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'json'));
+				assert.ok(tags.some(tag => tag === 'json'));
 			});
 	});
 
@@ -1145,19 +1149,19 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'c++'),
 					'detect c++'
 				);
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'ftp'),
 					'detect ftp'
 				);
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'javascript'),
 					'detect javascript'
 				);
-				assert(!tags.includes('java'), "don't detect java");
+				assert.ok(!tags.includes('java'), "don't detect java");
 			});
 	});
 
@@ -1182,7 +1186,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'shellscript'));
+				assert.ok(tags.some(tag => tag === 'shellscript'));
 			});
 	});
 
@@ -1206,9 +1210,9 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'go'));
-				assert(tags.some(tag => tag === 'golang'));
-				assert(tags.some(tag => tag === 'google-go'));
+				assert.ok(tags.some(tag => tag === 'go'));
+				assert.ok(tags.some(tag => tag === 'golang'));
+				assert.ok(tags.some(tag => tag === 'google-go'));
 			});
 	});
 
@@ -1235,11 +1239,11 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'lp-de'));
-				assert(tags.some(tag => tag === '__lp_vscode'));
-				assert(tags.some(tag => tag === '__lp-de_vscode'));
-				assert(tags.some(tag => tag === '__lp_vscode.go'));
-				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
+				assert.ok(tags.some(tag => tag === 'lp-de'));
+				assert.ok(tags.some(tag => tag === '__lp_vscode'));
+				assert.ok(tags.some(tag => tag === '__lp-de_vscode'));
+				assert.ok(tags.some(tag => tag === '__lp_vscode.go'));
+				assert.ok(tags.some(tag => tag === '__lp-de_vscode.go'));
 			});
 	});
 
@@ -1278,13 +1282,13 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(
+				assert.ok(
 					assets.some(
 						asset =>
 							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'
 					)
 				);
-				assert(
+				assert.ok(
 					assets.some(
 						asset =>
 							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' &&
@@ -1294,12 +1298,12 @@ describe('toVsixManifest', () => {
 
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
-				assert.equal(localizedLangProp.length, 1);
+				assert.strictEqual(localizedLangProp.length, 1);
 
 				const localizedLangs = localizedLangProp[0].$.Value.split(',');
-				assert.equal(localizedLangs.length, 2);
-				assert.equal(localizedLangs[0], 'German');
-				assert.equal(localizedLangs[1], 'Português');
+				assert.strictEqual(localizedLangs.length, 2);
+				assert.strictEqual(localizedLangs[0], 'German');
+				assert.strictEqual(localizedLangs[1], 'Português');
 			});
 	});
 
@@ -1323,8 +1327,8 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === '__ext_go'));
-				assert(tags.some(tag => tag === '__ext_golang'));
+				assert.ok(tags.some(tag => tag === '__ext_go'));
+				assert.ok(tags.some(tag => tag === '__ext_golang'));
 			});
 	});
 
@@ -1348,7 +1352,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === '__ext_go'));
+				assert.ok(tags.some(tag => tag === '__ext_go'));
 			});
 	});
 
@@ -1368,13 +1372,13 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const badges = result.PackageManifest.Metadata[0].Badges[0].Badge;
-				assert.equal(badges.length, 2);
-				assert.equal(badges[0].$.Link, 'http://badgeurl');
-				assert.equal(badges[0].$.ImgUri, 'http://badgeurl.png');
-				assert.equal(badges[0].$.Description, 'this is a badge');
-				assert.equal(badges[1].$.Link, 'http://anotherbadgeurl');
-				assert.equal(badges[1].$.ImgUri, 'http://anotherbadgeurl.png');
-				assert.equal(badges[1].$.Description, 'this is another badge');
+				assert.strictEqual(badges.length, 2);
+				assert.strictEqual(badges[0].$.Link, 'http://badgeurl');
+				assert.strictEqual(badges[0].$.ImgUri, 'http://badgeurl.png');
+				assert.strictEqual(badges[0].$.Description, 'this is a badge');
+				assert.strictEqual(badges[1].$.Link, 'http://anotherbadgeurl');
+				assert.strictEqual(badges[1].$.ImgUri, 'http://anotherbadgeurl.png');
+				assert.strictEqual(badges[1].$.Description, 'this is another badge');
 			});
 	});
 
@@ -1404,7 +1408,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				tags.forEach(tag => assert(tag, `Found empty tag '${tag}'.`));
+				tags.forEach(tag => assert.ok(tag, `Found empty tag '${tag}'.`));
 			});
 	});
 
@@ -1422,10 +1426,10 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const engineProperties = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.Engine');
-				assert.equal(engineProperties.length, 1);
+				assert.strictEqual(engineProperties.length, 1);
 
 				const engine = engineProperties[0].$.Value;
-				assert.equal(engine, '^1.0.0');
+				assert.strictEqual(engine, '^1.0.0');
 			});
 	});
 
@@ -1442,7 +1446,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
 					)
@@ -1464,7 +1468,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'
 					)
@@ -1486,7 +1490,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
 					)
@@ -1509,12 +1513,12 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const dependenciesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionDependencies');
-				assert.equal(dependenciesProp.length, 1);
+				assert.strictEqual(dependenciesProp.length, 1);
 
 				const dependencies = dependenciesProp[0].$.Value.split(',');
-				assert.equal(dependencies.length, 2);
-				assert(dependencies.some(d => d === 'foo.bar'));
-				assert(dependencies.some(d => d === 'monkey.hello'));
+				assert.strictEqual(dependencies.length, 2);
+				assert.ok(dependencies.some(d => d === 'foo.bar'));
+				assert.ok(dependencies.some(d => d === 'monkey.hello'));
 			});
 	});
 
@@ -1534,8 +1538,8 @@ describe('toVsixManifest', () => {
 
 		try {
 			await _toVsixManifest(manifest, files);
-		} catch (err) {
-			assert(/have the same case insensitive path/i.test(err.message));
+		} catch (err: any) {
+			assert.ok(/have the same case insensitive path/i.test(err.message));
 			return;
 		}
 
@@ -1562,7 +1566,7 @@ describe('toVsixManifest', () => {
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
-		assert.equal(extensionKindProps[0].$.Value, ['ui', 'workspace', 'web'].join(','));
+		assert.strictEqual(extensionKindProps[0].$.Value, ['ui', 'workspace', 'web'].join(','));
 	});
 
 	it('should expose extension kind properties when derived', async () => {
@@ -1575,7 +1579,7 @@ describe('toVsixManifest', () => {
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
-		assert.equal(extensionKindProps[0].$.Value, 'workspace');
+		assert.strictEqual(extensionKindProps[0].$.Value, 'workspace');
 	});
 
 	it('should not have target platform by default', async () => {
@@ -1605,8 +1609,8 @@ describe('toVsixManifest', () => {
 
 		try {
 			await _toVsixManifest(manifest, [], { target: 'what' });
-		} catch (err) {
-			return assert(/is not a valid VS Code target/i.test(err.message));
+		} catch (err: any) {
+			return assert.ok(/is not a valid VS Code target/i.test(err.message));
 		}
 
 		throw new Error('Should not reach here');
@@ -1617,8 +1621,8 @@ describe('toVsixManifest', () => {
 
 		try {
 			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
-		} catch (err) {
-			return assert(/not a valid VS Code target/.test(err.message));
+		} catch (err: any) {
+			return assert.ok(/not a valid VS Code target/.test(err.message));
 		}
 
 		throw new Error('Should not reach here');
@@ -1629,8 +1633,8 @@ describe('toVsixManifest', () => {
 
 		try {
 			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
-		} catch (err) {
-			return assert(/>=1.61/.test(err.message));
+		} catch (err: any) {
+			return assert.ok(/>=1.61/.test(err.message));
 		}
 
 		throw new Error('Should not reach here');
@@ -1725,7 +1729,7 @@ describe('toContentTypes', () => {
 				assert.ok(result);
 				assert.ok(result.Types);
 				assert.ok(result.Types.Default);
-				assert.equal(result.Types.Default.length, 2);
+				assert.strictEqual(result.Types.Default.length, 2);
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.vsixmanifest' && d.$.ContentType === 'text/xml'));
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.json' && d.$.ContentType === 'application/json'));
 			});
@@ -1771,6 +1775,7 @@ describe('ManifestProcessor', () => {
 		};
 
 		const outPackageJson = await processor.onFile(packageJson);
+		assert.ok(outPackageJson.mode);
 		assert.ok(outPackageJson.mode & 0o200);
 	});
 
@@ -1836,7 +1841,7 @@ describe('MarkdownProcessor', () => {
 
 		try {
 			await processor.onFile(readme);
-		} catch (err) {
+		} catch (err: any) {
 			didThrow = true;
 		}
 
@@ -1867,7 +1872,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1894,7 +1899,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1923,7 +1928,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1956,7 +1961,7 @@ describe('MarkdownProcessor', () => {
 				return fs.promises
 					.readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8')
 					.then(expected => {
-						assert.equal(actual, expected);
+						assert.strictEqual(actual, expected);
 					});
 			});
 	});
@@ -1988,7 +1993,7 @@ describe('MarkdownProcessor', () => {
 				return fs.promises
 					.readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8')
 					.then(expected => {
-						assert.equal(actual, expected);
+						assert.strictEqual(actual, expected);
 					});
 			});
 	});
@@ -2015,7 +2020,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2042,7 +2047,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2069,7 +2074,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2096,7 +2101,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2123,7 +2128,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2152,7 +2157,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2185,7 +2190,7 @@ describe('MarkdownProcessor', () => {
 				return fs.promises
 					.readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8')
 					.then(expected => {
-						assert.equal(actual, expected);
+						assert.strictEqual(actual, expected);
 					});
 			});
 	});
@@ -2217,7 +2222,7 @@ describe('MarkdownProcessor', () => {
 				return fs.promises
 					.readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8')
 					.then(expected => {
-						assert.equal(actual, expected);
+						assert.strictEqual(actual, expected);
 					});
 			});
 	});
@@ -2248,7 +2253,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2275,7 +2280,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2302,7 +2307,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2329,7 +2334,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2356,7 +2361,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2383,7 +2388,7 @@ describe('MarkdownProcessor', () => {
 			.then(file => read(file))
 			.then(actual => {
 				return fs.promises.readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2446,7 +2451,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should allow SVG from GitHub actions in image tag (old url format)', async () => {
@@ -2462,7 +2467,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should allow SVG from GitHub actions in image tag', async () => {
@@ -2478,7 +2483,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should prevent SVG from a GitHub repo in image tag', async () => {
@@ -2524,7 +2529,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should prevent SVG tags', async () => {
@@ -2576,7 +2581,7 @@ describe('MarkdownProcessor', () => {
 describe('version', () => {
 	let dir: tmp.DirResult;
 	const fixtureFolder = fixture('vsixmanifest');
-	let cwd;
+	let cwd: string;
 
 	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8' });
 

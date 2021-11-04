@@ -1,12 +1,21 @@
 {
 	"compilerOptions": {
-		"target": "es2015",
+		"target": "es2020",
 		"module": "commonjs",
-		"declaration": true,
+		"lib": ["es2020"],
+		"esModuleInterop": true,
 		"outDir": "out",
+		"allowJs": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"declaration": true,
 		"sourceMap": true
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"ts-node": {
+		"files": true
+	}
 }

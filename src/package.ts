@@ -6,14 +6,14 @@ import * as yazl from 'yazl';
 import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import * as glob from 'glob';
-import * as minimatch from 'minimatch';
-import * as markdownit from 'markdown-it';
+import glob from 'glob';
+import minimatch from 'minimatch';
+import markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
 import * as url from 'url';
-import { lookup } from 'mime';
+import mime from 'mime';
 import * as semver from 'semver';
-import * as urljoin from 'url-join';
+import urljoin from 'url-join';
 import {
 	validatePublisher,
 	validateExtensionName,
@@ -23,7 +23,7 @@ import {
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
-import * as parseSemver from 'parse-semver';
+import parseSemver from 'parse-semver';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -131,32 +131,28 @@ export class BaseProcessor implements IProcessor {
 	assets: IAsset[] = [];
 	tags: string[] = [];
 	vsix: VSIX = Object.create(null);
-	onFile(file: IFile): Promise<IFile> {
-		return Promise.resolve(file);
+	async onFile(file: IFile): Promise<IFile> {
+		return file;
 	}
-	onEnd() {
-		return Promise.resolve(null);
+	async onEnd() {
+		// noop
 	}
 }
 
 // https://github.com/npm/cli/blob/latest/lib/utils/hosted-git-info-from-manifest.js
-function getGitHost(manifest: Manifest): GitHost | null {
+function getGitHost(manifest: Manifest): GitHost | undefined {
 	const url = getRepositoryUrl(manifest);
-
-	if (!url) {
-		return null;
-	}
-
-	return GitHost.fromUrl(url, { noGitPlus: true });
+	return url ? GitHost.fromUrl(url, { noGitPlus: true }) : undefined;
 }
 
 // https://github.com/npm/cli/blob/latest/lib/repo.js
-function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string | null {
+function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string | undefined {
 	if (gitHost) {
 		return gitHost.https();
 	}
 
-	let url: string | null = null;
+	let url: string | undefined = undefined;
+
 	if (manifest.repository) {
 		if (typeof manifest.repository === 'string') {
 			url = manifest.repository;
@@ -173,7 +169,7 @@ function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string 
 }
 
 // https://github.com/npm/cli/blob/latest/lib/bugs.js
-function getBugsUrl(manifest: Manifest, gitHost: GitHost | null): string | null {
+function getBugsUrl(manifest: Manifest, gitHost: GitHost | undefined): string | undefined {
 	if (manifest.bugs) {
 		if (typeof manifest.bugs === 'string') {
 			return manifest.bugs;
@@ -190,11 +186,11 @@ function getBugsUrl(manifest: Manifest, gitHost: GitHost | null): string | null 
 		return gitHost.bugs();
 	}
 
-	return null;
+	return undefined;
 }
 
 // https://github.com/npm/cli/blob/latest/lib/docs.js
-function getHomepageUrl(manifest: Manifest, gitHost: GitHost | null): string | null {
+function getHomepageUrl(manifest: Manifest, gitHost: GitHost | undefined): string | undefined {
 	if (manifest.homepage) {
 		return manifest.homepage;
 	}
@@ -203,13 +199,13 @@ function getHomepageUrl(manifest: Manifest, gitHost: GitHost | null): string | n
 		return gitHost.docs();
 	}
 
-	return null;
+	return undefined;
 }
 
-// Contributed by Mozilla develpoer authors
+// Contributed by Mozilla developer authors
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-function escapeRegExp(string) {
-	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+function escapeRegExp(value: string) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
 function toExtensionTags(extensions: string[]): string[] {
@@ -273,20 +269,20 @@ const TrustedSVGSources = [
 	'www.versioneye.com',
 ];
 
-function isGitHubRepository(repository: string | null): boolean {
-	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository || '');
+function isGitHubRepository(repository: string | undefined): boolean {
+	return /^https:\/\/github\.com\/|^git@github\.com:/.test(repository ?? '');
 }
 
-function isGitLabRepository(repository: string | null): boolean {
-	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository || '');
+function isGitLabRepository(repository: string | undefined): boolean {
+	return /^https:\/\/gitlab\.com\/|^git@gitlab\.com:/.test(repository ?? '');
 }
 
 function isGitHubBadge(href: string): boolean {
 	return /^https:\/\/github\.com\/[^/]+\/[^/]+\/(actions\/)?workflows\/.*badge\.svg/.test(href || '');
 }
 
-function isHostTrusted(url: url.UrlWithStringQuery): boolean {
-	return TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1 || isGitHubBadge(url.href);
+function isHostTrusted(url: url.URL): boolean {
+	return (url.host && TrustedSVGSources.indexOf(url.host.toLowerCase()) > -1) || isGitHubBadge(url.href);
 }
 
 export interface IVersionBumpOptions {
@@ -310,7 +306,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	const manifest = await readManifest(cwd);
 
 	if (manifest.version === options.version) {
-		return null;
+		return;
 	}
 
 	switch (options.version) {
@@ -340,18 +336,12 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 		command = `${command} --no-git-tag-version`;
 	}
 
-	try {
-		// call `npm version` to do our dirty work
-		cp.exec;
-		const { stdout, stderr } = await promisify(cp.exec)(command, { cwd });
+	// call `npm version` to do our dirty work
+	const { stdout, stderr } = await promisify(cp.exec)(command, { cwd });
 
-		if (!process.env['VSCE_TESTS']) {
-			process.stdout.write(stdout);
-			process.stderr.write(stderr);
-		}
-		return null;
-	} catch (err) {
-		throw err.message;
+	if (!process.env['VSCE_TESTS']) {
+		process.stdout.write(stdout);
+		process.stderr.write(stderr);
 	}
 }
 
@@ -508,7 +498,7 @@ export class ManifestProcessor extends BaseProcessor {
 }
 
 export class TagsProcessor extends BaseProcessor {
-	private static Keywords = {
+	private static Keywords: Record<string, string[]> = {
 		git: ['git'],
 		npm: ['node'],
 		spell: ['markdown'],
@@ -547,7 +537,7 @@ export class TagsProcessor extends BaseProcessor {
 		rust: ['rust'],
 	};
 
-	onEnd(): Promise<void> {
+	async onEnd(): Promise<void> {
 		const keywords = this.manifest.keywords ?? [];
 		const contributes = this.manifest.contributes;
 		const activationEvents = this.manifest.activationEvents ?? [];
@@ -583,7 +573,7 @@ export class TagsProcessor extends BaseProcessor {
 
 		const languageActivations = activationEvents
 			.map(e => /^onLanguage:(.*)$/.exec(e))
-			.filter(r => !!r)
+			.filter(util.nonnull)
 			.map(r => r[1]);
 
 		const grammars = ((contributes && contributes['grammars']) ?? []).map(g => g.language);
@@ -618,17 +608,15 @@ export class TagsProcessor extends BaseProcessor {
 		]);
 
 		this.tags = [...tags].filter(tag => !!tag);
-
-		return Promise.resolve(null);
 	}
 }
 
 export class MarkdownProcessor extends BaseProcessor {
-	private baseContentUrl: string;
-	private baseImagesUrl: string;
+	private baseContentUrl: string | undefined;
+	private baseImagesUrl: string | undefined;
 	private isGitHub: boolean;
 	private isGitLab: boolean;
-	private repositoryUrl: string;
+	private repositoryUrl: string | undefined;
 	private gitHubIssueLinking: boolean;
 	private gitLabIssueLinking: boolean;
 
@@ -668,7 +656,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		}
 
 		const markdownPathRegex = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
-		const urlReplace = (_, isImage, title, link: string) => {
+		const urlReplace = (_: string, isImage: string, title: string, link: string) => {
 			if (/^mailto:/i.test(link)) {
 				return `${isImage}[${title}](${link})`;
 			}
@@ -725,8 +713,8 @@ export class MarkdownProcessor extends BaseProcessor {
 				issueNumber: string
 			): string => {
 				let result = all;
-				let owner: string;
-				let repositoryName: string;
+				let owner: string | undefined;
+				let repositoryName: string | undefined;
 
 				if (ownerAndRepositoryName) {
 					[owner, repositoryName] = ownerAndRepositoryName.split('/', 2);
@@ -738,7 +726,7 @@ export class MarkdownProcessor extends BaseProcessor {
 						? urljoin('https://github.com', owner, repositoryName, 'issues', issueNumber)
 						: urljoin('https://gitlab.com', owner, repositoryName, '-', 'issues', issueNumber);
 					result = prefix + `[${owner}/${repositoryName}#${issueNumber}](${issueUrl})`;
-				} else if (!owner && !repositoryName && issueNumber) {
+				} else if (!owner && !repositoryName && issueNumber && this.repositoryUrl) {
 					// Issue in own repository
 					result =
 						prefix +
@@ -759,10 +747,16 @@ export class MarkdownProcessor extends BaseProcessor {
 		const $ = cheerio.load(html);
 
 		$('img').each((_, img) => {
-			const src = decodeURI($(img).attr('src'));
-			const srcUrl = url.parse(src);
+			const rawSrc = $(img).attr('src');
 
-			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.path)) {
+			if (!rawSrc) {
+				throw new Error(`Images in ${this.name} must have a source.`);
+			}
+
+			const src = decodeURI(rawSrc);
+			const srcUrl = new url.URL(src);
+
+			if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.pathname)) {
 				throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
 			}
 
@@ -788,7 +782,9 @@ export class MarkdownProcessor extends BaseProcessor {
 	}
 
 	// GitHub heuristics
-	private guessBaseUrls(githostBranch: string | undefined): { content: string; images: string; repository: string } {
+	private guessBaseUrls(
+		githostBranch: string | undefined
+	): { content: string; images: string; repository: string } | undefined {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -798,7 +794,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		}
 
 		if (!repository) {
-			return null;
+			return undefined;
 		}
 
 		const gitHubRegex = /(?<domain>github(\.com\/|:))(?<project>(?:[^/]+)\/(?:[^/]+))(\/|$)/;
@@ -808,7 +804,7 @@ export class MarkdownProcessor extends BaseProcessor {
 		};
 
 		if (!match) {
-			return null;
+			return undefined;
 		}
 
 		const project = match.groups.project.replace(/\.git$/i, '');
@@ -828,7 +824,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			};
 		}
 
-		return null;
+		return undefined;
 	}
 }
 
@@ -902,13 +898,13 @@ class LicenseProcessor extends BaseProcessor {
 }
 
 class IconProcessor extends BaseProcessor {
-	private icon: string;
+	private icon: string | undefined;
 	private didFindIcon = false;
 
 	constructor(manifest: Manifest) {
 		super(manifest);
 
-		this.icon = manifest.icon ? `extension/${manifest.icon}` : null;
+		this.icon = manifest.icon && `extension/${manifest.icon}`;
 		delete this.vsix.icon;
 	}
 
@@ -922,12 +918,10 @@ class IconProcessor extends BaseProcessor {
 		return Promise.resolve(file);
 	}
 
-	onEnd(): Promise<void> {
+	async onEnd(): Promise<void> {
 		if (this.icon && !this.didFindIcon) {
 			return Promise.reject(new Error(`The specified icon '${this.icon}' wasn't found in the extension.`));
 		}
-
-		return Promise.resolve(null);
 	}
 }
 
@@ -987,7 +981,7 @@ function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 
 	let result: ExtensionKind[] = ['ui', 'workspace', 'web'];
 
-	const isNonEmptyArray = obj => Array.isArray(obj) && obj.length > 0;
+	const isNonEmptyArray = (obj: any) => Array.isArray(obj) && obj.length > 0;
 	// Extension pack defaults to workspace,web extensionKind
 	if (isNonEmptyArray(manifest.extensionPack) || isNonEmptyArray(manifest.extensionDependencies)) {
 		result = ['workspace', 'web'];
@@ -1078,7 +1072,7 @@ export class ValidationProcessor extends BaseProcessor {
 		];
 
 		for (const lower of this.duplicates) {
-			for (const filePath of this.files.get(lower)) {
+			for (const filePath of this.files.get(lower)!) {
 				messages.push(`  - ${filePath}`);
 			}
 		}
@@ -1133,7 +1127,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	(manifest.badges ?? []).forEach(badge => {
 		const decodedUrl = decodeURI(badge.url);
-		const srcUrl = url.parse(decodedUrl);
+		const srcUrl = new url.URL(decodedUrl);
 
 		if (!/^https:$/i.test(srcUrl.protocol)) {
 			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);
@@ -1216,7 +1210,7 @@ const escapeChars = new Map([
 ]);
 
 function escape(value: any): string {
-	return String(value).replace(/(['"<>&])/g, (_, char) => escapeChars.get(char));
+	return String(value).replace(/(['"<>&])/g, (_, char) => escapeChars.get(char)!);
 }
 
 export async function toVsixManifest(vsix: VSIX): Promise<string> {
@@ -1330,7 +1324,7 @@ export async function toContentTypes(files: IFile[]): Promise<string> {
 		const ext = path.extname(file.path).toLowerCase();
 
 		if (ext) {
-			mimetypes.set(ext, lookup(ext));
+			mimetypes.set(ext, mime.lookup(ext));
 		}
 	}
 
@@ -1380,20 +1374,19 @@ const defaultIgnore = [
 
 const notIgnored = ['!package.json', '!README.md'];
 
-function collectAllFiles(
+async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[]
 ): Promise<string[]> {
-	return getDependencies(cwd, dependencies, dependencyEntryPoints).then(deps => {
-		const promises: Promise<string[]>[] = deps.map(dep => {
-			return promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
-				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-			);
-		});
+	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+	const promises = deps.map(dep =>
+		promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
+		)
+	);
 
-		return Promise.all(promises).then(util.flatten);
-	});
+	return Promise.all(promises).then(util.flatten);
 }
 
 function collectFiles(
@@ -1432,7 +1425,10 @@ function collectFiles(
 
 				// Split into ignore and negate list
 				.then(ignore =>
-					ignore.reduce((r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]), [[], []])
+					ignore.reduce<[string[], string[]]>(
+						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
+						[[], []]
+					)
 				)
 				.then(r => ({ ignore: r[0], negate: r[1] }))
 
@@ -1464,7 +1460,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 					return r;
 				}, new Set()),
 			].join(',');
-			const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
+			const vsix = processors.reduce<VSIX>((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
 				return [

@@ -9,8 +9,8 @@ import {
 
 describe('validatePublisher', () => {
 	it('should throw with empty', () => {
-		assert.throws(() => validatePublisher(null));
-		assert.throws(() => validatePublisher(void 0));
+		assert.throws(() => validatePublisher(null!));
+		assert.throws(() => validatePublisher(undefined!));
 		assert.throws(() => validatePublisher(''));
 	});
 
@@ -32,8 +32,8 @@ describe('validatePublisher', () => {
 
 describe('validateExtensionName', () => {
 	it('should throw with empty', () => {
-		assert.throws(() => validateExtensionName(null));
-		assert.throws(() => validateExtensionName(void 0));
+		assert.throws(() => validateExtensionName(null!));
+		assert.throws(() => validateExtensionName(undefined!));
 		assert.throws(() => validateExtensionName(''));
 	});
 
@@ -55,8 +55,8 @@ describe('validateExtensionName', () => {
 
 describe('validateVersion', () => {
 	it('should throw with empty', () => {
-		assert.throws(() => validateVersion(null));
-		assert.throws(() => validateVersion(void 0));
+		assert.throws(() => validateVersion(null!));
+		assert.throws(() => validateVersion(undefined!));
 		assert.throws(() => validateVersion(''));
 	});
 
@@ -77,8 +77,8 @@ describe('validateVersion', () => {
 
 describe('validateEngineCompatibility', () => {
 	it('should throw with empty', () => {
-		assert.throws(() => validateEngineCompatibility(null));
-		assert.throws(() => validateEngineCompatibility(void 0));
+		assert.throws(() => validateEngineCompatibility(null!));
+		assert.throws(() => validateEngineCompatibility(undefined!));
 		assert.throws(() => validateEngineCompatibility(''));
 	});
 
