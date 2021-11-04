@@ -11,6 +11,17 @@
 
 Or simply [Docker](#via-docker).
 
+### On Linux
+
+This project uses [keytar](https://www.npmjs.com/package/keytar) that uses `libsecret`, so you may need to install it before running `vsce`.
+
+Depending on your distribution, you will need to run the following command:
+
+- Debian/Ubuntu: `sudo apt-get install libsecret-1-dev`
+- Alpine: `apk add libsecret`
+- Red Hat-based: `sudo yum install libsecret-devel`
+- Arch Linux: `sudo pacman -S libsecret`
+
 ## Usage
 
 Install vsce globally:
