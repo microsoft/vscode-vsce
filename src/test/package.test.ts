@@ -22,6 +22,7 @@ import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten } from '../util';
+import { validatePublisher } from '../validation';
 
 // don't warn in tests
 console.warn = () => null;
@@ -266,9 +267,6 @@ describe('validateManifest', () => {
 	it('should catch missing fields', () => {
 		assert.ok(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
 		assert.throws(() => {
-			validateManifest({ publisher: undefined!, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } });
-		});
-		assert.throws(() => {
 			validateManifest({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
@@ -283,6 +281,8 @@ describe('validateManifest', () => {
 		assert.throws(() => {
 			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } as any });
 		});
+		validatePublisher('demo');
+		assert.throws(() => validatePublisher(undefined!));
 	});
 
 	it('should prevent SVG icons', () => {

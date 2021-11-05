@@ -8,6 +8,7 @@ import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
+import { validatePublisher } from './validation';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -80,6 +81,8 @@ export interface IInternalPublishOptions {
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
+	validatePublisher(manifest.publisher);
+
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 	}

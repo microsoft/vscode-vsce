@@ -15,7 +15,6 @@ import mime from 'mime';
 import * as semver from 'semver';
 import urljoin from 'url-join';
 import {
-	validatePublisher,
 	validateExtensionName,
 	validateVersion,
 	validateEngineCompatibility,
@@ -1089,7 +1088,6 @@ export class ValidationProcessor extends BaseProcessor {
 }
 
 export function validateManifest(manifest: Manifest): Manifest {
-	validatePublisher(manifest.publisher);
 	validateExtensionName(manifest.name);
 
 	if (!manifest.version) {
