@@ -1,6 +1,6 @@
 {
 	"name": "vsce",
-	"version": "1.100.1",
+	"version": "0.0.0",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -21,66 +21,65 @@
 	"main": "out/api.js",
 	"typings": "out/api.d.ts",
 	"bin": {
-		"vsce": "out/vsce"
+		"vsce": "vsce"
 	},
 	"scripts": {
-		"copy-vsce": "mkdir -p out && cp -f src/vsce out/vsce",
 		"compile": "tsc",
-		"build": "run-s copy-vsce compile",
-		"watch:build": "run-s copy-vsce \"compile -- --watch\"",
+		"build": "tsc",
+		"watch:build": "npm run compile -- --watch",
 		"test": "mocha",
-		"watch:test": "run-s copy-vsce \"test -- --watch\"",
-		"vsce": "out/vsce"
+		"watch:test": "npm run test -- --watch",
+		"prepare": "husky install"
 	},
 	"engines": {
-		"node": ">= 10"
+		"node": ">= 14"
 	},
 	"dependencies": {
 		"azure-devops-node-api": "^11.0.1",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.1.0",
-		"denodeify": "^1.2.1",
 		"glob": "^7.0.6",
 		"hosted-git-info": "^4.0.2",
+		"keytar": "^7.7.0",
 		"leven": "^3.1.0",
-		"lodash": "^4.17.15",
 		"markdown-it": "^10.0.0",
 		"mime": "^1.3.4",
 		"minimatch": "^3.0.3",
-		"osenv": "^0.1.3",
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
 		"semver": "^5.1.0",
 		"tmp": "^0.2.1",
 		"typed-rest-client": "^1.8.4",
-		"url-join": "^1.1.0",
+		"url-join": "^4.0.1",
 		"xml2js": "^0.4.23",
 		"yauzl": "^2.3.1",
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
+		"@commitlint/cli": "^14.1.0",
+		"@commitlint/config-conventional": "^14.1.0",
 		"@types/cheerio": "^0.22.29",
-		"@types/denodeify": "^1.2.31",
 		"@types/glob": "^7.1.1",
 		"@types/hosted-git-info": "^3.0.2",
-		"@types/lodash": "^4.14.123",
 		"@types/markdown-it": "0.0.2",
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^10.17.60",
+		"@types/node": "^14.17.32",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
-		"@types/tmp": "^0.1.0",
+		"@types/tmp": "^0.2.2",
+		"@types/url-join": "^4.0.1",
 		"@types/xml2js": "^0.4.4",
 		"@types/yauzl": "^2.9.2",
-		"concurrently": "^5.1.0",
-		"husky": "^4.3.0",
+		"@types/yazl": "^2.4.2",
+		"husky": "^7.0.4",
 		"mocha": "^7.1.1",
 		"npm-run-all": "^4.1.5",
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
+		"semantic-release": "^18.0.0",
 		"source-map-support": "^0.4.2",
 		"ts-node": "^10.0.0",
 		"typescript": "^4.3.2"
@@ -89,18 +88,23 @@
 		"require": [
 			"ts-node/register"
 		],
-		"watch-files": "src/**,resources/**",
+		"watch-files": "src/**",
 		"spec": "src/test/**/*.ts"
-	},
-	"husky": {
-		"hooks": {
-			"pre-commit": "pretty-quick --staged"
-		}
 	},
 	"prettier": {
 		"useTabs": true,
 		"printWidth": 120,
 		"singleQuote": true,
 		"arrowParens": "avoid"
+	},
+	"release": {
+		"branches": [
+			"main"
+		]
+	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
+		]
 	}
 }

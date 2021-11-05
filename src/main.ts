@@ -1,6 +1,5 @@
-import * as program from 'commander';
-import * as leven from 'leven';
-
+import program from 'commander';
+import leven from 'leven';
 import { packageCommand, ls } from './package';
 import { deleteExtension, publish, unpublishExtension } from './publish';
 import { show } from './show';
@@ -32,7 +31,7 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 }
 
 function main(task: Promise<any>): void {
-	let latestVersion: string = null;
+	let latestVersion: string | null = null;
 
 	const token = new CancellationToken();
 
@@ -63,15 +62,16 @@ module.exports = function (argv: string[]): void {
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option(
+		.option<string[]>(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
 			(val, all) => (all ? all.concat(val) : [val]),
 			undefined
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.action(({ yarn, packagedDependencies, ignoreFile }) =>
-			main(ls(undefined, yarn, packagedDependencies, ignoreFile))
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
+			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
 
 	program
@@ -80,7 +80,11 @@ module.exports = function (argv: string[]): void {
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', 'Target architecture')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
+		.option(
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option(
 			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
@@ -89,6 +93,7 @@ module.exports = function (argv: string[]): void {
 			'--gitlabBranch <branch>',
 			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
 		)
+		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
@@ -96,6 +101,7 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.action(
 			(
 				version,
@@ -104,14 +110,17 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					githubBranch,
 					gitlabBranch,
+					rewriteRelativeLinks,
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
+					dependencies,
 				}
 			) =>
 				main(
@@ -121,14 +130,17 @@ module.exports = function (argv: string[]): void {
 						target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						githubBranch,
 						gitlabBranch,
+						rewriteRelativeLinks,
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
+						dependencies,
 					})
 				)
 		);
@@ -141,9 +153,13 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-t, --target <targets...>', 'Target architectures')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
+		.option(
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
@@ -159,6 +175,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.action(
 			(
 				version,
@@ -167,6 +184,7 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					packagePath,
 					githubBranch,
 					gitlabBranch,
@@ -175,15 +193,17 @@ module.exports = function (argv: string[]): void {
 					yarn,
 					noVerify,
 					ignoreFile,
+					dependencies,
 				}
 			) =>
 				main(
 					publish({
 						pat,
 						version,
-						target,
+						targets: target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						packagePath,
 						githubBranch,
 						gitlabBranch,
@@ -192,6 +212,7 @@ module.exports = function (argv: string[]): void {
 						useYarn: yarn,
 						noVerify,
 						ignoreFile,
+						dependencies,
 					})
 				)
 		);

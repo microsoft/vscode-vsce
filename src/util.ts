@@ -1,12 +1,12 @@
-import * as _read from 'read';
+import { promisify } from 'util';
+import _read from 'read';
 import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
-import * as denodeify from 'denodeify';
 import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 
-const __read = denodeify<_read.Options, string>(_read);
+const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
 	if (process.env['VSCE_TESTS'] || !process.stdout.isTTY) {
 		return Promise.resolve('y');
@@ -61,7 +61,11 @@ export function chain<T, P>(initial: T, processors: P[], process: (a: T, b: P) =
 }
 
 export function flatten<T>(arr: T[][]): T[] {
-	return [].concat.apply([], arr) as T[];
+	return ([] as T[]).concat.apply([], arr) as T[];
+}
+
+export function nonnull<T>(arg: T | null | undefined): arg is T {
+	return !!arg;
 }
 
 const CancelledError = 'Cancelled';

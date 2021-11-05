@@ -2,13 +2,26 @@
 
 > _The Visual Studio Code Extension Manager_
 
-[![Build Status](https://dev.azure.com/vscode/VSCE/_apis/build/status/VSCE?branchName=main)](https://dev.azure.com/vscode/VSCE/_build/latest?definitionId=16&branchName=main) [![npm version](https://badge.fury.io/js/vsce.svg)](https://badge.fury.io/js/vsce)
+[![ci](https://github.com/microsoft/vsce/workflows/ci/badge.svg)](https://github.com/microsoft/vsce/actions?query=workflow%3Aci)
+[![Version](https://img.shields.io/npm/v/vsce.svg)](https://npmjs.org/package/vsce)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `10.x.x`
+- [Node.js](https://nodejs.org/en/) at least `14.x.x`
 
 Or simply [Docker](#via-docker).
+
+### Linux
+
+In order to save credentials safely, this project uses [keytar](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using keytar.
+
+Depending on your distribution, you will need to run the following command:
+
+- Debian/Ubuntu: `sudo apt-get install libsecret-1-dev`
+- Alpine: `apk add libsecret`
+- Red Hat-based: `sudo yum install libsecret-devel`
+- Arch Linux: `sudo pacman -S libsecret`
 
 ## Usage
 
@@ -54,23 +67,16 @@ First clone this repository, then:
 
 ```sh
 npm i
-npm run watch # or `watch-test` to also run tests
+npm run watch:build # or `watch:test` to also build tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
 ```sh
-npm run vsce
+node vsce
 ```
 
-### Publish to NPM
-
-Simply push a new tag and the CI will automatically publish to NPM. The usual flow is:
-
-```sh
-npm version [minor|patch]
-git push --follow-tags
-```
+This project uses [semantic-release](https://semantic-release.gitbook.io/semantic-release/) and commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) spec. This allows us to effortlessly automate releases.
 
 ## About
 

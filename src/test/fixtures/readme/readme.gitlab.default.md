@@ -21,6 +21,7 @@ The status bar lets you quickly navigate to any issue and you can see all positi
 [![Jump to issues](https://gitlab.com/username/repository/-/raw/HEAD/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
 [![Jump to issues](https://gitlab.com/username/repository/-/raw/HEAD/images/SpellMDDemo2.gif)](https://gitlab.com/username/repository/-/blob/HEAD/monkey)
 ![](https://gitlab.com/username/repository/-/raw/HEAD/images/SpellMDDemo2.gif)
+![](https://gitlab.com/username/repository/-/raw/HEAD/SpellMDDemo2.gif)
 <img src="https://gitlab.com/username/repository/-/raw/HEAD/images/myImage.gif">
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.

@@ -1,25 +1,27 @@
 import * as fs from 'fs';
+import { promisify } from 'util';
+import * as semver from 'semver';
 import {
 	ExtensionQueryFlags,
 	PublishedExtension,
 	PublishedExtensionFlags,
 } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, versionBump } from './package';
+import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
 import { Manifest } from './manifest';
-import * as denodeify from 'denodeify';
 import { readVSIXPackage } from './zip';
 
-const tmpName = denodeify<string>(tmp.tmpName);
+const tmpName = promisify(tmp.tmpName);
 
 export interface IPublishOptions {
 	readonly packagePath?: string[];
 	readonly version?: string;
-	readonly target?: string;
+	readonly targets?: string[];
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
+	readonly updatePackageJson?: boolean;
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
@@ -30,13 +32,14 @@ export interface IPublishOptions {
 	readonly ignoreFile?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly dependencies?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
 	if (options.packagePath) {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
-		} else if (options.target) {
+		} else if (options.targets) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'target'.`);
 		}
 
@@ -53,17 +56,38 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			await _publish(packagePath, vsix.manifest, { ...options, target });
 		}
 	} else {
-		await versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion);
+		const cwd = options.cwd || process.cwd();
+		const manifest = await readManifest(cwd);
+		await prepublish(cwd, manifest, options.useYarn);
+		await versionBump(options);
 
-		const packagePath = await tmpName();
-		const packageResult = await pack({ ...options, packagePath });
-		await _publish(packagePath, packageResult.manifest, options);
+		if (options.targets) {
+			for (const target of options.targets) {
+				const packagePath = await tmpName();
+				const packageResult = await pack({ ...options, target, packagePath });
+				await _publish(packagePath, packageResult.manifest, { ...options, target });
+			}
+		} else {
+			const packagePath = await tmpName();
+			const packageResult = await pack({ ...options, packagePath });
+			await _publish(packagePath, packageResult.manifest, options);
+		}
 	}
 }
 
-async function _publish(packagePath: string, manifest: Manifest, options: IPublishOptions) {
+export interface IInternalPublishOptions {
+	readonly target?: string;
+	readonly pat?: string;
+	readonly noVerify?: boolean;
+}
+
+async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	}
+
+	if (semver.prerelease(manifest.version)) {
+		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'`);
 	}
 
 	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
@@ -84,23 +108,35 @@ async function _publish(packagePath: string, manifest: Manifest, options: IPubli
 				null,
 				manifest.publisher,
 				manifest.name,
-				null,
+				undefined,
 				ExtensionQueryFlags.IncludeVersions
 			);
-		} catch (err) {
+		} catch (err: any) {
 			if (err.statusCode !== 404) {
 				throw err;
 			}
 		}
 
-		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
-			throw new Error(`${description} already exists. Version number cannot be the same.`);
-		}
+		if (extension && extension.versions) {
+			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
 
-		if (extension) {
+			if (sameVersion.length > 0) {
+				if (!options.target) {
+					throw new Error(`${description} already exists.`);
+				}
+
+				if (sameVersion.some(v => !v.targetPlatform)) {
+					throw new Error(`${name} (no target) v${manifest.version} already exists.`);
+				}
+
+				if (sameVersion.some(v => v.targetPlatform === options.target)) {
+					throw new Error(`${description} already exists.`);
+				}
+			}
+
 			try {
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
-			} catch (err) {
+			} catch (err: any) {
 				if (err.statusCode === 409) {
 					throw new Error(`${description} already exists.`);
 				} else {
@@ -110,10 +146,12 @@ async function _publish(packagePath: string, manifest: Manifest, options: IPubli
 		} else {
 			await api.createExtension(undefined, packageStream);
 		}
-	} catch (err) {
+	} catch (err: any) {
 		const message = (err && err.message) || '';
 
-		if (/Invalid Resource/.test(message)) {
+		if (/Personal Access Token used has expired/.test(message)) {
+			err.message = `${err.message}\n\nYou're using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		} else if (/Invalid Resource/.test(message)) {
 			err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
 		}
 

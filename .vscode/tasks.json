@@ -15,7 +15,14 @@
 		},
 		{
 			"type": "npm",
-			"script": "test"
+			"script": "test",
+			"problemMatcher": [],
+			"label": "npm: test",
+			"detail": "mocha",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			}
 		}
 	]
 }

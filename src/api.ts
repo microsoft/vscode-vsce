@@ -1,7 +1,36 @@
 import { publish as _publish } from './publish';
 import { packageCommand, listFiles as _listFiles } from './package';
 
-export interface ICreateVSIXOptions {
+export interface IVSIXOptions {
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
+	baseContentUrl?: string;
+
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
+	baseImagesUrl?: string;
+
+	/**
+	 * Github branch used to publish the package. Used to automatically infer
+	 * the base content and images URI.
+	 */
+	githubBranch?: string;
+
+	/**
+	 * Gitlab branch used to publish the package. Used to automatically infer
+	 * the base content and images URI.
+	 */
+	gitlabBranch?: string;
+
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
+	useYarn?: boolean;
+}
+
+export interface ICreateVSIXOptions extends IVSIXOptions {
 	/**
 	 * The location of the extension in the file system.
 	 *
@@ -15,21 +44,6 @@ export interface ICreateVSIXOptions {
 	 * Defaults to `NAME-VERSION.vsix`.
 	 */
 	packagePath?: string;
-
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
-
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
 }
 
 export interface IPublishOptions {
@@ -69,6 +83,7 @@ export interface IPublishOptions {
 export enum PackageManager {
 	Npm,
 	Yarn,
+	None,
 }
 
 export interface IListFilesOptions {
@@ -97,28 +112,13 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export interface IPublishVSIXOptions {
+export interface IPublishVSIXOptions extends IVSIXOptions {
 	/**
 	 * The Personal Access Token to use.
 	 *
 	 * Defaults to the stored one.
 	 */
 	pat?: string;
-
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
-
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
 }
 
 /**
@@ -139,12 +139,7 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(
-		options.cwd,
-		options.packageManager === PackageManager.Yarn,
-		options.packagedDependencies,
-		options.ignoreFile
-	);
+	return _listFiles(options);
 }
 
 /**

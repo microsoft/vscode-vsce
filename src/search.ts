@@ -1,14 +1,22 @@
 import { getPublicGalleryAPI } from './util';
-import { ExtensionQueryFilterType, ExtensionQueryFlags } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import {
+	ExtensionQueryFilterType,
+	ExtensionQueryFlags,
+	PublishedExtension,
+} from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { tableView, wordTrim } from './viewutils';
 
 const pageSize = 100;
 const installationTarget = 'Microsoft.VisualStudio.Code';
 const excludeFlags = '37888'; //Value to exclude un-published, locked or hidden extensions
 
+interface VSCodePublishedExtension extends PublishedExtension {
+	publisher: { displayName: string; publisherName: string };
+}
+
 export async function search(searchText: string, json: boolean = false): Promise<any> {
 	const api = getPublicGalleryAPI();
-	const results = await api.extensionQuery({
+	const results = (await api.extensionQuery({
 		pageSize,
 		criteria: [
 			{ filterType: ExtensionQueryFilterType.SearchText, value: searchText },
@@ -16,7 +24,7 @@ export async function search(searchText: string, json: boolean = false): Promise
 			{ filterType: ExtensionQueryFilterType.ExcludeWithFlags, value: excludeFlags },
 		],
 		flags: [ExtensionQueryFlags.ExcludeNonValidated, ExtensionQueryFlags.IncludeLatestVersionOnly],
-	});
+	})) as VSCodePublishedExtension[];
 
 	if (json) {
 		console.log(JSON.stringify(results, undefined, '\t'));

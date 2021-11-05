@@ -1,14 +1,11 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as denodeify from 'denodeify';
 import * as cp from 'child_process';
-import * as parseSemver from 'parse-semver';
-import * as _ from 'lodash';
-import { CancellationToken, log } from './util';
+import parseSemver from 'parse-semver';
+import { CancellationToken, log, nonnull } from './util';
 
-const stat = denodeify(fs.stat);
 const exists = (file: string) =>
-	stat(file).then(
+	fs.promises.stat(file).then(
 		_ => true,
 		_ => false
 	);
@@ -33,7 +30,7 @@ function exec(
 	cancellationToken?: CancellationToken
 ): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((c, e) => {
-		let disposeCancellationListener: Function = null;
+		let disposeCancellationListener: Function | null = null;
 
 		const child = cp.exec(command, { ...options, encoding: 'utf8' } as any, (err, stdout: string, stderr: string) => {
 			if (disposeCancellationListener) {
@@ -48,7 +45,7 @@ function exec(
 		});
 
 		if (cancellationToken) {
-			disposeCancellationListener = cancellationToken.subscribe(err => {
+			disposeCancellationListener = cancellationToken.subscribe((err: any) => {
 				child.kill();
 				e(err);
 			});
@@ -56,14 +53,13 @@ function exec(
 	});
 }
 
-function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
-	return exec('npm -v', {}, cancellationToken).then(({ stdout }) => {
-		const version = stdout.trim();
+async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
+	const { stdout } = await exec('npm -v', {}, cancellationToken);
+	const version = stdout.trim();
 
-		if (/^3\.7\.[0123]$/.test(version)) {
-			return Promise.reject(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
-		}
-	});
+	if (/^3\.7\.[0123]$/.test(version)) {
+		throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
+	}
 }
 
 function getNpmDependencies(cwd: string): Promise<string[]> {
@@ -177,36 +173,36 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 
 	let result = trees
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
-		.filter(dep => !!dep);
+		.filter(nonnull);
 
 	if (usingPackagedDependencies) {
-		result = selectYarnDependencies(result, packagedDependencies);
+		result = selectYarnDependencies(result, packagedDependencies!);
 	}
 
 	return result;
 }
 
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
-	const result: string[] = [cwd];
+	const result = new Set([cwd]);
 
 	if (await exists(path.join(cwd, 'yarn.lock'))) {
 		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 		const flatten = (dep: YarnDependency) => {
-			result.push(dep.path);
+			result.add(dep.path);
 			dep.children.forEach(flatten);
 		};
 		deps.forEach(flatten);
 	}
 
-	return _.uniq(result);
+	return [...result];
 }
 
-export async function detectYarn(cwd: string) {
-	for (const file of ['yarn.lock', '.yarnrc']) {
-		if (await exists(path.join(cwd, file))) {
+export async function detectYarn(cwd: string): Promise<boolean> {
+	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
+		if (await exists(path.join(cwd, name))) {
 			if (!process.env['VSCE_TESTS']) {
 				log.info(
-					`Detected presence of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+					`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
 				);
 			}
 			return true;
@@ -217,12 +213,16 @@ export async function detectYarn(cwd: string) {
 
 export async function getDependencies(
 	cwd: string,
-	useYarn?: boolean,
+	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
-	return (useYarn !== undefined ? useYarn : await detectYarn(cwd))
-		? await getYarnDependencies(cwd, packagedDependencies)
-		: await getNpmDependencies(cwd);
+	if (dependencies === 'none') {
+		return [cwd];
+	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
+		return await getYarnDependencies(cwd, packagedDependencies);
+	} else {
+		return await getNpmDependencies(cwd);
+	}
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {

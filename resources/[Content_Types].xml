@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <% _.forEach(contentTypes, function (e) { %><Default Extension="${ e.extension }" ContentType="${ e.contentType }"/><% }); %>
-</Types>

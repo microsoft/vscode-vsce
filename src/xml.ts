@@ -1,13 +1,13 @@
+import { promisify } from 'util';
 import { parseString } from 'xml2js';
-import * as denodeify from 'denodeify';
 
 function createXMLParser<T>(): (raw: string) => Promise<T> {
-	return denodeify<string, T>(parseString);
+	return promisify<string, T>(parseString);
 }
 
 export type XMLManifest = {
 	PackageManifest: {
-		$: { Version: string; xmlns: string };
+		$: { Version: string; xmlns: string; 'xmlns:d': string };
 		Metadata: {
 			Description: { _: string }[];
 			DisplayName: string[];
@@ -28,7 +28,7 @@ export type XMLManifest = {
 
 export type ContentTypes = {
 	Types: {
-		Default: { $: { Extension: string; ContentType } }[];
+		Default: { $: { Extension: string; ContentType: string } }[];
 	};
 };
 
