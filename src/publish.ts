@@ -5,7 +5,7 @@ import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/i
 import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
 
@@ -54,6 +54,8 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 	} else {
 		const cwd = options.cwd || process.cwd();
 		const manifest = await readManifest(cwd);
+		patchOptionsWithManifest(options, manifest);
+
 		await prepublish(cwd, manifest, options.useYarn);
 		await versionBump(options);
 

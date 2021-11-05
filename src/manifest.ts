@@ -78,6 +78,9 @@ export interface Manifest {
 	devDependencies?: { [name: string]: string };
 	private?: boolean;
 
+	// vsce
+	vsce?: any;
+
 	// not supported (npm)
 	// files?: string[];
 	// bin

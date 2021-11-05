@@ -1623,6 +1623,8 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
+	util.patchOptionsWithManifest(options, manifest);
+
 	await prepublish(cwd, manifest, options.useYarn);
 	await versionBump(options);
 
