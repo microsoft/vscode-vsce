@@ -57,6 +57,7 @@ export interface Manifest {
 	_bundling?: { [name: string]: string }[];
 	_testing?: string;
 	enableProposedApi?: boolean;
+	enabledApiProposals?: readonly string[];
 	qna?: 'marketplace' | string | false;
 	extensionKind?: ExtensionKind | ExtensionKind[];
 

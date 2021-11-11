@@ -86,6 +86,9 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 	if (!options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 	}
+	if (!options.noVerify && manifest.enabledApiProposals) {
+		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+	}
 
 	if (semver.prerelease(manifest.version)) {
 		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'`);
