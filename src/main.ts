@@ -102,6 +102,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		.option('--pre-release', 'Mark this package as a pre-release')
 		.action(
 			(
 				version,
@@ -121,6 +122,7 @@ module.exports = function (argv: string[]): void {
 					gitHubIssueLinking,
 					gitLabIssueLinking,
 					dependencies,
+					preRelease,
 				}
 			) =>
 				main(
@@ -141,6 +143,7 @@ module.exports = function (argv: string[]): void {
 						gitHubIssueLinking,
 						gitLabIssueLinking,
 						dependencies,
+						preRelease,
 					})
 				)
 		);
@@ -176,6 +179,7 @@ module.exports = function (argv: string[]): void {
 		.option('--noVerify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		.option('--pre-release', 'Mark this package as a pre-release')
 		.action(
 			(
 				version,
@@ -194,6 +198,7 @@ module.exports = function (argv: string[]): void {
 					noVerify,
 					ignoreFile,
 					dependencies,
+					preRelease,
 				}
 			) =>
 				main(
@@ -213,6 +218,7 @@ module.exports = function (argv: string[]): void {
 						noVerify,
 						ignoreFile,
 						dependencies,
+						preRelease,
 					})
 				)
 		);

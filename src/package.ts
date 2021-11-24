@@ -85,6 +85,7 @@ export interface IPackageOptions {
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
+	readonly preRelease?: boolean;
 }
 
 export interface IProcessor {
@@ -124,6 +125,7 @@ export interface VSIX {
 	extensionPack: string;
 	extensionKind: string;
 	localizedLanguages: string;
+	preRelease: boolean;
 }
 
 export class BaseProcessor implements IProcessor {
@@ -438,6 +440,7 @@ export class ManifestProcessor extends BaseProcessor {
 							.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
 							.join(',')
 					: '',
+			preRelease: !!this.options.preRelease,
 		};
 
 		if (isGitHub) {
@@ -1248,6 +1251,7 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="${escape(vsix.extensionPack)}" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="${escape(vsix.extensionKind)}" />
 				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
+				<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${escape(vsix.preRelease)}" />
 				${
 					!vsix.links.repository
 						? ''
