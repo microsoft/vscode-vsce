@@ -30,6 +30,7 @@ export interface IPublishOptions {
 	readonly pat?: string;
 	readonly noVerify?: boolean;
 	readonly dependencies?: boolean;
+	readonly preRelease?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {

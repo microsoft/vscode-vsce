@@ -1639,6 +1639,24 @@ describe('toVsixManifest', () => {
 
 		throw new Error('Should not reach here');
 	});
+
+	it('should add prerelease property when --pre-release flag is passed', async () => {
+		const manifest = createManifest();
+
+		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
+	});
+
+	it('should not add prerelease property when --pre-release flag is not passed', async () => {
+		const manifest = createManifest();
+
+		const raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease');
+	});
 });
 
 describe('qna', () => {
