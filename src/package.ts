@@ -388,8 +388,9 @@ export class ManifestProcessor extends BaseProcessor {
 
 		const extensionKind = getExtensionKind(manifest);
 		const target = options.target;
+		const preRelease = options.preRelease;
 
-		if (target) {
+		if (target || preRelease) {
 			let engineVersion: string;
 
 			try {
@@ -399,14 +400,23 @@ export class ManifestProcessor extends BaseProcessor {
 				throw new Error('Failed to parse semver of engines.vscode');
 			}
 
-			if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61')) {
-				throw new Error(
-					`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
-				);
+			if (target) {
+				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61')) {
+					throw new Error(
+						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
+					);
+				}
+				if (!Targets.has(target)) {
+					throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+				}
 			}
 
-			if (!Targets.has(target)) {
-				throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+			if (preRelease) {
+				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63')) {
+					throw new Error(
+						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
+					);
+				}
 			}
 		}
 
