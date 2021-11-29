@@ -1641,7 +1641,7 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should add prerelease property when --pre-release flag is passed', async () => {
-		const manifest = createManifest();
+		const manifest = createManifest({ engines: { vscode: '>=1.63.0' } });
 
 		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
 		const xmlManifest = await parseXmlManifest(raw);
@@ -1650,12 +1650,24 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should not add prerelease property when --pre-release flag is not passed', async () => {
-		const manifest = createManifest();
+		const manifest = createManifest({ engines: { vscode: '>=1.64.0' } });
 
 		const raw = await _toVsixManifest(manifest, []);
 		const xmlManifest = await parseXmlManifest(raw);
 
 		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease');
+	});
+
+	it('should throw when targeting an old VS Code version with --pre-release', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.62.0' } });
+
+		try {
+			await _toVsixManifest(manifest, [], { preRelease: true });
+		} catch (err: any) {
+			return assert.ok(/>=1.63/.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
 	});
 });
 
