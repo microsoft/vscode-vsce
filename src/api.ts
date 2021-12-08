@@ -1,7 +1,7 @@
 import { publish as _publish } from './publish';
 import { packageCommand, listFiles as _listFiles } from './package';
 
-export interface IVSIXOptions {
+export interface IBaseVSIXOptions {
 	/**
 	 * The base URL for links detected in Markdown files.
 	 */
@@ -28,9 +28,16 @@ export interface IVSIXOptions {
 	 * Should use Yarn instead of NPM.
 	 */
 	useYarn?: boolean;
+
+	/**
+	 * Optional target the extension should run on.
+	 *
+	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
+	 */
+	target?: string;
 }
 
-export interface ICreateVSIXOptions extends IVSIXOptions {
+export interface ICreateVSIXOptions extends IBaseVSIXOptions {
 	/**
 	 * The location of the extension in the file system.
 	 *
@@ -112,7 +119,7 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export interface IPublishVSIXOptions extends IVSIXOptions {
+export interface IPublishVSIXOptions extends IBaseVSIXOptions {
 	/**
 	 * The Personal Access Token to use.
 	 *
@@ -146,5 +153,10 @@ export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
  * Publishes a pre-build VSIX.
  */
 export function publishVSIX(packagePath: string | string[], options: IPublishVSIXOptions = {}): Promise<any> {
-	return _publish({ packagePath: typeof packagePath === 'string' ? [packagePath] : packagePath, ...options });
+	return _publish({
+		packagePath: typeof packagePath === 'string' ? [packagePath] : packagePath,
+		...options,
+		targets: typeof options.target === 'string' ? [options.target] : undefined,
+		...{ target: undefined },
+	});
 }
