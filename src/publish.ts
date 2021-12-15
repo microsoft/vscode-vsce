@@ -51,6 +51,22 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				throw new Error(`Invalid extension VSIX manifest. ${err}`);
 			}
 
+			if (options.preRelease) {
+				let isPreReleasePackage = true;
+				try {
+					isPreReleasePackage = !!vsix.xmlManifest.PackageManifest.Metadata[0].Properties[0].Property.some(
+						p => p.$.Id === 'Microsoft.VisualStudio.Code.PreRelease'
+					);
+				} catch (err) {
+					throw new Error(`Invalid extension VSIX manifest. ${err}`);
+				}
+				if (!isPreReleasePackage) {
+					throw new Error(
+						`Cannot use '--pre-release' flag with the package that is not a pre-release. To publish the package as a pre-release version, please package it using '--pre-release' flag and try publishing again.`
+					);
+				}
+			}
+
 			await _publish(packagePath, vsix.manifest, { ...options, target });
 		}
 	} else {
