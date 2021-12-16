@@ -50,7 +50,7 @@ export function validateEngineCompatibility(version: string): void {
 /**
  * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode
  *
- * NOTE: This is enforced at the major and minor level., Since we don't have control over the patch
+ * NOTE: This is enforced at the major and minor level. Since we don't have control over the patch
  * version (it's auto-incremented by DefinitelyTyped), we don't look at the patch version at all.
  */
 export function validateVSCodeTypesCompatibility(engineVersion: string, typeVersion: string): void {
