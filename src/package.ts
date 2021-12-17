@@ -1626,6 +1626,10 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 		);
 	}
 
+	if (options.version) {
+		manifest.version = options.version;
+	}
+
 	const packagePath = await getPackagePath(cwd, manifest, options);
 	await writeVsix(files, path.resolve(packagePath));
 
