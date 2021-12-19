@@ -916,6 +916,35 @@ class LicenseProcessor extends BaseProcessor {
 	}
 }
 
+class LaunchEntryPointProcessor extends BaseProcessor {
+	private entryPoints: Set<string> = new Set<string>();
+
+	constructor(manifest: Manifest) {
+		super(manifest);
+		if (manifest.main) {
+			this.entryPoints.add(util.normalize(path.join('extension', manifest.main)));
+		}
+		if (manifest.browser) {
+			this.entryPoints.add(util.normalize(path.join('extension', manifest.browser)));
+		}
+	}
+
+	onFile(file: IFile): Promise<IFile> {
+		const normalizedPath = util.normalize(file.path);
+		this.entryPoints.delete(normalizedPath);
+		return Promise.resolve(file);
+	}
+
+	async onEnd(): Promise<void> {
+		if (this.entryPoints.size > 0) {
+			const files: string = [...this.entryPoints].join(',\n  ');
+			return Promise.reject(
+				new Error(`Extension entrypoint(s) missing: check files exists and does not match .vscodeignore:\n  ${files}`)
+			);
+		}
+	}
+}
+
 class IconProcessor extends BaseProcessor {
 	private icon: string | undefined;
 	private didFindIcon = false;
@@ -1498,6 +1527,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new TagsProcessor(manifest),
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
+		new LaunchEntryPointProcessor(manifest),
 		new LicenseProcessor(manifest),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),

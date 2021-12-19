@@ -1794,6 +1794,30 @@ describe('toContentTypes', () => {
 	});
 });
 
+describe('LaunchEntryPointProcessor', () => {
+	it('should detect when declared entrypoint is not in package', async () => {
+		const manifest = createManifest({
+			main: 'main.js',
+		});
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
+		let expectedError = false;
+		try {
+			await _toVsixManifest(manifest, files);
+		} catch (err: any) {
+			const error = err as Error;
+			expectedError = error?.message.includes('entrypoint(s) missing');
+			expectedError &&= error?.message.includes('main.js');
+		}
+		assert.ok(expectedError);
+	});
+
+	it('should accept manifest if no entrypoints defined', async () => {
+		const manifest = createManifest({});
+		const files = [{ path: 'extension/something.js', contents: Buffer.from('') }];
+		await _toVsixManifest(manifest, files);
+		assert.ok(true);
+	});
+});
 describe('ManifestProcessor', () => {
 	it('should ensure that package.json is writable', async () => {
 		const root = fixture('uuid');
