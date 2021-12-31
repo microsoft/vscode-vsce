@@ -1800,7 +1800,7 @@ describe('LaunchEntryPointProcessor', () => {
 			main: 'main.js',
 		});
 		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
-		let expectedError = false;
+		let didErr = false;
 		try {
 			await _toVsixManifest(manifest, files);
 		} catch (err: any) {
