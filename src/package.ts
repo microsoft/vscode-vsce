@@ -938,9 +938,7 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	async onEnd(): Promise<void> {
 		if (this.entryPoints.size > 0) {
 			const files: string = [...this.entryPoints].join(',\n  ');
-			return Promise.reject(
-				new Error(`Extension entrypoint(s) missing: check files exists and does not match .vscodeignore:\n  ${files}`)
-			);
+			throw new Error(`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`);
 		}
 	}
 }
