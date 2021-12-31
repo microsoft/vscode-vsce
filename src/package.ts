@@ -930,8 +930,7 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	}
 
 	onFile(file: IFile): Promise<IFile> {
-		const normalizedPath = util.normalize(file.path);
-		this.entryPoints.delete(normalizedPath);
+		this.entryPoints.delete(util.normalize(file.path));
 		return Promise.resolve(file);
 	}
 
