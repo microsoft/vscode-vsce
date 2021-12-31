@@ -1807,7 +1807,7 @@ describe('LaunchEntryPointProcessor', () => {
 			const message = err.message;
 			didErr = message.includes('entrypoint(s) missing') && message.includes('main.js');
 		}
-		assert.ok(expectedError);
+		assert.ok(didErr);
 	});
 
 	it('should accept manifest if no entrypoints defined', async () => {
