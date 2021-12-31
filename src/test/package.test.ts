@@ -1804,9 +1804,8 @@ describe('LaunchEntryPointProcessor', () => {
 		try {
 			await _toVsixManifest(manifest, files);
 		} catch (err: any) {
-			const error = err as Error;
-			expectedError = error?.message.includes('entrypoint(s) missing');
-			expectedError &&= error?.message.includes('main.js');
+			const message = err.message;
+			didErr = message.includes('entrypoint(s) missing') && message.includes('main.js');
 		}
 		assert.ok(expectedError);
 	});
