@@ -1814,7 +1814,6 @@ describe('LaunchEntryPointProcessor', () => {
 		const manifest = createManifest({});
 		const files = [{ path: 'extension/something.js', contents: Buffer.from('') }];
 		await _toVsixManifest(manifest, files);
-		assert.ok(true);
 	});
 });
 describe('ManifestProcessor', () => {
