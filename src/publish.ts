@@ -52,7 +52,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			}
 
 			if (options.preRelease) {
-				let isPreReleasePackage = true;
+				let isPreReleasePackage = false;
 				try {
 					isPreReleasePackage = !!vsix.xmlManifest.PackageManifest.Metadata[0].Properties[0].Property.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Code.PreRelease'
