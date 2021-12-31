@@ -62,7 +62,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 				if (!isPreReleasePackage) {
 					throw new Error(
-						`Cannot use '--pre-release' flag with the package that is not a pre-release. To publish the package as a pre-release version, please package it using '--pre-release' flag and try publishing again.`
+						`Cannot use '--pre-release' flag with a package that was not packaged as pre-release. Please package it using the '--pre-release' flag and publish again.`
 					);
 				}
 			}
