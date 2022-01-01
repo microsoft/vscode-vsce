@@ -1794,7 +1794,7 @@ describe('toContentTypes', () => {
 	});
 });
 
-describe('LaunchEntryPointProcessor', () => {
+describe.only('LaunchEntryPointProcessor', () => {
 	it('should detect when declared entrypoint is not in package', async () => {
 		const manifest = createManifest({
 			main: 'main.js',
@@ -1806,6 +1806,23 @@ describe('LaunchEntryPointProcessor', () => {
 		} catch (err: any) {
 			const message = err.message;
 			didErr = message.includes('entrypoint(s) missing') && message.includes('main.js');
+		}
+		assert.ok(didErr);
+	});
+
+	it('should work even if .js extension is not mentioned', async () => {
+		const manifest = createManifest({
+			main: './out/src/extension',
+		});
+		const files = [{ path: 'extension/out/src/extension.js', contents: Buffer.from('') }];
+
+		let didErr = false;
+
+		try {
+			await _toVsixManifest(manifest, files);
+			didErr = true;
+		} catch (err: any) {
+			didErr = false;
 		}
 		assert.ok(didErr);
 	});
