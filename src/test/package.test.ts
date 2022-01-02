@@ -1794,7 +1794,7 @@ describe('toContentTypes', () => {
 	});
 });
 
-describe.only('LaunchEntryPointProcessor', () => {
+describe('LaunchEntryPointProcessor', () => {
 	it('should detect when declared entrypoint is not in package', async () => {
 		const manifest = createManifest({
 			main: 'main.js',
