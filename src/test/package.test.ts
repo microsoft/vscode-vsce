@@ -1796,18 +1796,25 @@ describe('toContentTypes', () => {
 
 describe('LaunchEntryPointProcessor', () => {
 	it('should detect when declared entrypoint is not in package', async () => {
-		const manifest = createManifest({
-			main: 'main.js',
-		});
+		const manifest = createManifest({ main: 'main.js' });
 		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
+
 		let didErr = false;
+
 		try {
 			await _toVsixManifest(manifest, files);
 		} catch (err: any) {
 			const message = err.message;
 			didErr = message.includes('entrypoint(s) missing') && message.includes('main.js');
 		}
+
 		assert.ok(didErr);
+	});
+
+	it('should work even if .js extension is not used', async () => {
+		const manifest = createManifest({ main: 'out/src/extension' });
+		const files = [{ path: 'extension/out/src/extension.js', contents: Buffer.from('') }];
+		await _toVsixManifest(manifest, files);
 	});
 
 	it('should accept manifest if no entrypoints defined', async () => {

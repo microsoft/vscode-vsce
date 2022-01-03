@@ -922,11 +922,18 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', manifest.main)));
+			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
 		}
 		if (manifest.browser) {
-			this.entryPoints.add(util.normalize(path.join('extension', manifest.browser)));
+			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
 		}
+	}
+
+	appendJSExt(filePath: string): string {
+		if (filePath.endsWith('.js')) {
+			return filePath;
+		}
+		return filePath + '.js';
 	}
 
 	onFile(file: IFile): Promise<IFile> {
@@ -937,7 +944,9 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	async onEnd(): Promise<void> {
 		if (this.entryPoints.size > 0) {
 			const files: string = [...this.entryPoints].join(',\n  ');
-			throw new Error(`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`);
+			throw new Error(
+				`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`
+			);
 		}
 	}
 }
