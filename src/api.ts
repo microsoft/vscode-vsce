@@ -35,6 +35,11 @@ export interface IBaseVSIXOptions {
 	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
 	 */
 	target?: string;
+
+	/**
+	 * Mark this package as a pre-release
+	 */
+	preRelease?: boolean;
 }
 
 export interface ICreateVSIXOptions extends IBaseVSIXOptions {
