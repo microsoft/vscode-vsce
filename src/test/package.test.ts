@@ -2637,7 +2637,9 @@ describe('MarkdownProcessor', () => {
 	});
 });
 
-describe('version', () => {
+describe('version', function () {
+	this.timeout(5000);
+
 	let dir: tmp.DirResult;
 	const fixtureFolder = fixture('vsixmanifest');
 	let cwd: string;
