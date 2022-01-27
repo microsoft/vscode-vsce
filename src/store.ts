@@ -154,7 +154,16 @@ async function openDefaultStore(): Promise<IStore> {
 		return await FileStore.open();
 	}
 
-	const keytarStore = await KeytarStore.open();
+	let keytarStore: IStore;
+
+	try {
+		keytarStore = await KeytarStore.open();
+	} catch (err) {
+		const store = await FileStore.open();
+		log.warn(`Failed to open credential store. Falling back to storing secrets clear-text in: ${store.path}`);
+		return store;
+	}
+
 	const fileStore = await FileStore.open();
 
 	// migrate from file store
