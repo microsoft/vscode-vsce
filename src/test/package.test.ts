@@ -1604,6 +1604,17 @@ describe('toVsixManifest', () => {
 		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
 	});
 
+	it('should set the target platform when engine is set to insider', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.62.0-insider' } });
+		const raw = await _toVsixManifest(manifest, [], { target: 'win32-x64' });
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
+	});
+
 	it('should fail when target is invalid', async () => {
 		const manifest = createManifest();
 
@@ -1642,6 +1653,15 @@ describe('toVsixManifest', () => {
 
 	it('should add prerelease property when --pre-release flag is passed', async () => {
 		const manifest = createManifest({ engines: { vscode: '>=1.63.0' } });
+
+		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
+	});
+
+	it('should add prerelease property when --pre-release flag is passed when engine property is for insiders', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.64.0-insider' } });
 
 		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
 		const xmlManifest = await parseXmlManifest(raw);
