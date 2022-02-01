@@ -401,7 +401,7 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 
 			if (target) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61')) {
+				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61', { includePrerelease: true })) {
 					throw new Error(
 						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
 					);
@@ -412,7 +412,7 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 
 			if (preRelease) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63')) {
+				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63', { includePrerelease: true })) {
 					throw new Error(
 						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
 					);
