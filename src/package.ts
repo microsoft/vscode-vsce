@@ -86,6 +86,7 @@ export interface IPackageOptions {
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
+	readonly noPrompt?: boolean;
 }
 
 export interface IProcessor {
@@ -478,6 +479,8 @@ export class ManifestProcessor extends BaseProcessor {
 	}
 
 	async onEnd(): Promise<void> {
+		const noPrompt = this.options.noPrompt;
+
 		if (typeof this.manifest.extensionKind === 'string') {
 			util.log.warn(
 				`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://aka.ms/vscode/api/incorrect-execution-location`
@@ -493,8 +496,10 @@ export class ManifestProcessor extends BaseProcessor {
 		if (!this.manifest.repository) {
 			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
 
-			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
-				throw new Error('Aborted');
+			if (!noPrompt) {
+				if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
+					throw new Error('Aborted');
+				}
 			}
 		}
 
@@ -503,8 +508,10 @@ export class ManifestProcessor extends BaseProcessor {
 				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
 			);
 
-			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
-				throw new Error('Aborted');
+			if (!noPrompt) {
+				if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
+					throw new Error('Aborted');
+				}
 			}
 		}
 	}

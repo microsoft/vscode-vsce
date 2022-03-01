@@ -103,6 +103,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
+		.option('--noPrompt', 'Answers y to warning prompts')
 		.action(
 			(
 				version,
@@ -123,6 +124,7 @@ module.exports = function (argv: string[]): void {
 					gitLabIssueLinking,
 					dependencies,
 					preRelease,
+					noPrompt,
 				}
 			) =>
 				main(
@@ -144,6 +146,7 @@ module.exports = function (argv: string[]): void {
 						gitLabIssueLinking,
 						dependencies,
 						preRelease,
+						noPrompt,
 					})
 				)
 		);
