@@ -27,13 +27,13 @@ Depending on your distribution, you will need to run the following command:
 
 Install vsce globally:
 
-```sh
-npm install -g vsce
+```console
+npm install --global vsce
 ```
 
 Verify the installation:
 
-```sh
+```console
 vsce --version
 ```
 
@@ -43,36 +43,54 @@ vsce --version
 
 You can also build a container for running vsce:
 
-```sh
-git clone https://github.com/microsoft/vscode-vsce
-cd vscode-vsce
-docker build -t vsce .
+```console
+$ DOCKER_BUILDKIT=1 docker build --tag vsce "https://github.com/microsoft/vscode-vsce.git#main"
 ```
 
 Validate the container:
 
-```sh
-docker run -it vsce --version
+```console
+docker run --rm -it vsce --version
 ```
 
 Publish your local extension:
 
-```sh
-docker run -it -v $(pwd):/workspace vsce publish
+```console
+docker run --rm -it -v "$(pwd)":/workspace vsce publish
+```
+
+## Configuration
+
+You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` to list them all). Example:
+
+```console
+vsce publish --baseImagesUrl https://my.custom/base/images/url
+```
+
+Or you can also set them in the `package.json`, so that you avoid having to retype the common options again. Example:
+
+```jsonc
+// package.json
+{
+  "vsce": {
+    "baseImagesUrl": "https://my.custom/base/images/url"
+  }
+}
 ```
 
 ## Development
 
 First clone this repository, then:
 
-```sh
-npm i
-npm run watch:build # or `watch:test` to also build tests
+```console
+$ npm install
+
+$ npm run watch:build # or `watch:test` to also build tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
-```sh
+```console
 node vsce
 ```
 
