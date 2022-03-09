@@ -86,6 +86,7 @@ export interface IPackageOptions {
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
+	readonly allowStarActivation?: boolean;
 }
 
 export interface IProcessor {
@@ -498,7 +499,7 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 		}
 
-		if (this.manifest.activationEvents?.some(e => e === '*')) {
+		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
 			util.log.warn(
 				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
 			);

@@ -103,6 +103,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
+		.option('--allow-star-activation', 'Allow using * in activation events')
 		.action(
 			(
 				version,
@@ -123,6 +124,7 @@ module.exports = function (argv: string[]): void {
 					gitLabIssueLinking,
 					dependencies,
 					preRelease,
+					allowStarActivation,
 				}
 			) =>
 				main(
@@ -144,6 +146,7 @@ module.exports = function (argv: string[]): void {
 						gitLabIssueLinking,
 						dependencies,
 						preRelease,
+						allowStarActivation,
 					})
 				)
 		);
@@ -180,6 +183,7 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
+		.option('--allow-star-activation', 'Allow using * in activation events')
 		.action(
 			(
 				version,
@@ -199,6 +203,7 @@ module.exports = function (argv: string[]): void {
 					ignoreFile,
 					dependencies,
 					preRelease,
+					allowStarActivation,
 				}
 			) =>
 				main(
@@ -219,6 +224,7 @@ module.exports = function (argv: string[]): void {
 						ignoreFile,
 						dependencies,
 						preRelease,
+						allowStarActivation,
 					})
 				)
 		);
