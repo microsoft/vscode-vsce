@@ -104,6 +104,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
+		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.action(
 			(
 				version,
@@ -125,6 +126,7 @@ module.exports = function (argv: string[]): void {
 					dependencies,
 					preRelease,
 					allowStarActivation,
+					allowMissingRepository,
 				}
 			) =>
 				main(
@@ -147,6 +149,7 @@ module.exports = function (argv: string[]): void {
 						dependencies,
 						preRelease,
 						allowStarActivation,
+						allowMissingRepository,
 					})
 				)
 		);
@@ -184,6 +187,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
+		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.action(
 			(
 				version,
@@ -204,6 +208,7 @@ module.exports = function (argv: string[]): void {
 					dependencies,
 					preRelease,
 					allowStarActivation,
+					allowMissingRepository,
 				}
 			) =>
 				main(
@@ -225,6 +230,7 @@ module.exports = function (argv: string[]): void {
 						dependencies,
 						preRelease,
 						allowStarActivation,
+						allowMissingRepository,
 					})
 				)
 		);

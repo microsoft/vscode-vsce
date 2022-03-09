@@ -87,6 +87,7 @@ export interface IPackageOptions {
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
+	readonly allowMissingRepository?: boolean;
 }
 
 export interface IProcessor {
@@ -491,7 +492,7 @@ export class ManifestProcessor extends BaseProcessor {
 			);
 		}
 
-		if (!this.manifest.repository) {
+		if (!this.options.allowMissingRepository && !this.manifest.repository) {
 			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
