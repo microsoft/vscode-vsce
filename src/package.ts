@@ -86,6 +86,8 @@ export interface IPackageOptions {
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
+	readonly allowStarActivation?: boolean;
+	readonly allowMissingRepository?: boolean;
 }
 
 export interface IProcessor {
@@ -490,7 +492,7 @@ export class ManifestProcessor extends BaseProcessor {
 			);
 		}
 
-		if (!this.manifest.repository) {
+		if (!this.options.allowMissingRepository && !this.manifest.repository) {
 			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
@@ -498,7 +500,7 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 		}
 
-		if (this.manifest.activationEvents?.some(e => e === '*')) {
+		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
 			util.log.warn(
 				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
 			);

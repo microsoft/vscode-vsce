@@ -31,6 +31,8 @@ export interface IPublishOptions {
 	readonly noVerify?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
+	readonly allowStarActivation?: boolean;
+	readonly allowMissingRepository?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
