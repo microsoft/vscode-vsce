@@ -10,7 +10,7 @@
 
 - [Node.js](https://nodejs.org/en/) at least `14.x.x`
 
-Or simply [Docker](#via-docker).
+Or simply [Docker](#usage-via-docker).
 
 ### Linux
 
