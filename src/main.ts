@@ -183,6 +183,7 @@ module.exports = function (argv: string[]): void {
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
+		.option('--no-verify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
@@ -203,6 +204,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
+					noVerifyLegacy,
 					noVerify,
 					ignoreFile,
 					dependencies,
@@ -225,7 +227,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
-						noVerify,
+						noVerify: noVerify || noVerifyLegacy,
 						ignoreFile,
 						dependencies,
 						preRelease,

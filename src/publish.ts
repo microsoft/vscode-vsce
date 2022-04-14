@@ -103,10 +103,14 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 	validatePublisher(manifest.publisher);
 
 	if (!options.noVerify && manifest.enableProposedApi) {
-		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+		throw new Error(
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --no-verify to bypass."
+		);
 	}
 	if (!options.noVerify && manifest.enabledApiProposals) {
-		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+		throw new Error(
+			"Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace. Use --no-verify to bypass."
+		);
 	}
 
 	if (semver.prerelease(manifest.version)) {

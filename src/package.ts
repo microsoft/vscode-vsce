@@ -493,7 +493,9 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		if (!this.options.allowMissingRepository && !this.manifest.repository) {
-			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
+			util.log.warn(
+				`A 'repository' field is missing from the 'package.json' manifest file.\nUse --allow-missing-repository to bypass.`
+			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -502,7 +504,7 @@ export class ManifestProcessor extends BaseProcessor {
 
 		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
 			util.log.warn(
-				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
+				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up\nUse --allow-star-activation to bypass.`
 			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
