@@ -96,6 +96,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
+		.option('--readmePath <path>', 'Set the path or readme file, by default use README.md')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
@@ -119,6 +120,7 @@ module.exports = function (argv: string[]): void {
 					rewriteRelativeLinks,
 					baseContentUrl,
 					baseImagesUrl,
+					readmePath,
 					yarn,
 					ignoreFile,
 					gitHubIssueLinking,
@@ -142,6 +144,7 @@ module.exports = function (argv: string[]): void {
 						rewriteRelativeLinks,
 						baseContentUrl,
 						baseImagesUrl,
+						readmePath,
 						useYarn: yarn,
 						ignoreFile,
 						gitHubIssueLinking,
@@ -180,6 +183,7 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
+		.option('--readmePath <path>', 'Set the path or readme file, by default use README.md')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
@@ -202,6 +206,7 @@ module.exports = function (argv: string[]): void {
 					gitlabBranch,
 					baseContentUrl,
 					baseImagesUrl,
+					readmePath,
 					yarn,
 					noVerify,
 					ignoreFile,

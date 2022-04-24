@@ -79,6 +79,7 @@ export interface IPackageOptions {
 	readonly rewriteRelativeLinks?: boolean;
 	readonly baseContentUrl?: string;
 	readonly baseImagesUrl?: string;
+	readonly readmePath?: string;
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
@@ -851,7 +852,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 export class ReadmeProcessor extends MarkdownProcessor {
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
-		super(manifest, 'README.md', /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
+		super(manifest, options.readmePath || 'README.md', /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
 	}
 }
 export class ChangelogProcessor extends MarkdownProcessor {

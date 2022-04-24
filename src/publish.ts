@@ -24,6 +24,7 @@ export interface IPublishOptions {
 	readonly gitlabBranch?: string;
 	readonly baseContentUrl?: string;
 	readonly baseImagesUrl?: string;
+	readonly readmePath?: string;
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
