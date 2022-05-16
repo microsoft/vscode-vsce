@@ -9,6 +9,7 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+
 const pkg = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
@@ -281,8 +282,9 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('search <text>')
 		.option('--json', 'Output result in json format', false)
+		.option('-p, --pagesize [value]', 'Number of results to return', '100')
 		.description('search extension gallery')
-		.action((text, { json }) => main(search(text, json)));
+		.action((text, { json, pagesize }) => main(search(text, json, parseInt(pagesize))));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
