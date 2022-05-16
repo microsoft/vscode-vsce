@@ -40,9 +40,10 @@ export async function search(
 				`Search results:`,
 				'',
 				...tableView([
-					['<ExtensionId>', '<Name>', '<Installs>', '<Rating>'],
-					...results.map(({ publisher: { publisherName }, extensionName, displayName, statistics }) => [
-						publisherName + '.' + extensionName,
+					['<ExtensionId>', '<Publisher>', '<Name>', '<Installs>', '<Rating>'],
+					...results.map(({ publisher, extensionName, displayName, statistics }) => [
+						publisher.publisherName + '.' + extensionName,
+						publisher.displayName,
 						wordTrim(displayName || '', 25),
 						getStats(statistics!),
 					]),
