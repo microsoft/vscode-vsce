@@ -10,6 +10,8 @@ import { ExtensionStatiticsMap } from './show';
 const installationTarget = 'Microsoft.VisualStudio.Code';
 const excludeFlags = '37888'; //Value to exclude un-published, locked or hidden extensions
 
+const baseResultsTableHeaders = ['<ExtensionId>', '<Publisher>', '<Name>'];
+
 interface VSCodePublishedExtension extends PublishedExtension {
 	publisher: { displayName: string; publisherName: string };
 }
@@ -30,24 +32,16 @@ export async function search(
 		flags: [
 			ExtensionQueryFlags.ExcludeNonValidated,
 			ExtensionQueryFlags.IncludeLatestVersionOnly,
-			ExtensionQueryFlags.IncludeStatistics,
+			stats ? ExtensionQueryFlags.IncludeStatistics : 0,
 		],
 	})) as VSCodePublishedExtension[];
 
-	if (stats) {
+	if (stats || !json) {
 		console.log(
 			[
 				`Search results:`,
 				'',
-				...tableView([
-					['<ExtensionId>', '<Publisher>', '<Name>', '<Installs>', '<Rating>'],
-					...results.map(({ publisher, extensionName, displayName, statistics }) => [
-						publisher.publisherName + '.' + extensionName,
-						publisher.displayName,
-						wordTrim(displayName || '', 25),
-						getStats(statistics!),
-					]),
-				]),
+				...buildResultTableView(results, stats),
 				'',
 				'For more information on an extension use "vsce show <extensionId>"',
 			]
@@ -57,36 +51,35 @@ export async function search(
 		return;
 	}
 
-	if (json) {
-		console.log(JSON.stringify(results, undefined, '\t'));
-		return;
-	}
-
 	if (!results.length) {
 		console.log('No matching results');
 		return;
 	}
 
-	console.log(
-		[
-			`Search results:`,
-			'',
-			...tableView([
-				['<ExtensionId>', '<Name>', '<Description>'],
-				...results.map(({ publisher: { publisherName }, extensionName, displayName, shortDescription }) => [
-					publisherName + '.' + extensionName,
-					wordTrim(displayName || '', 25),
-					wordTrim(shortDescription || '', 150).replace(/\n|\r|\t/g, ' '),
-				]),
-			]),
-			'',
-			'For more information on an extension use "vsce show <extensionId>"',
-		]
-			.map(line => wordTrim(line.replace(/\s+$/g, '')))
-			.join('\n')
-	);
+	if (json) {
+		console.log(JSON.stringify(results, undefined, '\t'));
+		return;
+	}
 }
-function getStats(statistics: ExtensionStatistic[]): string {
+
+function buildResultTableView(results: VSCodePublishedExtension[], stats: boolean): string[] {
+	const values = results.map(({ publisher, extensionName, displayName, shortDescription, statistics }) => [
+		publisher.publisherName + '.' + extensionName,
+		publisher.displayName,
+		wordTrim(displayName || '', 25),
+		stats ? buildExtensionStatisticsText(statistics!) : wordTrim(shortDescription || '', 150).replace(/\n|\r|\t/g, ' '),
+	]);
+
+	var resultsTableHeaders = stats
+		? [...baseResultsTableHeaders, '<Installs>', '<Rating>']
+		: [...baseResultsTableHeaders, '<Description>'];
+
+	const resultsTable = tableView([resultsTableHeaders, ...values]);
+
+	return resultsTable;
+}
+
+function buildExtensionStatisticsText(statistics: ExtensionStatistic[]): string {
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics?.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
 		<ExtensionStatiticsMap>{}
