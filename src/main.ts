@@ -282,9 +282,10 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('search <text>')
 		.option('--json', 'Output result in json format', false)
+		.option('--stats', 'Shows the extension rating and download counts', false)
 		.option('-p, --pagesize [value]', 'Number of results to return', '100')
 		.description('search extension gallery')
-		.action((text, { json, pagesize }) => main(search(text, json, parseInt(pagesize))));
+		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
