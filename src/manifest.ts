@@ -60,6 +60,7 @@ export interface Manifest {
 	enabledApiProposals?: readonly string[];
 	qna?: 'marketplace' | string | false;
 	extensionKind?: ExtensionKind | ExtensionKind[];
+	sponsorLink?: string;
 
 	// optional (npm)
 	author?: string | Person;
