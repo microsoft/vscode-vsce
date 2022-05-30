@@ -1660,6 +1660,34 @@ describe('toVsixManifest', () => {
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
 	});
 
+	it('should add sponsor link property', () => {
+		const sponsor = 'https://foo.bar';
+		const manifest: Manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			sponsor,
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const sponsorLinkProp = properties.find(p => p.$.Id === 'Microsoft.VisualStudio.Code.SponsorLink');
+				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor);
+			});
+	});
+
+	it('should automatically add sponsor tag for extension with sponsor link', async () => {
+		const manifest = createManifest({ sponsor: 'https://foo.bar' });
+		const vsixManifest = await _toVsixManifest(manifest, []);
+		const result = await parseXmlManifest(vsixManifest);
+
+		assert.ok(result.PackageManifest.Metadata[0].Tags[0].split(',').includes('__sponsor_extension'));
+	});
+
 	it('should add prerelease property when --pre-release flag is passed when engine property is for insiders', async () => {
 		const manifest = createManifest({ engines: { vscode: '>=1.64.0-insider' } });
 

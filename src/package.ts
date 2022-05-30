@@ -128,6 +128,7 @@ export interface VSIX {
 	extensionKind: string;
 	localizedLanguages: string;
 	preRelease: boolean;
+	sponsorLink: string;
 }
 
 export class BaseProcessor implements IProcessor {
@@ -453,6 +454,7 @@ export class ManifestProcessor extends BaseProcessor {
 							.join(',')
 					: '',
 			preRelease: !!this.options.preRelease,
+			sponsorLink: manifest.sponsor || '',
 		};
 
 		if (isGitHub) {
@@ -603,6 +605,7 @@ export class TagsProcessor extends BaseProcessor {
 		);
 
 		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
+		const sponsorTags = this.manifest.sponsor ? ['__sponsor_extension'] : [];
 
 		const tags = new Set([
 			...keywords,
@@ -620,6 +623,7 @@ export class TagsProcessor extends BaseProcessor {
 			...grammars,
 			...descriptionKeywords,
 			...webExensionTags,
+			...sponsorTags,
 		]);
 
 		this.tags = [...tags].filter(tag => !!tag);
@@ -1299,6 +1303,11 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="${escape(vsix.extensionKind)}" />
 				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
 				${vsix.preRelease ? `<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${escape(vsix.preRelease)}" />` : ''}
+				${
+					vsix.sponsorLink
+						? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(vsix.sponsorLink)}" />`
+						: ''
+				}
 				${
 					!vsix.links.repository
 						? ''
