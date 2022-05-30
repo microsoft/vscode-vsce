@@ -1681,7 +1681,7 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should automatically add sponsor tag for extension with sponsor link', async () => {
-		const manifest = createManifest({ sponsorLink: 'https://foo.bar' });
+		const manifest = createManifest({ sponsor: 'https://foo.bar' });
 		const vsixManifest = await _toVsixManifest(manifest, []);
 		const result = await parseXmlManifest(vsixManifest);
 

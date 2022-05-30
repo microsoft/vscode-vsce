@@ -454,7 +454,7 @@ export class ManifestProcessor extends BaseProcessor {
 							.join(',')
 					: '',
 			preRelease: !!this.options.preRelease,
-			sponsorLink: manifest.sponsorLink || '',
+			sponsorLink: manifest.sponsor || '',
 		};
 
 		if (isGitHub) {
@@ -605,7 +605,7 @@ export class TagsProcessor extends BaseProcessor {
 		);
 
 		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
-		const sponsorTags = this.manifest.sponsorLink ? ['__sponsor_extension'] : [];
+		const sponsorTags = this.manifest.sponsor ? ['__sponsor_extension'] : [];
 
 		const tags = new Set([
 			...keywords,
