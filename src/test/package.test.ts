@@ -1661,14 +1661,14 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should add sponsor link property', () => {
-		const sponsorLink = 'https://foo.bar';
-		const manifest = {
+		const sponsor = 'https://foo.bar';
+		const manifest: Manifest = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
 			description: 'test extension',
 			engines: Object.create(null),
-			sponsorLink,
+			sponsor,
 		};
 
 		return _toVsixManifest(manifest, [])
@@ -1676,7 +1676,7 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const sponsorLinkProp = properties.find(p => p.$.Id === 'Microsoft.VisualStudio.Code.SponsorLink');
-				assert.strictEqual(sponsorLinkProp?.$.Value, sponsorLink);
+				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor);
 			});
 	});
 
