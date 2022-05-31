@@ -383,6 +383,13 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
 	});
+
+	it('should validate sponsor', () => {
+		assert.throws(() => validateManifest(createManifest({ sponsor: 'hello' })));
+		assert.throws(() => validateManifest(createManifest({ sponsor: 'www.foo.com' })));
+		validateManifest(createManifest({ sponsor: 'https://foo.bar' }));
+		validateManifest(createManifest({ sponsor: 'http://www.foo.com' }));
+	});
 });
 
 describe('toVsixManifest', () => {

@@ -1221,6 +1221,21 @@ export function validateManifest(manifest: Manifest): Manifest {
 		}
 	}
 
+	if (manifest.sponsor) {
+		let isValidSponsorUrl = true;
+		try {
+			const sponsorUrl = new url.URL(manifest.sponsor);
+			isValidSponsorUrl = /^(https|http):$/i.test(sponsorUrl.protocol);
+		} catch (error) {
+			isValidSponsorUrl = false;
+		}
+		if (!isValidSponsorUrl) {
+			throw new Error(
+				`Manifest contains invalid value '${manifest.sponsor}' in the 'sponsor' property. It must be a valid URL with a HTTP or HTTPS protocol.`
+			);
+		}
+	}
+
 	return manifest;
 }
 
