@@ -383,6 +383,13 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
 	});
+
+	it('should validate sponsor', () => {
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'hello' } })));
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'www.foo.com' } })));
+		validateManifest(createManifest({ sponsor: { url: 'https://foo.bar' } }));
+		validateManifest(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
+	});
 });
 
 describe('toVsixManifest', () => {
@@ -1661,7 +1668,7 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should add sponsor link property', () => {
-		const sponsor = 'https://foo.bar';
+		const sponsor = { url: 'https://foo.bar' };
 		const manifest: Manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1676,12 +1683,12 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const sponsorLinkProp = properties.find(p => p.$.Id === 'Microsoft.VisualStudio.Code.SponsorLink');
-				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor);
+				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor.url);
 			});
 	});
 
 	it('should automatically add sponsor tag for extension with sponsor link', async () => {
-		const manifest = createManifest({ sponsor: 'https://foo.bar' });
+		const manifest = createManifest({ sponsor: { url: 'https://foo.bar' } });
 		const vsixManifest = await _toVsixManifest(manifest, []);
 		const result = await parseXmlManifest(vsixManifest);
 

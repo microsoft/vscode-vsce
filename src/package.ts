@@ -454,7 +454,7 @@ export class ManifestProcessor extends BaseProcessor {
 							.join(',')
 					: '',
 			preRelease: !!this.options.preRelease,
-			sponsorLink: manifest.sponsor || '',
+			sponsorLink: manifest.sponsor?.url || '',
 		};
 
 		if (isGitHub) {
@@ -605,7 +605,7 @@ export class TagsProcessor extends BaseProcessor {
 		);
 
 		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
-		const sponsorTags = this.manifest.sponsor ? ['__sponsor_extension'] : [];
+		const sponsorTags = this.manifest.sponsor?.url ? ['__sponsor_extension'] : [];
 
 		const tags = new Set([
 			...keywords,
@@ -1218,6 +1218,21 @@ export function validateManifest(manifest: Manifest): Manifest {
 						.join(', ')}.`
 				);
 			}
+		}
+	}
+
+	if (manifest.sponsor) {
+		let isValidSponsorUrl = true;
+		try {
+			const sponsorUrl = new url.URL(manifest.sponsor.url);
+			isValidSponsorUrl = /^(https|http):$/i.test(sponsorUrl.protocol);
+		} catch (error) {
+			isValidSponsorUrl = false;
+		}
+		if (!isValidSponsorUrl) {
+			throw new Error(
+				`Manifest contains invalid value '${manifest.sponsor.url}' in the 'sponsor' property. It must be a valid URL with a HTTP or HTTPS protocol.`
+			);
 		}
 	}
 
