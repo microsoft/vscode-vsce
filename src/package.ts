@@ -936,7 +936,7 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	}
 
 	appendJSExt(filePath: string): string {
-		if (filePath.endsWith('.js')) {
+		if (filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
 			return filePath;
 		}
 		return filePath + '.js';
