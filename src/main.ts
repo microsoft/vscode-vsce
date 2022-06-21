@@ -70,7 +70,9 @@ module.exports = function (argv: string[]): void {
 			undefined
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
 			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
@@ -102,6 +104,8 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
@@ -185,7 +189,9 @@ module.exports = function (argv: string[]): void {
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')

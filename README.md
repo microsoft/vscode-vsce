@@ -74,6 +74,8 @@ Or you can also set them in the `package.json`, so that you avoid having to rety
 {
   "vsce": {
     "baseImagesUrl": "https://my.custom/base/images/url"
+    "dependencies": true,
+    "yarn": false
   }
 }
 ```
