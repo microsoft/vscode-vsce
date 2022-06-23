@@ -185,14 +185,12 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	const result = new Set([cwd]);
 
-	if (await exists(path.join(cwd, 'yarn.lock'))) {
-		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
-		const flatten = (dep: YarnDependency) => {
-			result.add(dep.path);
-			dep.children.forEach(flatten);
-		};
-		deps.forEach(flatten);
-	}
+	const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
+	const flatten = (dep: YarnDependency) => {
+		result.add(dep.path);
+		dep.children.forEach(flatten);
+	};
+	deps.forEach(flatten);
 
 	return [...result];
 }
