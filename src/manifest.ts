@@ -79,6 +79,7 @@ export interface Manifest {
 	dependencies?: { [name: string]: string };
 	devDependencies?: { [name: string]: string };
 	private?: boolean;
+	pricing?: string;
 
 	// vsce
 	vsce?: any;

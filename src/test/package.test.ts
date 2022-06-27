@@ -390,6 +390,13 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ sponsor: { url: 'https://foo.bar' } }));
 		validateManifest(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
 	});
+
+	it('should validate pricing', () => {
+		assert.throws(() => validateManifest(createManifest({ pricing: 'Paid' })));
+		validateManifest(createManifest({ pricing: 'Trial' }));
+		validateManifest(createManifest({ pricing: 'Free' }));
+		validateManifest(createManifest());
+	});
 });
 
 describe('toVsixManifest', () => {
@@ -1723,6 +1730,13 @@ describe('toVsixManifest', () => {
 		}
 
 		throw new Error('Should not reach here');
+	});
+
+	it('should identify trial version of an extension', async () => {
+		const manifest = createManifest({ pricing: 'Trial' });
+		var raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.Content.Pricing', 'Trial');
 	});
 });
 
