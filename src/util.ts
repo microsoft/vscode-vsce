@@ -129,11 +129,23 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	args = [LogPrefix[type], msg, ...args];
 
 	if (type === LogMessageType.WARNING) {
-		console.warn(...args);
+		if (process.env['GITHUB_ACTIONS']) {
+			process.stdout.write(`::warning::${msg}`);
+		} else {
+			console.warn(...args);
+		}
 	} else if (type === LogMessageType.ERROR) {
-		console.error(...args);
+		if (process.env['GITHUB_ACTIONS']) {
+			process.stdout.write(`::error::${msg}`);
+		} else {
+			console.error(...args);
+		}
 	} else {
-		console.log(...args);
+		if (process.env['GITHUB_ACTIONS']) {
+			process.stdout.write(`::notice::${msg}`);
+		} else {
+			console.log(...args);
+		}
 	}
 }
 
