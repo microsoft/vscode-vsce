@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { Manifest } from './manifest';
+import * as os from 'os';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -130,19 +131,19 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 
 	if (type === LogMessageType.WARNING) {
 		if (process.env['GITHUB_ACTIONS']) {
-			process.stdout.write(`::warning::${msg}`);
+			process.stdout.write(`::warning::${msg}` + os.EOL);
 		} else {
 			console.warn(...args);
 		}
 	} else if (type === LogMessageType.ERROR) {
 		if (process.env['GITHUB_ACTIONS']) {
-			process.stdout.write(`::error::${msg}`);
+			process.stdout.write(`::error::${msg}` + os.EOL);
 		} else {
 			console.error(...args);
 		}
 	} else {
 		if (process.env['GITHUB_ACTIONS']) {
-			process.stdout.write(`::notice::${msg}`);
+			process.stdout.write(`::notice::${msg}` + os.EOL);
 		} else {
 			console.log(...args);
 		}
