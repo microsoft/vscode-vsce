@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { Manifest } from './manifest';
-import { error, info, warning } from '@actions/core';
+import { EOL } from 'os';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -130,12 +130,22 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	args = [LogPrefix[type], msg, ...args];
 
 	if (type === LogMessageType.WARNING) {
-		process.env['GITHUB_ACTIONS'] ? warning(msg) : console.warn(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('warning', msg) : console.warn(...args);
 	} else if (type === LogMessageType.ERROR) {
-		process.env['GITHUB_ACTIONS'] ? error(msg) : console.error(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('error', msg) : console.error(...args);
 	} else {
-		process.env['GITHUB_ACTIONS'] ? info(msg) : console.log(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('info', msg) : console.log(...args);
 	}
+}
+
+function logToGitHubActions(type: string, message: string): void {
+	const escape = (message: string) => {
+		return message.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+	};
+
+	const command = type === 'info' ? message : `::${type}::${escape(message)}`;
+
+	process.stdout.write(command + EOL);
 }
 
 export interface LogFn {
