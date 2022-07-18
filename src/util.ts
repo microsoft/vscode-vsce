@@ -138,13 +138,20 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	}
 }
 
+const EscapeCharacters = new Map([
+	['%', '%25'],
+	['\r', '%0D'],
+	['\n', '%0A'],
+]);
+
+const EscapeRegex = new RegExp(`[${[...EscapeCharacters.keys()].join('')}]`, 'g');
+
+function escapeGitHubActionsMessage(message: string): string {
+	return message.replace(EscapeRegex, c => EscapeCharacters.get(c) ?? c);
+}
+
 function logToGitHubActions(type: string, message: string): void {
-	const escape = (message: string) => {
-		return message.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
-	};
-
-	const command = type === 'info' ? message : `::${type}::${escape(message)}`;
-
+	const command = type === 'info' ? message : `::${type}::${escapeGitHubActionsMessage(message)}`;
 	process.stdout.write(command + EOL);
 }
 
