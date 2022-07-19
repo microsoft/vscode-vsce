@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { Manifest } from './manifest';
+import { EOL } from 'os';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -129,12 +130,29 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	args = [LogPrefix[type], msg, ...args];
 
 	if (type === LogMessageType.WARNING) {
-		console.warn(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('warning', msg) : console.warn(...args);
 	} else if (type === LogMessageType.ERROR) {
-		console.error(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('error', msg) : console.error(...args);
 	} else {
-		console.log(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('info', msg) : console.log(...args);
 	}
+}
+
+const EscapeCharacters = new Map([
+	['%', '%25'],
+	['\r', '%0D'],
+	['\n', '%0A'],
+]);
+
+const EscapeRegex = new RegExp(`[${[...EscapeCharacters.keys()].join('')}]`, 'g');
+
+function escapeGitHubActionsMessage(message: string): string {
+	return message.replace(EscapeRegex, c => EscapeCharacters.get(c) ?? c);
+}
+
+function logToGitHubActions(type: string, message: string): void {
+	const command = type === 'info' ? message : `::${type}::${escapeGitHubActionsMessage(message)}`;
+	process.stdout.write(command + EOL);
 }
 
 export interface LogFn {
