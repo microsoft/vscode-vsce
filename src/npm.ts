@@ -155,9 +155,17 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 }
 
 async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
+	const versionString = await new Promise<string>((c, e) =>
+		cp.exec(
+			'yarn --version',
+			{ cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 },
+			(err, stdout) => (err ? e(err) : c(stdout))
+		)
+	);
+	const yarnCommand = versionString[0] !== 1 ? "yarn info --recursive --dependents --json" : 'yarn list --prod --json'
 	const raw = await new Promise<string>((c, e) =>
 		cp.exec(
-			'yarn list --prod --json',
+			yarnCommand,
 			{ cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 },
 			(err, stdout) => (err ? e(err) : c(stdout))
 		)
