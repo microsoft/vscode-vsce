@@ -1,93 +1,18 @@
 import { publish as _publish } from './publish';
-import { packageCommand, listFiles as _listFiles } from './package';
+import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
 
-export interface IBaseVSIXOptions {
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
+/**
+ * @deprecated prefer IPackageOptions instead
+ */
+export type IBaseVSIXOptions = Pick<
+	IPackageOptions,
+	'baseContentUrl' | 'baseImagesUrl' | 'githubBranch' | 'gitlabBranch' | 'useYarn' | 'target' | 'preRelease' | 'version'
+>;
 
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Github branch used to publish the package. Used to automatically infer
-	 * the base content and images URI.
-	 */
-	githubBranch?: string;
-
-	/**
-	 * Gitlab branch used to publish the package. Used to automatically infer
-	 * the base content and images URI.
-	 */
-	gitlabBranch?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
-
-	/**
-	 * Optional target the extension should run on.
-	 *
-	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
-	 */
-	target?: string;
-
-	/**
-	 * Mark this package as a pre-release
-	 */
-	preRelease?: boolean;
-}
-
-export interface ICreateVSIXOptions extends IBaseVSIXOptions {
-	/**
-	 * The location of the extension in the file system.
-	 *
-	 * Defaults to `process.cwd()`.
-	 */
-	cwd?: string;
-
-	/**
-	 * The destination of the packaged the VSIX.
-	 *
-	 * Defaults to `NAME-VERSION.vsix`.
-	 */
-	packagePath?: string;
-}
-
-export interface IPublishOptions {
-	/**
-	 * The location of the extension in the file system.
-	 *
-	 * Defaults to `process.cwd()`.
-	 */
-	cwd?: string;
-
-	/**
-	 * The Personal Access Token to use.
-	 *
-	 * Defaults to the stored one.
-	 */
-	pat?: string;
-
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
-
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
-}
+/**
+ * @deprecated prefer IPackageOptions instead
+ */
+export type ICreateVSIXOptions = Pick<IPackageOptions, 'cwd' | 'packagePath'> & IBaseVSIXOptions;
 
 /**
  * The supported list of package managers.
@@ -136,7 +61,7 @@ export interface IPublishVSIXOptions extends IBaseVSIXOptions {
 /**
  * Creates a VSIX from the extension in the current working directory.
  */
-export function createVSIX(options: ICreateVSIXOptions = {}): Promise<any> {
+export function createVSIX(options: IPackageOptions = {}): Promise<any> {
 	return packageCommand(options);
 }
 
