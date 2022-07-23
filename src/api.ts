@@ -1,6 +1,8 @@
 import { publish as _publish, IPublishOptions as _IPublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
 
+export { IPackageOptions };
+
 /**
  * @deprecated prefer IPackageOptions instead
  */
