@@ -6,7 +6,7 @@ import { packageCommand, listFiles as _listFiles, IPackageOptions } from './pack
  */
 export type IBaseVSIXOptions = Pick<
 	IPackageOptions,
-	'baseContentUrl' | 'baseImagesUrl' | 'githubBranch' | 'gitlabBranch' | 'useYarn' | 'target' | 'preRelease' | 'version'
+	'baseContentUrl' | 'baseImagesUrl' | 'githubBranch' | 'gitlabBranch' | 'useYarn' | 'target' | 'preRelease'
 >;
 
 /**
