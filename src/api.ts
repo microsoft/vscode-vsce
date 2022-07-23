@@ -1,4 +1,4 @@
-import { publish as _publish } from './publish';
+import { publish as _publish, IPublishOptions as _IPublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
 
 /**
@@ -49,14 +49,9 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export interface IPublishVSIXOptions extends IBaseVSIXOptions {
-	/**
-	 * The Personal Access Token to use.
-	 *
-	 * Defaults to the stored one.
-	 */
-	pat?: string;
-}
+export type IPublishVSIXOptions = IPublishOptions & Pick<IPackageOptions, 'target'>;
+
+export type IPublishOptions = _IPublishOptions;
 
 /**
  * Creates a VSIX from the extension in the current working directory.
