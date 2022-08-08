@@ -1150,7 +1150,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 		throw new Error('Manifest missing field: version');
 	}
 
-	if (manifest.pricing && !['free', 'trial'].includes(manifest.pricing.toLowerCase())) {
+	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
 		throw new Error('Pricing should be Free or Trial');
 	}
 
