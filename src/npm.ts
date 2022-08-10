@@ -214,13 +214,23 @@ export async function getDependencies(
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
+	let deps: string[];
 	if (dependencies === 'none') {
 		return [cwd];
 	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
-		return await getYarnDependencies(cwd, packagedDependencies);
+		deps = await getYarnDependencies(cwd, packagedDependencies);
 	} else {
-		return await getNpmDependencies(cwd);
+		deps = await getNpmDependencies(cwd);
 	}
+
+	try {
+		const link = await fs.promises.readlink(cwd);
+		const pathToReplace = path.resolve(cwd, link);
+
+		deps = deps.map(dep => dep.replace(pathToReplace, cwd));
+	} catch (e) {}
+
+	return deps;
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
