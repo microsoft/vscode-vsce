@@ -225,7 +225,7 @@ export async function getDependencies(
 
 	try {
 		const link = await fs.promises.readlink(cwd);
-		const pathToReplace = path.resolve(cwd, link);
+		const pathToReplace = path.resolve(path.dirname(cwd), link);
 
 		deps = deps.map(dep => dep.replace(pathToReplace, cwd));
 	} catch (e) {}
