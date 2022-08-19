@@ -40,7 +40,9 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
 		} else if (options.targets) {
-			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'target'.`);
+			throw new Error(
+				`Both options not supported simultaneously: 'packagePath' and 'target'. Use 'vsce package --target <target>' to first create a platform specific package, then use 'vsce publish --packagePath <path>' to publish it.`
+			);
 		}
 
 		for (const packagePath of options.packagePath) {
