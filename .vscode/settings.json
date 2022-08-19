@@ -15,5 +15,6 @@
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
-	"conventionalCommits.scopes": ["api"]
+	"conventionalCommits.scopes": ["api"],
+	"git.branchProtection": ["main"]
 }
