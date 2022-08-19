@@ -393,7 +393,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	}
 }
 
-const Targets = new Set([
+export const Targets = new Set([
 	'win32-x64',
 	'win32-ia32',
 	'win32-arm64',
