@@ -19,14 +19,38 @@ export interface IPublishOptions {
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;
+
+	/**
+	 * The location of the extension in the file system.
+	 *
+	 * Defaults to `process.cwd()`.
+	 */
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
+
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
 	readonly baseContentUrl?: string;
+
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+
+	/**
+	 * The Personal Access Token to use.
+	 *
+	 * Defaults to the stored one.
+	 */
 	readonly pat?: string;
 	readonly noVerify?: boolean;
 	readonly dependencies?: boolean;
