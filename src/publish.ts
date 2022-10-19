@@ -124,6 +124,7 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
