@@ -197,7 +197,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
-		.option('--skip-duplicate', 'Do not fail if package already exists on the marketplace')
+		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
 		.action(
 			(
 				version,
