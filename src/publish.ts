@@ -172,7 +172,7 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 
 			if (sameVersion.length > 0) {
 				if (options.skipDuplicate) {
-					log.done(`Found v${manifest.version} - skipping publish`);
+					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
 					return;
 				}
 				if (!options.target) {
