@@ -57,6 +57,7 @@ export interface IPublishOptions {
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -123,6 +124,7 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
@@ -170,6 +172,10 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
 
 			if (sameVersion.length > 0) {
+				if (options.skipDuplicate) {
+					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+					return;
+				}
 				if (!options.target) {
 					throw new Error(`${description} already exists.`);
 				}
@@ -187,7 +193,12 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
 			} catch (err: any) {
 				if (err.statusCode === 409) {
-					throw new Error(`${description} already exists.`);
+					if (options.skipDuplicate) {
+						log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+						return;
+					} else {
+						throw new Error(`${description} already exists.`);
+					}
 				} else {
 					throw err;
 				}
