@@ -172,6 +172,7 @@ export interface VSIX {
 	localizedLanguages: string;
 	preRelease: boolean;
 	sponsorLink: string;
+	pricing: string;
 }
 
 export class BaseProcessor implements IProcessor {
@@ -475,6 +476,7 @@ export class ManifestProcessor extends BaseProcessor {
 			target,
 			engine: manifest.engines['vscode'],
 			description: manifest.description ?? '',
+			pricing: manifest.pricing ?? 'Free',
 			categories: (manifest.categories ?? []).join(','),
 			flags: flags.join(' '),
 			links: {
@@ -1191,6 +1193,10 @@ export function validateManifest(manifest: Manifest): Manifest {
 		throw new Error('Manifest missing field: version');
 	}
 
+	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
+		throw new Error('Pricing should be Free or Trial');
+	}
+
 	validateVersion(manifest.version);
 
 	if (!manifest.engines) {
@@ -1404,6 +1410,8 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 						: ''
 				}
 				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="${escape(vsix.githubMarkdown)}" />
+				<Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="${escape(vsix.pricing)}"/>
+
 				${
 					vsix.enableMarketplaceQnA !== undefined
 						? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
