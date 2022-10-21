@@ -9,7 +9,7 @@
 			"request": "launch",
 			"name": "Launch Program",
 			// "cwd": "<absolute path to your extension>",
-			"program": "${workspaceFolder}/out/vsce",
+			"program": "${workspaceFolder}/vsce",
 			"args": [
 				"--version"
 				// "ls", "package", "publish"

@@ -19,20 +19,45 @@ export interface IPublishOptions {
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;
+
+	/**
+	 * The location of the extension in the file system.
+	 *
+	 * Defaults to `process.cwd()`.
+	 */
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
+
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
 	readonly baseContentUrl?: string;
+
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+
+	/**
+	 * The Personal Access Token to use.
+	 *
+	 * Defaults to the stored one.
+	 */
 	readonly pat?: string;
 	readonly noVerify?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -40,7 +65,9 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
 		} else if (options.targets) {
-			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'target'.`);
+			throw new Error(
+				`Both options not supported simultaneously: 'packagePath' and 'target'. Use 'vsce package --target <target>' to first create a platform specific package, then use 'vsce publish --packagePath <path>' to publish it.`
+			);
 		}
 
 		for (const packagePath of options.packagePath) {
@@ -97,6 +124,7 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
@@ -144,6 +172,10 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
 
 			if (sameVersion.length > 0) {
+				if (options.skipDuplicate) {
+					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+					return;
+				}
 				if (!options.target) {
 					throw new Error(`${description} already exists.`);
 				}
@@ -161,7 +193,12 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
 			} catch (err: any) {
 				if (err.statusCode === 409) {
-					throw new Error(`${description} already exists.`);
+					if (options.skipDuplicate) {
+						log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+						return;
+					} else {
+						throw new Error(`${description} already exists.`);
+					}
 				} else {
 					throw err;
 				}

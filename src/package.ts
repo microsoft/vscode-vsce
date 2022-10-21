@@ -67,24 +67,67 @@ export interface IAsset {
 }
 
 export interface IPackageOptions {
+	/**
+	 * The destination of the packaged the VSIX.
+	 *
+	 * Defaults to `NAME-VERSION.vsix`.
+	 */
 	readonly packagePath?: string;
 	readonly version?: string;
+
+	/**
+	 * Optional target the extension should run on.
+	 *
+	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
+	 */
 	readonly target?: string;
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;
+
+	/**
+	 * The location of the extension in the file system.
+	 *
+	 * Defaults to `process.cwd()`.
+	 */
 	readonly cwd?: string;
+
+	/**
+	 * Github branch used to publish the package. Used to automatically infer
+	 * the base content and images URI.
+	 */
 	readonly githubBranch?: string;
+
+	/**
+	 * Gitlab branch used to publish the package. Used to automatically infer
+	 * the base content and images URI.
+	 */
 	readonly gitlabBranch?: string;
+
 	readonly rewriteRelativeLinks?: boolean;
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
 	readonly baseContentUrl?: string;
+
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
+
+	/**
+	 * Mark this package as a pre-release
+	 */
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
@@ -351,7 +394,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	}
 }
 
-const Targets = new Set([
+export const Targets = new Set([
 	'win32-x64',
 	'win32-ia32',
 	'win32-arm64',
@@ -711,7 +754,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			contents = contents.replace(markdownPathRegex, urlReplace);
 
 			// Replace <img> links with urls
-			contents = contents.replace(/<img.+?src=["']([/.\w\s-]+)['"].*?>/g, (all, link) => {
+			contents = contents.replace(/<img.+?src=["']([/.\w\s#-]+)['"].*?>/g, (all, link) => {
 				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
 				if (!this.baseImagesUrl && isLinkRelative) {

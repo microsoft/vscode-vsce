@@ -1,6 +1,6 @@
 import program from 'commander';
 import leven from 'leven';
-import { packageCommand, ls } from './package';
+import { packageCommand, ls, Targets } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
@@ -55,6 +55,8 @@ function main(task: Promise<any>): void {
 	});
 }
 
+const ValidTargets = [...Targets].join(', ');
+
 module.exports = function (argv: string[]): void {
 	program.version(pkg.version).usage('<command>');
 
@@ -81,7 +83,7 @@ module.exports = function (argv: string[]): void {
 		.command('package [version]')
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -167,7 +169,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.option('-t, --target <targets...>', 'Target architectures')
+		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -195,6 +197,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
 		.action(
 			(
 				version,
@@ -216,6 +219,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipDuplicate,
 				}
 			) =>
 				main(
@@ -238,6 +242,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipDuplicate,
 					})
 				)
 		);
