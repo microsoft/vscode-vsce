@@ -242,9 +242,9 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	const fullName = `${publisher}.${name}`;
 
 	if (!options.force) {
-		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+		const answer = await read(`This will delete ALL published versions! Please type '${fullName}' to confirm: `);
 
-		if (!/^y$/i.test(answer)) {
+		if (answer !== fullName) {
 			throw new Error('Aborted');
 		}
 	}
