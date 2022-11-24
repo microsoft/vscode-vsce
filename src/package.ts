@@ -649,7 +649,7 @@ export class TagsProcessor extends BaseProcessor {
 			[]
 		);
 
-		const webExensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
+		const webExtensionTags = isWebKind(this.manifest) ? ['__web_extension'] : [];
 		const sponsorTags = this.manifest.sponsor?.url ? ['__sponsor_extension'] : [];
 
 		const tags = new Set([
@@ -667,7 +667,7 @@ export class TagsProcessor extends BaseProcessor {
 			...languageActivations,
 			...grammars,
 			...descriptionKeywords,
-			...webExensionTags,
+			...webExtensionTags,
 			...sponsorTags,
 		]);
 
