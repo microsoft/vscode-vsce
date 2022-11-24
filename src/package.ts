@@ -93,7 +93,7 @@ export interface IPackageOptions {
 	readonly cwd?: string;
 
 	/**
-	 * Github branch used to publish the package. Used to automatically infer
+	 * GitHub branch used to publish the package. Used to automatically infer
 	 * the base content and images URI.
 	 */
 	readonly githubBranch?: string;
