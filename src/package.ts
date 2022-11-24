@@ -99,7 +99,7 @@ export interface IPackageOptions {
 	readonly githubBranch?: string;
 
 	/**
-	 * Gitlab branch used to publish the package. Used to automatically infer
+	 * GitLab branch used to publish the package. Used to automatically infer
 	 * the base content and images URI.
 	 */
 	readonly gitlabBranch?: string;
