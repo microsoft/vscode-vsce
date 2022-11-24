@@ -131,7 +131,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode | Yarn2TreeNode, pr
 					name: child.name,
 			  } as YarnTreeNode);
 
-		const dep = asYarnDependency(prefix, childDep, prune);
+		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), childDep, prune);
 
 		if (dep) {
 			children.push(dep);
