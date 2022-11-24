@@ -200,7 +200,7 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 		.map(parseInt);
 
 	const isY2 = major > 1;
-	const listCommand = isY2 ? 'yarn info --recursive --dependents --json' : 'yarn list --prod --json --depth 99999';
+	const listCommand = isY2 ? 'yarn info --recursive --dependents --json' : 'yarn list --prod --json';
 
 	let raw = await new Promise<string>((c, e) =>
 		cp.exec(listCommand, { cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 }, (err, stdout) =>
@@ -264,8 +264,6 @@ export async function getDependencies(
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
-	console.log(await getYarnDependencies(cwd, packagedDependencies));
-	console.log(await getNpmDependencies(cwd));
 	if (dependencies === 'none') {
 		return [cwd];
 	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
