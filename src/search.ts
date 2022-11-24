@@ -6,7 +6,7 @@ import {
 	ExtensionStatistic,
 } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { ratingStars, tableView, wordTrim } from './viewutils';
-import { ExtensionStatiticsMap } from './show';
+import { ExtensionStatisticsMap } from './show';
 const installationTarget = 'Microsoft.VisualStudio.Code';
 const excludeFlags = '37888'; //Value to exclude un-published, locked or hidden extensions
 
@@ -82,7 +82,7 @@ function buildResultTableView(results: VSCodePublishedExtension[], stats: boolea
 function buildExtensionStatisticsText(statistics: ExtensionStatistic[]): string {
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics?.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
-		<ExtensionStatiticsMap>{}
+		<ExtensionStatisticsMap>{}
 	);
 
 	return (
