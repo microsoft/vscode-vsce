@@ -179,3 +179,7 @@ export function patchOptionsWithManifest(options: any, manifest: Manifest): void
 		}
 	}
 }
+
+export function ndjsonToJson(data: string): any {
+	return `[${data.split('\n').filter(nonnull).join(',')}]`;
+}

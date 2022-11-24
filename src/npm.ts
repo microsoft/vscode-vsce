@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
 import parseSemver from 'parse-semver';
-import { CancellationToken, log, nonnull } from './util';
+import { CancellationToken, log, ndjsonToJson, nonnull } from './util';
 
 const exists = (file: string) =>
 	fs.promises.stat(file).then(
@@ -75,31 +75,63 @@ interface YarnTreeNode {
 	children: YarnTreeNode[];
 }
 
+interface Yarn2TreeNode {
+	value: string;
+	children: Yarn2TreeNodeChildren;
+}
+
+interface Yarn2TreeNodeChildren {
+	Version: string;
+	Dependencies: Yarn2Dependency[];
+}
+
+interface Yarn2Dependency {
+	descriptor: string;
+	locator: string;
+}
+
 export interface YarnDependency {
 	name: string;
 	path: string;
 	children: YarnDependency[];
 }
 
-function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): YarnDependency | null {
-	if (prune && /@[\^~]/.test(tree.name)) {
+function isYarn2(tree: YarnTreeNode | Yarn2TreeNode | Yarn2Dependency): tree is Yarn2TreeNode | Yarn2Dependency {
+	return (tree as Yarn2TreeNode).value !== undefined || (tree as Yarn2Dependency).descriptor !== undefined;
+}
+
+function asYarnDependency(prefix: string, tree: YarnTreeNode | Yarn2TreeNode, prune: boolean): YarnDependency | null {
+	const isY2 = isYarn2(tree);
+	const packageName = isY2 ? tree.value : tree.name;
+
+	if (prune && /@[\^~]/.test(packageName)) {
 		return null;
 	}
 
 	let name: string;
 
 	try {
-		const parseResult = parseSemver(tree.name);
+		const parseResult = parseSemver(packageName);
 		name = parseResult.name;
 	} catch (err) {
-		name = tree.name.replace(/^([^@+])@.*$/, '$1');
+		name = packageName.replace(/^(.*)@.*$/, '$1');
 	}
 
 	const dependencyPath = path.join(prefix, name);
 	const children: YarnDependency[] = [];
 
-	for (const child of tree.children || []) {
-		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child, prune);
+	for (const child of (isY2 ? tree.children.Dependencies : (tree.children as YarnTreeNode[])) || []) {
+		const isChildY2 = isYarn2(child);
+		const childDep = isChildY2
+			? ({
+					value: child.locator,
+					children: {},
+			  } as Yarn2TreeNode)
+			: ({
+					name: child.name,
+			  } as YarnTreeNode);
+
+		const dep = asYarnDependency(prefix, childDep, prune);
 
 		if (dep) {
 			children.push(dep);
@@ -155,21 +187,39 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 }
 
 async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) =>
-		cp.exec(
-			'yarn list --prod --json',
-			{ cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 },
-			(err, stdout) => (err ? e(err) : c(stdout))
+	const [major] = (
+		await new Promise<string>((c, e) =>
+			cp.exec(
+				'yarn --version',
+				{ cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 },
+				(err, stdout) => (err ? e(err) : c(stdout))
+			)
+		)
+	)
+		.split('.')
+		.map(parseInt);
+
+	const isY2 = major > 1;
+	const listCommand = isY2 ? 'yarn info --recursive --dependents --json' : 'yarn list --prod --json --depth 99999';
+
+	let raw = await new Promise<string>((c, e) =>
+		cp.exec(listCommand, { cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 }, (err, stdout) =>
+			err ? e(err) : c(stdout)
 		)
 	);
-	const match = /^{"type":"tree".*$/m.exec(raw);
+
+	if (isY2) {
+		raw = ndjsonToJson(raw);
+	}
+
+	const match = (isY2 ? /^\[{"value":".*$/m : /^{"type":"tree".*$/m).exec(raw);
 
 	if (!match || match.length !== 1) {
-		throw new Error('Could not parse result of `yarn list --json`');
+		throw new Error(`Could not parse result of \`${listCommand}\``);
 	}
 
 	const usingPackagedDependencies = Array.isArray(packagedDependencies);
-	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
+	const trees = isY2 ? (JSON.parse(match[0]) as Yarn2TreeNode[]) : (JSON.parse(match[0]).data.trees as YarnTreeNode[]);
 
 	let result = trees
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
