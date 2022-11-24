@@ -264,6 +264,8 @@ export async function getDependencies(
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
+	console.log(await getYarnDependencies(cwd, packagedDependencies));
+	console.log(await getNpmDependencies(cwd));
 	if (dependencies === 'none') {
 		return [cwd];
 	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
