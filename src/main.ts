@@ -92,11 +92,11 @@ module.exports = function (argv: string[]): void {
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
@@ -179,11 +179,11 @@ module.exports = function (argv: string[]): void {
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
