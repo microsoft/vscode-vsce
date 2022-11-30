@@ -180,6 +180,6 @@ export function patchOptionsWithManifest(options: any, manifest: Manifest): void
 	}
 }
 
-export function ndjsonToJson(data: string): any {
+export function ndjsonToJson(data: string): string {
 	return `[${data.split('\n').filter(nonnull).join(',')}]`;
 }
