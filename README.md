@@ -28,7 +28,7 @@ Depending on your distribution, you will need to run the following command:
 Install vsce globally:
 
 ```console
-npm install --global vsce
+npm install --global @vscode/vsce
 ```
 
 Verify the installation:

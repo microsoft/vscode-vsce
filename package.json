@@ -1,6 +1,6 @@
 {
-	"name": "vsce",
-	"version": "0.0.0",
+	"name": "@vscode/vsce",
+	"version": "2.15.0",
 	"description": "VSCode Extension Manager",
 	"repository": {
 		"type": "git",
@@ -13,6 +13,9 @@
 		"vsce",
 		"extension"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"contributors": [
 		"Microsoft Corporation"
 	],
@@ -57,8 +60,6 @@
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "^14.1.0",
-		"@commitlint/config-conventional": "^14.1.0",
 		"@types/cheerio": "^0.22.29",
 		"@types/glob": "^7.1.1",
 		"@types/hosted-git-info": "^3.0.2",
@@ -76,10 +77,8 @@
 		"@types/yazl": "^2.4.2",
 		"husky": "^7.0.4",
 		"mocha": "^9.2.0",
-		"npm-run-all": "^4.1.5",
 		"prettier": "2.1.2",
 		"pretty-quick": "^3.0.2",
-		"semantic-release": "^19.0.2",
 		"source-map-support": "^0.4.2",
 		"ts-node": "^10.0.0",
 		"typescript": "^4.3.2"
@@ -96,15 +95,5 @@
 		"printWidth": 120,
 		"singleQuote": true,
 		"arrowParens": "avoid"
-	},
-	"release": {
-		"branches": [
-			"main"
-		]
-	},
-	"commitlint": {
-		"extends": [
-			"@commitlint/config-conventional"
-		]
 	}
 }
