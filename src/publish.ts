@@ -176,13 +176,6 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
 					return;
 				}
-				if (!options.target) {
-					throw new Error(`${description} already exists.`);
-				}
-
-				if (sameVersion.some(v => !v.targetPlatform)) {
-					throw new Error(`${name} (no target) v${manifest.version} already exists.`);
-				}
 
 				if (sameVersion.some(v => v.targetPlatform === options.target)) {
 					throw new Error(`${description} already exists.`);
