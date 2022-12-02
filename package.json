@@ -1,5 +1,5 @@
 {
-	"name": "vsce",
+	"name": "@vscode/vsce",
 	"version": "2.15.0",
 	"description": "VSCode Extension Manager",
 	"repository": {
@@ -13,6 +13,9 @@
 		"vsce",
 		"extension"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"contributors": [
 		"Microsoft Corporation"
 	],
