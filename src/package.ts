@@ -313,7 +313,7 @@ const TrustedSVGSources = [
 	'travis-ci.com',
 	'travis-ci.org',
 	'visualstudio.com',
-	'vsmarketplacebadge.apphb.com',
+	'vsmarketplacebadges.dev',
 	'www.bithound.io',
 	'www.versioneye.com',
 ];
