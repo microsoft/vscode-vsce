@@ -22,7 +22,7 @@
 	"author": "Microsoft Corporation",
 	"license": "MIT",
 	"main": "out/api.js",
-	"typings": "out/api.d.ts",
+	"typings": "dist/vsce.d.ts",
 	"bin": {
 		"vsce": "vsce"
 	},
@@ -59,6 +59,7 @@
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
+		"@microsoft/api-extractor": "^7.33.7",
 		"@types/cheerio": "^0.22.29",
 		"@types/glob": "^7.1.1",
 		"@types/hosted-git-info": "^3.0.2",

@@ -15,5 +15,6 @@
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
-	"git.branchProtection": ["main"]
+	"git.branchProtection": ["main"],
+	"files.associations": { "*.json": "jsonc" }
 }
