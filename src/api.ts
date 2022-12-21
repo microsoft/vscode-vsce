@@ -1,10 +1,9 @@
-import { publish as _publish, IPublishOptions as _IPublishOptions } from './publish';
+import { publish as _publish, IPublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
-
-export type { IPackageOptions } from './package';
 
 /**
  * @deprecated prefer IPackageOptions instead
+ * @public
  */
 export type IBaseVSIXOptions = Pick<
 	IPackageOptions,
@@ -13,11 +12,13 @@ export type IBaseVSIXOptions = Pick<
 
 /**
  * @deprecated prefer IPackageOptions instead
+ * @public
  */
 export type ICreateVSIXOptions = Pick<IPackageOptions, 'cwd' | 'packagePath'> & IBaseVSIXOptions;
 
 /**
  * The supported list of package managers.
+ * @public
  */
 export enum PackageManager {
 	Npm,
@@ -25,6 +26,10 @@ export enum PackageManager {
 	None,
 }
 
+/**
+ * Options for the `listFiles` function.
+ * @public
+ */
 export interface IListFilesOptions {
 	/**
 	 * The working directory of the extension. Defaults to `process.cwd()`.
@@ -51,19 +56,21 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export type IPublishVSIXOptions = IPublishOptions & Pick<IPackageOptions, 'target'>;
-
-export type IPublishOptions = _IPublishOptions;
+export type { IPackageOptions } from './package';
 
 /**
  * Creates a VSIX from the extension in the current working directory.
+ * @public
  */
 export function createVSIX(options: IPackageOptions = {}): Promise<any> {
 	return packageCommand(options);
 }
 
+export type { IPublishOptions } from './publish';
+
 /**
  * Publishes the extension in the current working directory.
+ * @public
  */
 export function publish(options: IPublishOptions = {}): Promise<any> {
 	return _publish(options);
@@ -71,13 +78,21 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 /**
  * Lists the files included in the extension's package.
+ * @public
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
 	return _listFiles(options);
 }
 
 /**
+ * Options for the `publishVSIX` function.
+ * @public
+ */
+export type IPublishVSIXOptions = IPublishOptions & Pick<IPackageOptions, 'target'>;
+
+/**
  * Publishes a pre-build VSIX.
+ * @public
  */
 export function publishVSIX(packagePath: string | string[], options: IPublishVSIXOptions = {}): Promise<any> {
 	return _publish({

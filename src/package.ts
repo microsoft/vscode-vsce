@@ -66,6 +66,10 @@ export interface IAsset {
 	path: string;
 }
 
+/**
+ * Options for the `createVSIX` function.
+ * @public
+ */
 export interface IPackageOptions {
 	/**
 	 * The destination of the packaged the VSIX.

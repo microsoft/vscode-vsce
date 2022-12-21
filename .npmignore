@@ -3,15 +3,13 @@
 .vscode/
 build/
 src/
-
 out/test/
 out/**/*.d.ts
-!out/api.d.ts
-
 .dockerignore
 .gitignore
 .prettierignore
 Dockerfile
 SECURITY.md
 tsconfig.json
+api-extractor.json
 **/*.js.map

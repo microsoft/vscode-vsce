@@ -12,6 +12,10 @@ import { validatePublisher } from './validation';
 
 const tmpName = promisify(tmp.tmpName);
 
+/**
+ * Options for the `publish` function.
+ * @public
+ */
 export interface IPublishOptions {
 	readonly packagePath?: string[];
 	readonly version?: string;
