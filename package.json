@@ -28,7 +28,8 @@
 	},
 	"scripts": {
 		"compile": "tsc",
-		"build": "tsc",
+		"api": "api-extractor run --local --verbose",
+		"build": "npm run compile && npm run api",
 		"watch:build": "npm run compile -- --watch",
 		"test": "mocha",
 		"watch:test": "npm run test -- --watch",
