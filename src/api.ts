@@ -81,7 +81,11 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * @public
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options);
+	return _listFiles({
+		...options,
+		useYarn: options.packageManager === PackageManager.Yarn,
+		dependencies: options.packageManager !== PackageManager.None,
+	});
 }
 
 /**
