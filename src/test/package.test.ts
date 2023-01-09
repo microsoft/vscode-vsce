@@ -397,6 +397,73 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ pricing: 'Free' }));
 		validateManifest(createManifest());
 	});
+
+	it('should allow implicit activation events', () => {
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		validateManifest(
+			createManifest({
+				engines: { vscode: '*' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					activationEvents: ['*'],
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+					contributes: {
+						commands: [
+							{
+								command: 'extension.helloWorld',
+								title: 'Hello World',
+							},
+						],
+					},
+				})
+			)
+		);
+	});
 });
 
 describe('toVsixManifest', () => {
