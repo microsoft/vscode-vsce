@@ -1641,10 +1641,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
-function getDependenciesOption(options: {
-	readonly dependencies?: boolean;
-	readonly useYarn?: boolean;
-}): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IListFilesOptions): 'npm' | 'yarn' | 'none' | undefined {
 	if (options.dependencies === false) {
 		return 'none';
 	}
