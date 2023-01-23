@@ -28,10 +28,37 @@ export interface Grammar {
 	readonly path: string;
 }
 
+export interface Command {
+	readonly command: string;
+	readonly title: string;
+}
+
+export interface Authentication {
+	readonly id: string;
+	readonly label: string;
+}
+
+export interface CustomEditor {
+	readonly viewType: string;
+	readonly priority: string;
+	readonly selector: readonly {
+		readonly filenamePattern?: string;
+	}[];
+}
+
+export interface View {
+	readonly id: string;
+	readonly name: string;
+}
+
 export interface Contributions {
 	readonly localizations?: Localization[];
 	readonly languages?: Language[];
 	readonly grammars?: Grammar[];
+	readonly commands?: Command[];
+	readonly authentication?: Authentication[];
+	readonly customEditors?: CustomEditor[];
+	readonly views?: { [location: string]: View[] };
 	readonly [contributionType: string]: any;
 }
 

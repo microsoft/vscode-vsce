@@ -1211,13 +1211,32 @@ export function validateManifest(manifest: Manifest): Manifest {
 		throw new Error('Manifest missing field: engines.vscode');
 	}
 
-	validateEngineCompatibility(manifest.engines['vscode']);
+	const engineVersion = manifest.engines['vscode'];
+	validateEngineCompatibility(engineVersion);
 
 	const hasActivationEvents = !!manifest.activationEvents;
+	const hasImplicitActivationEvents =
+		manifest.contributes?.commands ||
+		manifest.contributes?.authentication ||
+		manifest.contributes?.languages ||
+		manifest.contributes?.customEditors ||
+		manifest.contributes?.views;
 	const hasMain = !!manifest.main;
 	const hasBrowser = !!manifest.browser;
 
-	if (hasActivationEvents) {
+	let parsedEngineVersion: string;
+	try {
+		const engineSemver = parseSemver(`vscode@${engineVersion}`);
+		parsedEngineVersion = engineSemver.version;
+	} catch (err) {
+		throw new Error('Failed to parse semver of engines.vscode');
+	}
+
+	if (
+		hasActivationEvents ||
+		((engineVersion === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
+			hasImplicitActivationEvents)
+	) {
 		if (!hasMain && !hasBrowser) {
 			throw new Error(
 				"Manifest needs either a 'main' or 'browser' property, given it has a 'activationEvents' property."
