@@ -180,7 +180,7 @@ export interface VSIX {
 }
 
 export class BaseProcessor implements IProcessor {
-	constructor(protected manifest: Manifest) {}
+	constructor(protected manifest: Manifest) { }
 	assets: IAsset[] = [];
 	tags: string[] = [];
 	vsix: VSIX = Object.create(null);
@@ -499,8 +499,8 @@ export class ManifestProcessor extends BaseProcessor {
 			localizedLanguages:
 				manifest.contributes && manifest.contributes.localizations
 					? manifest.contributes.localizations
-							.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
-							.join(',')
+						.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
+						.join(',')
 					: '',
 			preRelease: !!this.options.preRelease,
 			sponsorLink: manifest.sponsor?.url || '',
@@ -801,10 +801,9 @@ export class MarkdownProcessor extends BaseProcessor {
 						// Issue in own repository
 						result =
 							prefix +
-							`[#${issueNumber}](${
-								this.isGitHub
-									? urljoin(this.repositoryUrl, 'issues', issueNumber)
-									: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
+							`[#${issueNumber}](${this.isGitHub
+								? urljoin(this.repositoryUrl, 'issues', issueNumber)
+								: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
 							})`;
 					}
 
@@ -1061,8 +1060,8 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 		const result: ExtensionKind[] = Array.isArray(manifest.extensionKind)
 			? manifest.extensionKind
 			: manifest.extensionKind === 'ui'
-			? ['ui', 'workspace']
-			: [manifest.extensionKind];
+				? ['ui', 'workspace']
+				: [manifest.extensionKind];
 
 		// Add web kind if the extension can run as web extension
 		if (deduced.includes('web') && !result.includes('web')) {
@@ -1215,12 +1214,14 @@ export function validateManifest(manifest: Manifest): Manifest {
 	validateEngineCompatibility(engineVersion);
 
 	const hasActivationEvents = !!manifest.activationEvents;
-	const hasImplicitActivationEvents =
+	const hasImplicitLanguageActivationEvents = manifest.contributes?.languages;
+	const hasOtherImplicitActivationEvents =
 		manifest.contributes?.commands ||
 		manifest.contributes?.authentication ||
-		manifest.contributes?.languages ||
 		manifest.contributes?.customEditors ||
 		manifest.contributes?.views;
+	const hasImplicitActivationEvents = hasImplicitLanguageActivationEvents || hasOtherImplicitActivationEvents;
+
 	const hasMain = !!manifest.main;
 	const hasBrowser = !!manifest.browser;
 
@@ -1237,7 +1238,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 		((engineVersion === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
 			hasImplicitActivationEvents)
 	) {
-		if (!hasMain && !hasBrowser) {
+		if (!hasMain && !hasBrowser && (hasActivationEvents || !hasImplicitLanguageActivationEvents)) {
 			throw new Error(
 				"Manifest needs either a 'main' or 'browser' property, given it has a 'activationEvents' property."
 			);
@@ -1371,18 +1372,17 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 			<Tags>${escape(vsix.tags)}</Tags>
 			<Categories>${escape(vsix.categories)}</Categories>
 			<GalleryFlags>${escape(vsix.flags)}</GalleryFlags>
-			${
-				!vsix.badges
-					? ''
-					: `<Badges>${vsix.badges
-							.map(
-								badge =>
-									`<Badge Link="${escape(badge.href)}" ImgUri="${escape(badge.url)}" Description="${escape(
-										badge.description
-									)}" />`
-							)
-							.join('\n')}</Badges>`
-			}
+			${!vsix.badges
+			? ''
+			: `<Badges>${vsix.badges
+				.map(
+					badge =>
+						`<Badge Link="${escape(badge.href)}" ImgUri="${escape(badge.url)}" Description="${escape(
+							badge.description
+						)}" />`
+				)
+				.join('\n')}</Badges>`
+		}
 			<Properties>
 				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="${escape(vsix.engine)}" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="${escape(vsix.extensionDependencies)}" />
@@ -1390,65 +1390,56 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="${escape(vsix.extensionKind)}" />
 				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
 				${vsix.preRelease ? `<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${escape(vsix.preRelease)}" />` : ''}
-				${
-					vsix.sponsorLink
-						? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(vsix.sponsorLink)}" />`
-						: ''
-				}
-				${
-					!vsix.links.repository
-						? ''
-						: `<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escape(vsix.links.repository)}" />
+				${vsix.sponsorLink
+			? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(vsix.sponsorLink)}" />`
+			: ''
+		}
+				${!vsix.links.repository
+			? ''
+			: `<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escape(vsix.links.repository)}" />
 				<Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${escape(vsix.links.repository)}" />
-				${
-					vsix.links.github
-						? `<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${escape(vsix.links.github)}" />`
-						: `<Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${escape(
-								vsix.links.repository
-						  )}" />`
-				}`
-				}
-				${
-					vsix.links.bugs
-						? `<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escape(vsix.links.bugs)}" />`
-						: ''
-				}
-				${
-					vsix.links.homepage
-						? `<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${escape(vsix.links.homepage)}" />`
-						: ''
-				}
-				${
-					vsix.galleryBanner.color
-						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${escape(
-								vsix.galleryBanner.color
-						  )}" />`
-						: ''
-				}
-				${
-					vsix.galleryBanner.theme
-						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${escape(
-								vsix.galleryBanner.theme
-						  )}" />`
-						: ''
-				}
+				${vsix.links.github
+				? `<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${escape(vsix.links.github)}" />`
+				: `<Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${escape(
+					vsix.links.repository
+				)}" />`
+			}`
+		}
+				${vsix.links.bugs
+			? `<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escape(vsix.links.bugs)}" />`
+			: ''
+		}
+				${vsix.links.homepage
+			? `<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${escape(vsix.links.homepage)}" />`
+			: ''
+		}
+				${vsix.galleryBanner.color
+			? `<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${escape(
+				vsix.galleryBanner.color
+			)}" />`
+			: ''
+		}
+				${vsix.galleryBanner.theme
+			? `<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${escape(
+				vsix.galleryBanner.theme
+			)}" />`
+			: ''
+		}
 				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="${escape(vsix.githubMarkdown)}" />
 				<Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="${escape(vsix.pricing)}"/>
 
-				${
-					vsix.enableMarketplaceQnA !== undefined
-						? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
-								vsix.enableMarketplaceQnA
-						  )}" />`
-						: ''
-				}
-				${
-					vsix.customerQnALink !== undefined
-						? `<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="${escape(
-								vsix.customerQnALink
-						  )}" />`
-						: ''
-				}
+				${vsix.enableMarketplaceQnA !== undefined
+			? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
+				vsix.enableMarketplaceQnA
+			)}" />`
+			: ''
+		}
+				${vsix.customerQnALink !== undefined
+			? `<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="${escape(
+				vsix.customerQnALink
+			)}" />`
+			: ''
+		}
 			</Properties>
 			${vsix.license ? `<License>${escape(vsix.license)}</License>` : ''}
 			${vsix.icon ? `<Icon>${escape(vsix.icon)}</Icon>` : ''}
@@ -1460,8 +1451,8 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 		<Assets>
 			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
 			${vsix.assets
-				.map(asset => `<Asset Type="${escape(asset.type)}" Path="${escape(asset.path)}" Addressable="true" />`)
-				.join('\n')}
+			.map(asset => `<Asset Type="${escape(asset.type)}" Path="${escape(asset.path)}" Addressable="true" />`)
+			.join('\n')}
 		</Assets>
 	</PackageManifest>`;
 }
@@ -1680,8 +1671,8 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 					files.forEach(f =>
 						isInMemoryFile(f)
 							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
-									mode: f.mode,
-							  })
+								mode: f.mode,
+							})
 							: zip.addFile(f.localPath, f.path, { mode: f.mode })
 					);
 					zip.end();
