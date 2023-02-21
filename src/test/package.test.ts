@@ -241,7 +241,7 @@ describe('collect', function () {
 describe('readManifest', () => {
 	it('should patch NLS', async function () {
 		const cwd = fixture('nls');
-		const raw = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
 		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
 		const manifest = await readManifest(cwd);
 
@@ -252,7 +252,7 @@ describe('readManifest', () => {
 
 	it('should not patch NLS if required', async function () {
 		const cwd = fixture('nls');
-		const raw = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
 		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
 		const manifest = await readManifest(cwd, false);
 
@@ -1961,7 +1961,7 @@ describe('LaunchEntryPointProcessor', () => {
 describe('ManifestProcessor', () => {
 	it('should ensure that package.json is writable', async () => {
 		const root = fixture('uuid');
-		const manifest = jsonc.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		const processor = new ManifestProcessor(manifest);
 		const packageJson = {
 			path: 'extension/package.json',
@@ -1976,7 +1976,7 @@ describe('ManifestProcessor', () => {
 	it('should bump package.json version in-memory when using --no-update-package-json', async () => {
 		const root = fixture('uuid');
 
-		let manifest = jsonc.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1', updatePackageJson: false });
@@ -1985,18 +1985,18 @@ describe('ManifestProcessor', () => {
 			localPath: path.join(root, 'package.json'),
 		};
 
-		manifest = jsonc.parse(await read(await processor.onFile(packageJson)));
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
 		assert.deepStrictEqual(manifest.version, '1.1.1');
 		assert.deepStrictEqual(processor.vsix.version, '1.1.1');
 
-		manifest = jsonc.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
 
 	it('should not bump package.json version in-memory when not using --no-update-package-json', async () => {
 		const root = fixture('uuid');
 
-		let manifest = jsonc.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1' });
@@ -2005,11 +2005,11 @@ describe('ManifestProcessor', () => {
 			localPath: path.join(root, 'package.json'),
 		};
 
-		manifest = jsonc.parse(await read(await processor.onFile(packageJson)));
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 		assert.deepStrictEqual(processor.vsix.version, '1.0.0');
 
-		manifest = jsonc.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
 });

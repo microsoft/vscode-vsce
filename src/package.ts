@@ -521,7 +521,7 @@ export class ManifestProcessor extends BaseProcessor {
 
 		if (this.options.version && !(this.options.updatePackageJson ?? true)) {
 			const contents = await read(file);
-			const packageJson = jsonc.parse(contents);
+			const packageJson = JSON.parse(contents);
 			packageJson.version = this.options.version;
 			file = { ...file, contents: JSON.stringify(packageJson, undefined, 2) };
 		}
@@ -1320,7 +1320,7 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
 		.then<Manifest>(manifestStr => {
 			try {
-				return Promise.resolve(jsonc.parse(manifestStr));
+				return Promise.resolve(JSON.parse(manifestStr));
 			} catch (e) {
 				console.error(`Error parsing 'package.json' manifest file: not a valid JSON file.`);
 				throw e;
