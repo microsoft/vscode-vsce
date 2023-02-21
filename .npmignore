@@ -1,5 +1,4 @@
 .github/
-.husky/
 .vscode/
 build/
 src/
@@ -7,7 +6,6 @@ out/test/
 out/**/*.d.ts
 .dockerignore
 .gitignore
-.prettierignore
 Dockerfile
 SECURITY.md
 tsconfig.json
