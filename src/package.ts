@@ -1013,7 +1013,7 @@ class IconProcessor extends BaseProcessor {
 	constructor(manifest: Manifest) {
 		super(manifest);
 
-		this.icon = manifest.icon && `extension/${manifest.icon}`;
+		this.icon = manifest.icon && path.posix.normalize(`extension/${manifest.icon}`);
 		delete this.vsix.icon;
 	}
 
