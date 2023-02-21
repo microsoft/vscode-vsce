@@ -101,10 +101,7 @@ Tests can be executed with:
 $ npm test
 ```
 
-N.B. [yarn] must be installed globally in order to run the full test contingent
-
-[yarn]: https://www.npmjs.com/package/yarn
-
+> **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
 ## About
 
 This tool assists in packaging and publishing Visual Studio Code extensions.
