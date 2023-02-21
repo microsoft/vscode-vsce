@@ -4,8 +4,6 @@
 	"version": "1.6.2",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
-	
-	// These are categories
 	"categories": [
 		"Debuggers"
 	],
