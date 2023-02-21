@@ -95,6 +95,13 @@ Once the watcher is up and running, you can run out of sources with:
 node vsce
 ```
 
+Tests can be executed with:
+
+```npm
+$ npm test
+```
+
+> **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
 ## About
 
 This tool assists in packaging and publishing Visual Studio Code extensions.
