@@ -235,6 +235,12 @@ describe('collect', function () {
 			assert.ok(!/\bnode_modules\b/i.test(file.path));
 		}
 	});
+
+	it('should handle relative icon paths', async function () {
+		const cwd = fixture('icon');
+		const manifest = await readManifest(cwd);
+		await collect(manifest, { cwd });
+	});
 });
 
 describe('readManifest', () => {
