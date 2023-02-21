@@ -435,6 +435,19 @@ describe('validateManifest', () => {
 			})
 		);
 
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				contributes: {
+					languages: [
+						{
+							id: 'typescript',
+						}
+					]
+				}
+			})
+		);
+
 		assert.throws(() =>
 			validateManifest(
 				createManifest({
