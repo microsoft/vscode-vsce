@@ -23,6 +23,7 @@ import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten } from '../util';
 import { validatePublisher } from '../validation';
+import * as jsonc from 'jsonc-parser';
 
 // don't warn in tests
 console.warn = () => null;
@@ -244,28 +245,26 @@ describe('collect', function () {
 });
 
 describe('readManifest', () => {
-	it('should patch NLS', () => {
+	it('should patch NLS', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd);
 
-		return readManifest(cwd).then((manifest: any) => {
-			assert.strictEqual(manifest.name, raw.name);
-			assert.strictEqual(manifest.description, translations['extension.description']);
-			assert.strictEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.strictEqual(manifest.description, translations['extension.description']);
+		assert.strictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 
-	it('should not patch NLS if required', () => {
+	it('should not patch NLS if required', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd, false);
 
-		return readManifest(cwd, false).then((manifest: any) => {
-			assert.strictEqual(manifest.name, raw.name);
-			assert.notEqual(manifest.description, translations['extension.description']);
-			assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.notStrictEqual(manifest.description, translations['extension.description']);
+		assert.notStrictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 });
 
