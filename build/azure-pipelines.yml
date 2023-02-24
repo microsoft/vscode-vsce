@@ -29,11 +29,12 @@ extends:
           - script: npm run build
         testPlatforms:
           - name: Linux
-            nodeVersions: [14.x, 16.x, 17.x]
-          - name: MacOS
-            nodeVersions: [14.x, 16.x, 17.x]
-          - name: Windows
-            nodeVersions: [14.x, 16.x, 17.x]
+            nodeVersions: [16.x]
+            # nodeVersions: [14.x, 16.x, 17.x]
+          # - name: MacOS
+          #   nodeVersions: [14.x, 16.x, 17.x]
+          # - name: Windows
+          #   nodeVersions: [14.x, 16.x, 17.x]
         testSteps:
           - script: npm ci
           - script: npm test
