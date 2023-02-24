@@ -23,7 +23,7 @@ extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
   parameters:
     npmPackages:
-      - name: vsce
+      - name: "@vscode/vsce"
         buildSteps:
           - script: npm ci
           - script: npm run build
