@@ -10,14 +10,14 @@ resources:
     - repository: templates
       type: github
       name: microsoft/vscode-engineering
-      ref: main
+      ref: joao/eligible-mouse
       endpoint: Monaco
 
 parameters:
-  - name: publishPackage
-    displayName: 🚀 Publish
-    type: boolean
-    default: false
+  - name: nextVersion
+    displayName: 🚀 Publish version
+    type: string
+    default: 'none'
 
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
@@ -37,4 +37,4 @@ extends:
         testSteps:
           - script: npm ci
           - script: npm test
-        publishPackage: ${{ parameters.publishPackage }}
+        nextVersion: ${{ parameters.nextVersion }}
