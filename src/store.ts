@@ -74,7 +74,7 @@ export class FileStore implements IStore {
 
 export class KeytarStore implements IStore {
 	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
-		const keytar = await import('keytar');
+		const keytar = await import('@napi-rs/keyring/keytar');
 		const creds = await keytar.findCredentials(serviceName);
 
 		return new KeytarStore(
@@ -89,7 +89,7 @@ export class KeytarStore implements IStore {
 	}
 
 	private constructor(
-		private readonly keytar: typeof import('keytar'),
+		private readonly keytar: typeof import('@napi-rs/keyring/keytar'),
 		private readonly serviceName: string,
 		private publishers: IPublisher[]
 	) {}
