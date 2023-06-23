@@ -51,7 +51,7 @@
 		"minimatch": "^3.0.3",
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
-		"semver": "^5.1.0",
+		"semver": "^7.5.2",
 		"tmp": "^0.2.1",
 		"typed-rest-client": "^1.8.4",
 		"url-join": "^4.0.1",
