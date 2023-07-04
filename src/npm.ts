@@ -10,6 +10,14 @@ const exists = (file: string) =>
 		_ => false
 	);
 
+export enum VersionedPackageManager {
+	Npm,
+	Pnpm,
+	YarnBerry,
+	YarnClassic,
+	None,
+}
+
 interface IOptions {
 	cwd?: string;
 	stdio?: any;
@@ -158,7 +166,10 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 	return reached.values;
 }
 
-async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
+async function getYarnBerryProductionDependencies(
+	cwd: string,
+	packagedDependencies?: string[]
+): Promise<YarnDependency[]> {
 	const raw = await new Promise<string>((c, e) =>
 		cp.exec(
 			'yarn list --prod --json',
@@ -186,10 +197,48 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 	return result;
 }
 
-async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
+async function getYarnClassicProductionDependencies(
+	cwd: string,
+	packagedDependencies?: string[]
+): Promise<YarnDependency[]> {
+	const raw = await new Promise<string>((c, e) =>
+		cp.exec(
+			'yarn list --prod --json',
+			{ cwd, encoding: 'utf8', env: { ...process.env }, maxBuffer: 5000 * 1024 },
+			(err, stdout) => (err ? e(err) : c(stdout))
+		)
+	);
+	const match = /^{"type":"tree".*$/m.exec(raw);
+
+	if (!match || match.length !== 1) {
+		throw new Error('Could not parse result of `yarn list --json`');
+	}
+
+	const usingPackagedDependencies = Array.isArray(packagedDependencies);
+	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
+
+	let result = trees
+		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
+		.filter(nonnull);
+
+	if (usingPackagedDependencies) {
+		result = selectYarnDependencies(result, packagedDependencies!);
+	}
+
+	return result;
+}
+
+async function getYarnDependencies(
+	cwd: string,
+	packageManager: VersionedPackageManager.YarnBerry | VersionedPackageManager.YarnClassic,
+	packagedDependencies?: string[]
+): Promise<string[]> {
 	const result = new Set([cwd]);
 
-	const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
+	const deps =
+		packageManager === VersionedPackageManager.YarnBerry
+			? await getYarnBerryProductionDependencies(cwd, packagedDependencies)
+			: await getYarnClassicProductionDependencies(cwd, packagedDependencies);
 	const flatten = (dep: YarnDependency) => {
 		result.add(dep.path);
 		dep.children.forEach(flatten);
@@ -197,6 +246,29 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	deps.forEach(flatten);
 
 	return [...result];
+}
+
+export async function detectPackageManager(cwd: string): Promise<VersionedPackageManager> {
+	const cwdFiles = await fs.promises.readdir(cwd);
+
+	switch (true) {
+		case cwdFiles.includes('yarn.lock'):
+			const yarnLockFileSource = await fs.promises.readFile(path.normalize(`${cwd}/yarn.lock`), 'utf-8');
+
+			// We use the lockfile introduction comment and not `.yarn/` / `.yarnrc.yml` to detect Yarn Classic
+			// because Yarn v3 also generates those when set to `classic` version
+			return yarnLockFileSource.includes('yarn lockfile v1')
+				? VersionedPackageManager.YarnClassic
+				: VersionedPackageManager.YarnBerry;
+
+		case cwdFiles.includes('pnpm-lock.yaml'):
+			return VersionedPackageManager.Pnpm;
+
+		case cwdFiles.includes('package-lock.json'):
+			return VersionedPackageManager.Npm;
+	}
+
+	return VersionedPackageManager.None;
 }
 
 export async function detectYarn(cwd: string): Promise<boolean> {
@@ -215,13 +287,13 @@ export async function detectYarn(cwd: string): Promise<boolean> {
 
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	packageManager: VersionedPackageManager | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
-	if (dependencies === 'none') {
+	if (packageManager === VersionedPackageManager.None) {
 		return [cwd];
-	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
-		return await getYarnDependencies(cwd, packagedDependencies);
+	} else if (packageManager === VersionedPackageManager.YarnBerry) {
+		return await getYarnDependencies(cwd, packageManager, packagedDependencies);
 	} else {
 		return await getNpmDependencies(cwd);
 	}

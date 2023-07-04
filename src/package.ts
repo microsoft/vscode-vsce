@@ -20,7 +20,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { detectPackageManager, detectYarn, getDependencies, VersionedPackageManager } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -274,6 +274,14 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
 		.map(({ id }) => [`__lp_${id}`, `__lp-${languageId}_${id}`])
 		.reduce((r, t) => [...r, ...t], []);
 }
+
+const PackageManagerCommand: Record<VersionedPackageManager, string> = {
+	[VersionedPackageManager.None]: 'npm',
+	[VersionedPackageManager.Npm]: 'npm',
+	[VersionedPackageManager.Pnpm]: 'pnpm',
+	[VersionedPackageManager.YarnBerry]: 'yarn',
+	[VersionedPackageManager.YarnClassic]: 'yarn',
+};
 
 /* This list is also maintained by the Marketplace team.
  * Remember to reach out to them when adding new domains.
@@ -1571,10 +1579,10 @@ const notIgnored = ['!package.json', '!README.md'];
 
 async function collectAllFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	packageManager: VersionedPackageManager | undefined,
 	dependencyEntryPoints?: string[]
 ): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+	const deps = await getDependencies(cwd, packageManager, dependencyEntryPoints);
 	const promises = deps.map(dep =>
 		promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1586,11 +1594,11 @@ async function collectAllFiles(
 
 function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	packageManager: VersionedPackageManager | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string
 ): Promise<string[]> {
-	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
+	return collectAllFiles(cwd, packageManager, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return (
@@ -1684,16 +1692,16 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
-function getDependenciesOption(options: IListFilesOptions): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IListFilesOptions): VersionedPackageManager | undefined {
 	if (options.dependencies === false) {
-		return 'none';
+		return VersionedPackageManager.None;
 	}
 
 	switch (options.useYarn) {
 		case true:
-			return 'yarn';
+			return VersionedPackageManager.YarnClassic;
 		case false:
-			return 'npm';
+			return VersionedPackageManager.Npm;
 		default:
 			return undefined;
 	}
@@ -1766,12 +1774,18 @@ export async function prepublish(cwd: string, manifest: Manifest, useYarn?: bool
 		useYarn = await detectYarn(cwd);
 	}
 
-	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
+	const packageManager = await detectPackageManager(cwd);
+	const packageManagerCommand = PackageManagerCommand[packageManager];
+
+	console.log(`Executing prepublish script '${packageManagerCommand} run vscode:prepublish'...`);
 
 	await new Promise<void>((c, e) => {
-		const tool = useYarn ? 'yarn' : 'npm';
-		const child = cp.spawn(tool, ['run', 'vscode:prepublish'], { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
+		const child = cp.spawn(packageManagerCommand, ['run', 'vscode:prepublish'], {
+			cwd,
+			shell: true,
+			stdio: 'inherit',
+		});
+		child.on('exit', code => (code === 0 ? c() : e(`${packageManagerCommand} failed with exit code ${code}`)));
 		child.on('error', e);
 	});
 }
