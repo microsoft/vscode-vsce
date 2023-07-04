@@ -270,7 +270,9 @@ describe('readManifest', () => {
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert.ok(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
+		assert.ok(
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } })
+		);
 		assert.throws(() => {
 			validateManifest({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
@@ -300,12 +302,16 @@ describe('validateManifest', () => {
 	it('should prevent badges from non HTTPS sources', () => {
 		assert.throws(() => {
 			validateManifest(
-				createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })
+				createManifest({
+					badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }],
+				})
 			);
 		});
 		assert.throws(() => {
 			validateManifest(
-				createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })
+				createManifest({
+					badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+				})
 			);
 		});
 		assert.throws(() => {
@@ -321,7 +327,9 @@ describe('validateManifest', () => {
 		assert.ok(
 			validateManifest(
 				createManifest({
-					badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }],
+					badges: [
+						{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' },
+					],
 				})
 			)
 		);
@@ -331,7 +339,13 @@ describe('validateManifest', () => {
 		assert.ok(
 			validateManifest(
 				createManifest({
-					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+					badges: [
+						{
+							url: 'https://gemnasium.com/foo.svg',
+							href: 'http://badgeurl',
+							description: 'this is a badge',
+						},
+					],
 				})
 			)
 		);
@@ -342,7 +356,13 @@ describe('validateManifest', () => {
 			assert.ok(
 				validateManifest(
 					createManifest({
-						badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+						badges: [
+							{
+								url: 'https://github.com/foo.svg',
+								href: 'http://badgeurl',
+								description: 'this is a badge',
+							},
+						],
 					})
 				)
 			);
@@ -441,9 +461,9 @@ describe('validateManifest', () => {
 					languages: [
 						{
 							id: 'typescript',
-						}
-					]
-				}
+						},
+					],
+				},
 			})
 		);
 
@@ -501,7 +521,10 @@ describe('toVsixManifest', () => {
 				assert.ok(result.PackageManifest);
 				assert.ok(result.PackageManifest.$);
 				assert.strictEqual(result.PackageManifest.$.Version, '2.0.0');
-				assert.strictEqual(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
+				assert.strictEqual(
+					result.PackageManifest.$.xmlns,
+					'http://schemas.microsoft.com/developer/vsx-schema/2011'
+				);
 				assert.strictEqual(
 					result.PackageManifest.$['xmlns:d'],
 					'http://schemas.microsoft.com/developer/vsx-schema-design/2011'
@@ -524,7 +547,10 @@ describe('toVsixManifest', () => {
 				assert.deepEqual(result.PackageManifest.Dependencies, ['']);
 				assert.strictEqual(result.PackageManifest.Assets.length, 1);
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 1);
-				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[0].$.Type,
+					'Microsoft.VisualStudio.Code.Manifest'
+				);
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
 			});
 	});
@@ -732,7 +758,9 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				assert.ok(
 					result.PackageManifest.Assets[0].Asset.some(
-						d => d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' && d.$.Path === 'extension/fake.png'
+						d =>
+							d.$.Type === 'Microsoft.VisualStudio.Services.Icons.Default' &&
+							d.$.Path === 'extension/fake.png'
 					)
 				);
 			});
@@ -781,10 +809,14 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
 				assert.ok(
-					properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91')
+					properties.some(
+						p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Color' && p.Value === '#5c2d91'
+					)
 				);
 				assert.ok(
-					properties.some(p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark')
+					properties.some(
+						p => p.Id === 'Microsoft.VisualStudio.Services.Branding.Theme' && p.Value === 'dark'
+					)
 				);
 			});
 	});
@@ -1384,7 +1416,8 @@ describe('toVsixManifest', () => {
 				assert.ok(
 					assets.some(
 						asset =>
-							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'
+							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' &&
+							asset.$.Path === 'extension/de.json'
 					)
 				);
 				assert.ok(
@@ -1396,7 +1429,9 @@ describe('toVsixManifest', () => {
 				);
 
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
+				const localizedLangProp = properties.filter(
+					p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages'
+				);
 				assert.strictEqual(localizedLangProp.length, 1);
 
 				const localizedLangs = localizedLangProp[0].$.Value.split(',');
@@ -1463,7 +1498,11 @@ describe('toVsixManifest', () => {
 			engines: Object.create(null),
 			badges: [
 				{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' },
-				{ url: 'http://anotherbadgeurl.png', href: 'http://anotherbadgeurl', description: 'this is another badge' },
+				{
+					url: 'http://anotherbadgeurl.png',
+					href: 'http://anotherbadgeurl',
+					description: 'this is another badge',
+				},
 			],
 		};
 
@@ -1569,7 +1608,8 @@ describe('toVsixManifest', () => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				assert.ok(
 					properties.some(
-						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'
+						p =>
+							p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'
 					)
 				);
 			});
@@ -1611,7 +1651,9 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				const dependenciesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionDependencies');
+				const dependenciesProp = properties.filter(
+					p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionDependencies'
+				);
 				assert.strictEqual(dependenciesProp.length, 1);
 
 				const dependencies = dependenciesProp[0].$.Value.split(',');
@@ -1914,8 +1956,12 @@ describe('toContentTypes', () => {
 				assert.ok(result.Types);
 				assert.ok(result.Types.Default);
 				assert.strictEqual(result.Types.Default.length, 2);
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.vsixmanifest' && d.$.ContentType === 'text/xml'));
-				assert.ok(result.Types.Default.some(d => d.$.Extension === '.json' && d.$.ContentType === 'application/json'));
+				assert.ok(
+					result.Types.Default.some(d => d.$.Extension === '.vsixmanifest' && d.$.ContentType === 'text/xml')
+				);
+				assert.ok(
+					result.Types.Default.some(d => d.$.Extension === '.json' && d.$.ContentType === 'application/json')
+				);
 			});
 	});
 
@@ -1940,7 +1986,9 @@ describe('toContentTypes', () => {
 					'there are png'
 				);
 				assert.ok(
-					result.Types.Default.some(d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)),
+					result.Types.Default.some(
+						d => d.$.Extension === '.md' && /^text\/(x-)?markdown$/.test(d.$.ContentType)
+					),
 					'there are md'
 				);
 				assert.ok(!result.Types.Default.some(d => d.$.Extension === ''));
@@ -2140,9 +2188,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return fs.promises.readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.strictEqual(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 
@@ -2369,9 +2419,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return fs.promises.readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.strictEqual(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 

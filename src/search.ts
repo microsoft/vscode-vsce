@@ -67,7 +67,9 @@ function buildResultTableView(results: VSCodePublishedExtension[], stats: boolea
 		publisher.publisherName + '.' + extensionName,
 		publisher.displayName,
 		wordTrim(displayName || '', 25),
-		stats ? buildExtensionStatisticsText(statistics!) : wordTrim(shortDescription || '', 150).replace(/\n|\r|\t/g, ' '),
+		stats
+			? buildExtensionStatisticsText(statistics!)
+			: wordTrim(shortDescription || '', 150).replace(/\n|\r|\t/g, ' '),
 	]);
 
 	var resultsTableHeaders = stats
@@ -80,7 +82,11 @@ function buildResultTableView(results: VSCodePublishedExtension[], stats: boolea
 }
 
 function buildExtensionStatisticsText(statistics: ExtensionStatistic[]): string {
-	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics?.reduce(
+	const {
+		install: installs = 0,
+		averagerating = 0,
+		ratingcount = 0,
+	} = statistics?.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
 		<ExtensionStatisticsMap>{}
 	);

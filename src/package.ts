@@ -181,7 +181,7 @@ export interface VSIX {
 }
 
 export class BaseProcessor implements IProcessor {
-	constructor(protected manifest: Manifest) { }
+	constructor(protected manifest: Manifest) {}
 	assets: IAsset[] = [];
 	tags: string[] = [];
 	vsix: VSIX = Object.create(null);
@@ -453,18 +453,26 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 
 			if (target) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61', { includePrerelease: true })) {
+				if (
+					engineVersion !== 'latest' &&
+					!semver.satisfies(engineVersion, '>=1.61', { includePrerelease: true })
+				) {
 					throw new Error(
 						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
 					);
 				}
 				if (!Targets.has(target)) {
-					throw new Error(`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`);
+					throw new Error(
+						`'${target}' is not a valid VS Code target. Valid targets: ${[...Targets].join(', ')}`
+					);
 				}
 			}
 
 			if (preRelease) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63', { includePrerelease: true })) {
+				if (
+					engineVersion !== 'latest' &&
+					!semver.satisfies(engineVersion, '>=1.63', { includePrerelease: true })
+				) {
 					throw new Error(
 						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
 					);
@@ -500,8 +508,8 @@ export class ManifestProcessor extends BaseProcessor {
 			localizedLanguages:
 				manifest.contributes && manifest.contributes.localizations
 					? manifest.contributes.localizations
-						.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
-						.join(',')
+							.map(loc => loc.localizedLanguageName ?? loc.languageName ?? loc.languageId)
+							.join(',')
 					: '',
 			preRelease: !!this.options.preRelease,
 			sponsorLink: manifest.sponsor?.url || '',
@@ -649,7 +657,9 @@ export class TagsProcessor extends BaseProcessor {
 		const descriptionKeywords = Object.keys(TagsProcessor.Keywords).reduce<string[]>(
 			(r, k) =>
 				r.concat(
-					new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description) ? TagsProcessor.Keywords[k] : []
+					new RegExp('\\b(?:' + escapeRegExp(k) + ')(?!\\w)', 'gi').test(description)
+						? TagsProcessor.Keywords[k]
+						: []
 				),
 			[]
 		);
@@ -723,7 +733,9 @@ export class MarkdownProcessor extends BaseProcessor {
 		let contents = await read(file);
 
 		if (/This is the README for your extension /.test(contents)) {
-			throw new Error(`It seems the README.md still contains template text. Make sure to edit the README.md file before you package or publish your extension.`);
+			throw new Error(
+				`It seems the README.md still contains template text. Make sure to edit the README.md file before you package or publish your extension.`
+			);
 		}
 
 		if (this.rewriteRelativeLinks) {
@@ -802,9 +814,10 @@ export class MarkdownProcessor extends BaseProcessor {
 						// Issue in own repository
 						result =
 							prefix +
-							`[#${issueNumber}](${this.isGitHub
-								? urljoin(this.repositoryUrl, 'issues', issueNumber)
-								: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
+							`[#${issueNumber}](${
+								this.isGitHub
+									? urljoin(this.repositoryUrl, 'issues', issueNumber)
+									: urljoin(this.repositoryUrl, '-', 'issues', issueNumber)
 							})`;
 					}
 
@@ -829,7 +842,11 @@ export class MarkdownProcessor extends BaseProcessor {
 				const src = decodeURI(rawSrc);
 				const srcUrl = new url.URL(src);
 
-				if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.pathname)) {
+				if (
+					/^data:$/i.test(srcUrl.protocol) &&
+					/^image$/i.test(srcUrl.host) &&
+					/\/svg/i.test(srcUrl.pathname)
+				) {
 					throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
 				}
 
@@ -873,7 +890,7 @@ export class MarkdownProcessor extends BaseProcessor {
 
 		const gitHubRegex = /(?<domain>github(\.com\/|:))(?<project>(?:[^/]+)\/(?:[^/]+))(\/|$)/;
 		const gitLabRegex = /(?<domain>gitlab(\.com\/|:))(?<project>(?:[^/]+)(\/(?:[^/]+))+)(\/|$)/;
-		const match = ((gitHubRegex.exec(repository) || gitLabRegex.exec(repository)) as unknown) as {
+		const match = (gitHubRegex.exec(repository) || gitLabRegex.exec(repository)) as unknown as {
 			groups: Record<string, string>;
 		};
 
@@ -904,7 +921,13 @@ export class MarkdownProcessor extends BaseProcessor {
 
 export class ReadmeProcessor extends MarkdownProcessor {
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
-		super(manifest, 'README.md', /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
+		super(
+			manifest,
+			'README.md',
+			/^extension\/readme.md$/i,
+			'Microsoft.VisualStudio.Services.Content.Details',
+			options
+		);
 	}
 }
 export class ChangelogProcessor extends MarkdownProcessor {
@@ -1061,8 +1084,8 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 		const result: ExtensionKind[] = Array.isArray(manifest.extensionKind)
 			? manifest.extensionKind
 			: manifest.extensionKind === 'ui'
-				? ['ui', 'workspace']
-				: [manifest.extensionKind];
+			? ['ui', 'workspace']
+			: [manifest.extensionKind];
 
 		// Add web kind if the extension can run as web extension
 		if (deduced.includes('web') && !result.includes('web')) {
@@ -1267,7 +1290,9 @@ export function validateManifest(manifest: Manifest): Manifest {
 		}
 
 		if (/\.svg$/i.test(srcUrl.pathname) && !isHostTrusted(srcUrl)) {
-			throw new Error(`Badge SVGs are restricted. Please use other file image formats, such as PNG: ${badge.url}`);
+			throw new Error(
+				`Badge SVGs are restricted. Please use other file image formats, such as PNG: ${badge.url}`
+			);
 		}
 	});
 
@@ -1280,7 +1305,9 @@ export function validateManifest(manifest: Manifest): Manifest {
 	});
 
 	if (manifest.extensionKind) {
-		const extensionKinds = Array.isArray(manifest.extensionKind) ? manifest.extensionKind : [manifest.extensionKind];
+		const extensionKinds = Array.isArray(manifest.extensionKind)
+			? manifest.extensionKind
+			: [manifest.extensionKind];
 
 		for (const kind of extensionKinds) {
 			if (!ValidExtensionKinds.has(kind)) {
@@ -1375,17 +1402,18 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 			<Tags>${escape(vsix.tags)}</Tags>
 			<Categories>${escape(vsix.categories)}</Categories>
 			<GalleryFlags>${escape(vsix.flags)}</GalleryFlags>
-			${!vsix.badges
-			? ''
-			: `<Badges>${vsix.badges
-				.map(
-					badge =>
-						`<Badge Link="${escape(badge.href)}" ImgUri="${escape(badge.url)}" Description="${escape(
-							badge.description
-						)}" />`
-				)
-				.join('\n')}</Badges>`
-		}
+			${
+				!vsix.badges
+					? ''
+					: `<Badges>${vsix.badges
+							.map(
+								badge =>
+									`<Badge Link="${escape(badge.href)}" ImgUri="${escape(
+										badge.url
+									)}" Description="${escape(badge.description)}" />`
+							)
+							.join('\n')}</Badges>`
+			}
 			<Properties>
 				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="${escape(vsix.engine)}" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="${escape(vsix.extensionDependencies)}" />
@@ -1393,56 +1421,75 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="${escape(vsix.extensionKind)}" />
 				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
 				${vsix.preRelease ? `<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${escape(vsix.preRelease)}" />` : ''}
-				${vsix.sponsorLink
-			? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(vsix.sponsorLink)}" />`
-			: ''
-		}
-				${!vsix.links.repository
-			? ''
-			: `<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escape(vsix.links.repository)}" />
+				${
+					vsix.sponsorLink
+						? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(
+								vsix.sponsorLink
+						  )}" />`
+						: ''
+				}
+				${
+					!vsix.links.repository
+						? ''
+						: `<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="${escape(
+								vsix.links.repository
+						  )}" />
 				<Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="${escape(vsix.links.repository)}" />
-				${vsix.links.github
-				? `<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${escape(vsix.links.github)}" />`
-				: `<Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${escape(
-					vsix.links.repository
-				)}" />`
-			}`
-		}
-				${vsix.links.bugs
-			? `<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escape(vsix.links.bugs)}" />`
-			: ''
-		}
-				${vsix.links.homepage
-			? `<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${escape(vsix.links.homepage)}" />`
-			: ''
-		}
-				${vsix.galleryBanner.color
-			? `<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${escape(
-				vsix.galleryBanner.color
-			)}" />`
-			: ''
-		}
-				${vsix.galleryBanner.theme
-			? `<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${escape(
-				vsix.galleryBanner.theme
-			)}" />`
-			: ''
-		}
+				${
+					vsix.links.github
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="${escape(
+								vsix.links.github
+						  )}" />`
+						: `<Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="${escape(
+								vsix.links.repository
+						  )}" />`
+				}`
+				}
+				${
+					vsix.links.bugs
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="${escape(
+								vsix.links.bugs
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.links.homepage
+						? `<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="${escape(
+								vsix.links.homepage
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.galleryBanner.color
+						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="${escape(
+								vsix.galleryBanner.color
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.galleryBanner.theme
+						? `<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="${escape(
+								vsix.galleryBanner.theme
+						  )}" />`
+						: ''
+				}
 				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="${escape(vsix.githubMarkdown)}" />
 				<Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="${escape(vsix.pricing)}"/>
 
-				${vsix.enableMarketplaceQnA !== undefined
-			? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
-				vsix.enableMarketplaceQnA
-			)}" />`
-			: ''
-		}
-				${vsix.customerQnALink !== undefined
-			? `<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="${escape(
-				vsix.customerQnALink
-			)}" />`
-			: ''
-		}
+				${
+					vsix.enableMarketplaceQnA !== undefined
+						? `<Property Id="Microsoft.VisualStudio.Services.EnableMarketplaceQnA" Value="${escape(
+								vsix.enableMarketplaceQnA
+						  )}" />`
+						: ''
+				}
+				${
+					vsix.customerQnALink !== undefined
+						? `<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="${escape(
+								vsix.customerQnALink
+						  )}" />`
+						: ''
+				}
 			</Properties>
 			${vsix.license ? `<License>${escape(vsix.license)}</License>` : ''}
 			${vsix.icon ? `<Icon>${escape(vsix.icon)}</Icon>` : ''}
@@ -1454,8 +1501,8 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 		<Assets>
 			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
 			${vsix.assets
-			.map(asset => `<Asset Type="${escape(asset.type)}" Path="${escape(asset.path)}" Addressable="true" />`)
-			.join('\n')}
+				.map(asset => `<Asset Type="${escape(asset.type)}" Path="${escape(asset.path)}" Addressable="true" />`)
+				.join('\n')}
 		</Assets>
 	</PackageManifest>`;
 }
@@ -1565,7 +1612,9 @@ function collectFiles(
 				// Add '/**' to possible folder names
 				.then(ignore => [
 					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
+					...ignore
+						.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i))
+						.map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
 				])
 
 				// Combine with default ignore list
@@ -1673,9 +1722,13 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 					const zip = new yazl.ZipFile();
 					files.forEach(f =>
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
-								mode: f.mode,
-							})
+							? zip.addBuffer(
+									typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents,
+									f.path,
+									{
+										mode: f.mode,
+									}
+							  )
 							: zip.addFile(f.localPath, f.path, { mode: f.mode })
 					);
 					zip.end();

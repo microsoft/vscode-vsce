@@ -58,7 +58,9 @@ export function wordWrap(text: string, width: number = columns): string {
 			([out, buffer, pos], ch) => {
 				const nl = pos === maxWidth ? `\n${indent}` : '';
 				const newPos: number = nl ? 0 : +pos + 1;
-				return / |-|,|\./.test(ch) ? [`${out}${buffer}${ch}${nl}`, '', newPos] : [`${out}${nl}`, buffer + ch, newPos];
+				return / |-|,|\./.test(ch)
+					? [`${out}${buffer}${ch}${nl}`, '', newPos]
+					: [`${out}${nl}`, buffer + ch, newPos];
 			},
 			[indent, '', 0]
 		)

@@ -56,7 +56,11 @@ function showOverview({
 		versions.slice(0, limitVersions).map(({ version, lastUpdated }) => [version, formatDate(lastUpdated!)])
 	);
 
-	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
+	const {
+		install: installs = 0,
+		averagerating = 0,
+		ratingcount = 0,
+	} = statistics.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
 		<ExtensionStatisticsMap>{}
 	);

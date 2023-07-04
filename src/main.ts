@@ -82,7 +82,10 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('package [version]')
 		.description('Packages an extension')
-		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
+		.option(
+			'-o, --out <path>',
+			'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)'
+		)
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
