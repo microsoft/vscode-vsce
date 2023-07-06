@@ -5,15 +5,21 @@
 [![Build Status](https://dev.azure.com/monacotools/Monaco/_apis/build/status/npm/microsoft.vscode-vsce?repoName=microsoft%2Fvscode-vsce&branchName=main)](https://dev.azure.com/monacotools/Monaco/_build/latest?definitionId=446&repoName=microsoft%2Fvscode-vsce&branchName=main)
 [![Version](https://img.shields.io/npm/v/@vscode/vsce.svg)](https://npmjs.org/package/@vscode/vsce)
 
+This tool assists in packaging and publishing Visual Studio Code extensions.
+
+Read the [**Documentation**](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) on the VS Code website.
+
 ## Requirements
 
 - [Node.js](https://nodejs.org/en/) at least `14.x.x`
 
-Or simply [Docker](#usage-via-docker).
+    or
+
+- [Docker](#usage-via-docker)
 
 ### Linux
 
-In order to save credentials safely, this project uses [keytar](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using keytar.
+In order to save credentials safely, this project uses [`keytar`](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using `keytar`.
 
 Depending on your distribution, you will need to run the following command:
 
@@ -23,6 +29,8 @@ Depending on your distribution, you will need to run the following command:
 - Arch Linux: `sudo pacman -S libsecret`
 
 ## Usage
+
+### via npm
 
 Install vsce globally:
 
@@ -36,27 +44,27 @@ Verify the installation:
 vsce --version
 ```
 
-`vsce` is meant to be mainly used as a command line tool. It can also be used a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using vsce as a library be sure to sanitize any user input used in API calls, as a security measurement.
+`vsce` is meant to be mainly used as a command-line tool. It can also be used as a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using `vsce` as a library, be sure to sanitize any user input used in API calls to prevent security issues.
 
-## Usage via Docker
+### via Docker
 
-You can also build a container for running vsce:
+1. Build a container:
 
-```console
-$ DOCKER_BUILDKIT=1 docker build --tag vsce "https://github.com/microsoft/vscode-vsce.git#main"
-```
+    ```console
+    $ DOCKER_BUILDKIT=1 docker build --tag vsce "https://github.com/microsoft/vscode-vsce.git#main"
+    ```
 
-Validate the container:
+1. Validate the container:
 
-```console
-docker run --rm -it vsce --version
-```
+    ```console
+    docker run --rm -it vsce --version
+    ```
 
-Publish your local extension:
+1. Publish your local extension:
 
-```console
-docker run --rm -it -v "$(pwd)":/workspace vsce publish
-```
+    ```console
+    docker run --rm -it -v "$(pwd)":/workspace vsce publish
+    ```
 
 ## Configuration
 
@@ -102,8 +110,3 @@ $ npm test
 ```
 
 > **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
-## About
-
-This tool assists in packaging and publishing Visual Studio Code extensions.
-
-Read the [**Documentation**](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) on the VS Code website.

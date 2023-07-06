@@ -62,9 +62,9 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('ls')
-		.description('Lists all the files that will be published')
+		.description('Lists all the files that will be published/packaged')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
-		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option<string[]>(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
@@ -99,10 +99,10 @@ module.exports = function (argv: string[]): void {
 			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
-		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with the specified URL.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
-		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
@@ -185,10 +185,10 @@ module.exports = function (argv: string[]): void {
 			'--gitlabBranch <branch>',
 			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
-		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with the specified URL.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
-		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
+		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option('--noVerify')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
@@ -249,53 +249,53 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('unpublish [extensionid]')
-		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
+		.description('Unpublishes an extension. Example extension id: ms-vscode.live-server.')
 		.option('-p, --pat <token>', 'Personal Access Token')
-		.option('-f, --force', 'Forces Unpublished Extension')
+		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
 		.action((id, { pat, force }) => main(unpublish({ id, pat, force })));
 
 	program
 		.command('ls-publishers')
-		.description('List all known publishers')
+		.description('Lists all known publishers')
 		.action(() => main(listPublishers()));
 
 	program
 		.command('delete-publisher <publisher>')
-		.description('Deletes a publisher')
+		.description('Deletes a publisher from marketplace')
 		.action(publisher => main(deletePublisher(publisher)));
 
 	program
 		.command('login <publisher>')
-		.description('Add a publisher to the known publishers list')
+		.description('Adds a publisher to the list of known publishers')
 		.action(name => main(loginPublisher(name)));
 
 	program
 		.command('logout <publisher>')
-		.description('Remove a publisher from the known publishers list')
+		.description('Removes a publisher from the list of known publishers')
 		.action(name => main(logoutPublisher(name)));
 
 	program
 		.command('verify-pat [publisher]')
+		.description('Verifies if the Personal Access Token has publish rights for the publisher')
 		.option(
 			'-p, --pat <token>',
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.description('Verify if the Personal Access Token has publish rights for the publisher.')
 		.action((name, { pat }) => main(verifyPat(pat, name)));
 
 	program
 		.command('show <extensionid>')
-		.option('--json', 'Output data in json format', false)
-		.description('Show extension metadata')
+		.description(`Shows an extension's metadata`)
+		.option('--json', 'Outputs data in json format', false)
 		.action((extensionid, { json }) => main(show(extensionid, json)));
 
 	program
 		.command('search <text>')
-		.option('--json', 'Output result in json format', false)
-		.option('--stats', 'Shows the extension rating and download counts', false)
+		.description('Searches extension gallery')
+		.option('--json', 'Output results in json format', false)
+		.option('--stats', 'Shows extensions rating and download count', false)
 		.option('-p, --pagesize [value]', 'Number of results to return', '100')
-		.description('search extension gallery')
 		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
 
 	program.on('command:*', ([cmd]: string) => {
@@ -311,8 +311,7 @@ module.exports = function (argv: string[]): void {
 			const availableCommands = program.commands.map(c => c._name);
 			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
-			help = `${help}
-Unknown command '${cmd}'`;
+			help = `${help}\n Unknown command '${cmd}'`;
 
 			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
 		});
