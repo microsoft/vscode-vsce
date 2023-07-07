@@ -689,6 +689,32 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should automatically detect misspelled license files', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/LICENCE.md', contents: '' }];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENCE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENCE.md');
+			});
+	});
+
 	it('should add an icon metadata tag', () => {
 		const manifest = {
 			name: 'test',
