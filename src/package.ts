@@ -930,8 +930,8 @@ class LicenseProcessor extends BaseProcessor {
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
 
 		if (!match || !match[1]) {
-			this.expectedLicenseName = 'LICENSE.md, LICENSE.txt or LICENSE';
-			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
+			this.expectedLicenseName = 'LICENSE, LICENSE.md, or LICENSE.txt';
+			this.filter = name => /^extension\/licen[cs]e(\.(md|txt))?$/i.test(name);
 		} else {
 			this.expectedLicenseName = match[1];
 			const regexp = new RegExp('^extension/' + match[1] + '$');
