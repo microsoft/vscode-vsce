@@ -173,17 +173,18 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 		}
 
 		if (extension && extension.versions) {
-			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
+			const versionExists = extension.versions.some(v =>
+				(v.version === manifest.version) &&
+				(options.target ? v.targetPlatform === options.target : true));
 
-			if (sameVersion.length > 0) {
+			if (versionExists) {
 				if (options.skipDuplicate) {
 					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
 					return;
-				}
-
-				if (sameVersion.some(v => v.targetPlatform === options.target)) {
+				} else {
 					throw new Error(`${description} already exists.`);
 				}
+
 			}
 
 			try {
