@@ -1,7 +1,7 @@
 {
 	"name": "@vscode/vsce",
 	"version": "2.20.0",
-	"description": "VSCode Extension Manager",
+	"description": "VS Code Extensions Manager",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Microsoft/vsce"
