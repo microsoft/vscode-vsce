@@ -175,7 +175,7 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 		if (extension && extension.versions) {
 			const versionExists = extension.versions.some(v =>
 				(v.version === manifest.version) &&
-				(options.target ? v.targetPlatform === options.target : true));
+				(v.targetPlatform === options.target));
 
 			if (versionExists) {
 				if (options.skipDuplicate) {
