@@ -62,6 +62,7 @@ export interface IPublishOptions {
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly skipDuplicate?: boolean;
+	readonly skipLicense?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
