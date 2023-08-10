@@ -81,6 +81,7 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('package [version]')
+		.alias('pack')
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
