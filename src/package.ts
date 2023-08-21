@@ -380,7 +380,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-	let command = `npm version ${options.version}`;
+	let command = `npm version ${options.version}`; // CodeQL [SM03609] options.version is checked above.
 
 	if (options.commitMessage) {
 		command = `${command} -m "${options.commitMessage}"`;
