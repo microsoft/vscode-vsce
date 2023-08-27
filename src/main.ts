@@ -298,37 +298,30 @@ module.exports = function (argv: string[]): void {
 		.description('search extension gallery')
 		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
 
-		program.on('command:*', ([cmd]: string) => {
-			if (cmd === 'create-publisher') {
-				log.error(
-					`The 'create-publisher' command is no longer available. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher`
-					);
-					
-					process.exit(1);
-				}
-				
-				program.outputHelp(help => {
-					const availableCommands = program.commands.map(c => c._name);
-					const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
+	program.on('command:*', ([cmd]: string) => {
+		if (cmd === 'create-publisher') {
+			log.error(
+				`The 'create-publisher' command is no longer available. You can create a publisher directly in the Marketplace: https://aka.ms/vscode-create-publisher`
+			);
 
-					help = `${help}
+			process.exit(1);
+		}
+
+		program.outputHelp(help => {
+			const availableCommands = program.commands.map(c => c._name);
+			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
+
+			help = `${help}
 Unknown command '${cmd}'`;
-					
-					return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
-				});
-				process.exit(1);
-			});
-			
-	program.description(`
-  ==    ==  .====.   .=====.  .=====.
-  ||    || ||       ||       ||
-  ||    ||  '====.  ||       ||===
-   \\\\  //        || ||       ||
-    '=='    '===='   '====='  '====='\n
-${pkg.description}\n
+
+			return suggestion ? `${help}, did you mean '${suggestion}'?\n` : `${help}.\n`;
+		});
+		process.exit(1);
+	});
+
+	program.description(`${pkg.description}\n
 - To learn more about the VS Code extension API, please visit https://code.visualstudio.com/api/extension-guides/overview
-- To connect with the VS Code extension developer community, please visit https://github.com/microsoft/vscode-discussions
-\n==========================`);
-  
+- To connect with the VS Code extension developer community, please visit https://github.com/microsoft/vscode-discussions`);
+
 	program.parse(argv);
 };
