@@ -1198,7 +1198,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	}
 
 	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
-		throw new Error('Pricing should be Free or Trial');
+		throw new Error('Pricing can only be "Free" or "Trial"');
 	}
 
 	validateVersion(manifest.version);
