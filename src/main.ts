@@ -320,5 +320,9 @@ Unknown command '${cmd}'`;
 		process.exit(1);
 	});
 
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
+
 	program.parse(argv);
 };
