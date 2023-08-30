@@ -15,10 +15,10 @@ resources:
       endpoint: Monaco
 
 parameters:
-  - name: publishPackage
-    displayName: 🚀 Publish
-    type: boolean
-    default: false
+  - name: nextVersion
+    displayName: '🚀 Release Version (eg: major, minor, patch, or literal version)'
+    type: string
+    default: 'none'
 
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
@@ -38,4 +38,7 @@ extends:
         testSteps:
           - script: npm ci
           - script: npm test
-        publishPackage: ${{ parameters.publishPackage }}
+        ${{ if ne(parameters.nextVersion, 'none') }}:
+          publishPackage: true
+          nextVersion: ${{ parameters.nextVersion }}
+          ghCreateTag: true
