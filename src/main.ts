@@ -319,9 +319,9 @@ Unknown command '${cmd}'`;
 		process.exit(1);
 	});
 
-	program.description(`${pkg.description}\n
-- To learn more about the VS Code extension API, please visit https://code.visualstudio.com/api/extension-guides/overview
-- To connect with the VS Code extension developer community, please visit https://github.com/microsoft/vscode-discussions`);
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
 
 	program.parse(argv);
 };
