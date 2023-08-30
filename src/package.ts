@@ -136,6 +136,7 @@ export interface IPackageOptions {
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
+	readonly skipLicense?: boolean;
 }
 
 export interface IProcessor {
@@ -919,12 +920,12 @@ export class ChangelogProcessor extends MarkdownProcessor {
 	}
 }
 
-class LicenseProcessor extends BaseProcessor {
+export class LicenseProcessor extends BaseProcessor {
 	private didFindLicense = false;
 	private expectedLicenseName: string;
 	filter: (name: string) => boolean;
 
-	constructor(manifest: Manifest) {
+	constructor(manifest: Manifest, private readonly options: IPackageOptions = {}) {
 		super(manifest);
 
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
@@ -961,7 +962,7 @@ class LicenseProcessor extends BaseProcessor {
 	}
 
 	async onEnd(): Promise<void> {
-		if (!this.didFindLicense) {
+		if (!this.didFindLicense && !this.options.skipLicense) {
 			util.log.warn(`${this.expectedLicenseName} not found`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
@@ -1628,7 +1629,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
 		new LaunchEntryPointProcessor(manifest),
-		new LicenseProcessor(manifest),
+		new LicenseProcessor(manifest, options),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),
 		new ValidationProcessor(manifest),

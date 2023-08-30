@@ -113,6 +113,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-license', 'Allow packaging without license file')
 		.action(
 			(
 				version,
@@ -135,6 +136,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -158,6 +160,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipLicense,
 					})
 				)
 		);
@@ -199,6 +202,7 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
+		.option('--skip-license', 'Allow publishing without license file')
 		.action(
 			(
 				version,
@@ -221,6 +225,7 @@ module.exports = function (argv: string[]): void {
 					allowStarActivation,
 					allowMissingRepository,
 					skipDuplicate,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -244,6 +249,7 @@ module.exports = function (argv: string[]): void {
 						allowStarActivation,
 						allowMissingRepository,
 						skipDuplicate,
+						skipLicense,
 					})
 				)
 		);

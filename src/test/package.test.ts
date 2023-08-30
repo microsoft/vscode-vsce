@@ -13,6 +13,7 @@ import {
 	ManifestProcessor,
 	versionBump,
 	VSIX,
+	LicenseProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -21,7 +22,7 @@ import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
-import { flatten } from '../util';
+import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
 
@@ -2814,6 +2815,43 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
+	});
+});
+
+describe('LicenseProcessor', () => {
+	it('should fail if license file not specified', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const message = 'LICENSE, LICENSE.md, or LICENSE.txt not found';
+
+		const processor = new LicenseProcessor(createManifest(), {});
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 1);
+		assert.strictEqual(logs[0], message);
+	});
+
+	it('should pass if no license specified and --skip-license flag is passed', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const processor = new LicenseProcessor(createManifest(), { skipLicense: true });
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 0);
 	});
 });
 
