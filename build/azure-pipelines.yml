@@ -15,10 +15,10 @@ resources:
       endpoint: Monaco
 
 parameters:
-  - name: publishPackage
-    displayName: 🚀 Publish
-    type: boolean
-    default: false
+  - name: nextVersion
+    displayName: '🚀 Release Version (eg: none, major, minor, patch, or X.X.X)'
+    type: string
+    default: 'none'
 
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
@@ -30,12 +30,16 @@ extends:
           - script: npm run build
         testPlatforms:
           - name: Linux
-            nodeVersions: [14.x, 16.x, 17.x]
+            nodeVersions: [14.x, 16.x, 18.x]
           - name: MacOS
-            nodeVersions: [14.x, 16.x, 17.x]
+            nodeVersions: [14.x, 16.x, 18.x]
           - name: Windows
-            nodeVersions: [14.x, 16.x, 17.x]
+            nodeVersions: [14.x, 16.x, 18.x]
         testSteps:
           - script: npm ci
           - script: npm test
-        publishPackage: ${{ parameters.publishPackage }}
+        ${{ if eq(parameters.nextVersion, 'none') }}:
+          publishPackage: false
+        ${{ else }}:
+          publishPackage: true
+          nextVersion: ${{ parameters.nextVersion }}
