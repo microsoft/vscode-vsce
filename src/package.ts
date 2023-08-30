@@ -380,7 +380,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-	let command = `npm version ${options.version}`;
+	let command = `npm version ${options.version}`; // CodeQL [SM03609] options.version is checked above.
 
 	if (options.commitMessage) {
 		command = `${command} -m "${options.commitMessage}"`;
@@ -1198,7 +1198,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	}
 
 	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
-		throw new Error('Pricing should be Free or Trial');
+		throw new Error('Pricing can only be "Free" or "Trial"');
 	}
 
 	validateVersion(manifest.version);
