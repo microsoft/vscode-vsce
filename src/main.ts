@@ -189,7 +189,7 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
-		.option('--noVerify', 'Allow proposed (unstable) API in Insiders distribution. Use only in local extension development.')
+		.option('--allow-proposed-api', 'Allow proposed (unstable) API in Insiders distribution. Use only in local extension development.')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
@@ -213,7 +213,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
-					noVerify,
+					allowProposedApi,
 					ignoreFile,
 					dependencies,
 					preRelease,
@@ -236,7 +236,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
-						noVerify,
+						allowProposedApi,
 						ignoreFile,
 						dependencies,
 						preRelease,
