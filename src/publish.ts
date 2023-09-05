@@ -57,6 +57,7 @@ export interface IPublishOptions {
 	 */
 	readonly pat?: string;
 	readonly allowProposedApi?: boolean;
+	readonly noVerify?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
@@ -128,16 +129,18 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly allowProposedApi?: boolean;
+	readonly noVerify?: boolean;
 	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
-	if (!options.allowProposedApi && manifest.enableProposedApi) {
+	// noVerify is left for compatibility reasons
+	if (!options.allowProposedApi && manifest.enableProposedApi || !options.noVerify && manifest.enableProposedApi) {
 		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
 	}
-	if (!options.allowProposedApi && manifest.enabledApiProposals) {
+	if (!options.allowProposedApi && manifest.enabledApiProposals || !options.noVerify && manifest.enabledApiProposals) {
 		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
 	}
 
