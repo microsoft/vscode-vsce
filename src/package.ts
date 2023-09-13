@@ -392,7 +392,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 		args.push('--no-git-tag-version');
 	}
 
-	const { stdout, stderr } = await promisify(cp.execFile)('npm', args, { cwd });
+	const { stdout, stderr } = await promisify(cp.execFile)(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd });
 
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
