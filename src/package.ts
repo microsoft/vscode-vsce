@@ -381,18 +381,18 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-	let command = `npm version ${options.version}`; // CodeQL [SM03609] options.version is checked above.
+	// call `npm version` to do our dirty work
+	const args = ['version', options.version];
 
 	if (options.commitMessage) {
-		command = `${command} -m "${options.commitMessage.replace(/"/g, '')}"`;
+		args.push('-m', options.commitMessage);
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
-		command = `${command} --no-git-tag-version`;
+		args.push('--no-git-tag-version');
 	}
 
-	// call `npm version` to do our dirty work
-	const { stdout, stderr } = await promisify(cp.exec)(command, { cwd });
+	const { stdout, stderr } = await promisify(cp.execFile)(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd });
 
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
