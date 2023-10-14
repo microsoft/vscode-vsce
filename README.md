@@ -72,7 +72,7 @@ Or you can also set them in the `package.json`, so that you avoid having to rety
 // package.json
 {
   "vsce": {
-    "baseImagesUrl": "https://my.custom/base/images/url"
+    "baseImagesUrl": "https://my.custom/base/images/url",
     "dependencies": true,
     "yarn": false
   }
