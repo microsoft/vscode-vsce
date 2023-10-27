@@ -402,7 +402,6 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 
 export const Targets = new Set([
 	'win32-x64',
-	'win32-ia32',
 	'win32-arm64',
 	'linux-x64',
 	'linux-arm64',
