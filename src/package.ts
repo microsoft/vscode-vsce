@@ -1541,10 +1541,18 @@ function collectFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
-	ignoreFile?: string
+	ignoreFile?: string,
+	target?: string
 ): Promise<string[]> {
 	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
+
+		// Filter data from other platforms
+		if (target != undefined) {
+			const regex = new RegExp(Array.from(Targets,(v) => v !== target ? "/" +v+ "/" : "").filter(item => !(item ==="")).join("|"))
+
+			files = files.filter(f => !regex.test(f))
+		}
 
 		return (
 			fs.promises
@@ -1654,9 +1662,10 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
+	const target = options.target || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, target).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1808,7 +1817,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile);
+	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies,options.ignoreFile);
 }
 
 /**
