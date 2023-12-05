@@ -1,7 +1,7 @@
 {
 	"name": "@vscode/vsce",
-	"version": "2.19.0",
-	"description": "VSCode Extension Manager",
+	"version": "0.0.0",
+	"description": "VS Code Extensions Manager",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Microsoft/vsce"
@@ -41,7 +41,7 @@
 		"azure-devops-node-api": "^11.0.1",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
-		"commander": "^6.1.0",
+		"commander": "^6.2.1",
 		"glob": "^7.0.6",
 		"hosted-git-info": "^4.0.2",
 		"jsonc-parser": "^3.2.0",

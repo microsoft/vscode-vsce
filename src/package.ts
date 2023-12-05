@@ -136,6 +136,7 @@ export interface IPackageOptions {
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
+	readonly skipLicense?: boolean;
 }
 
 export interface IProcessor {
@@ -380,18 +381,18 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-	let command = `npm version ${options.version}`;
+	// call `npm version` to do our dirty work
+	const args = ['version', options.version];
 
 	if (options.commitMessage) {
-		command = `${command} -m "${options.commitMessage}"`;
+		args.push('-m', options.commitMessage);
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
-		command = `${command} --no-git-tag-version`;
+		args.push('--no-git-tag-version');
 	}
 
-	// call `npm version` to do our dirty work
-	const { stdout, stderr } = await promisify(cp.exec)(command, { cwd });
+	const { stdout, stderr } = await promisify(cp.execFile)(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd });
 
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
@@ -401,7 +402,6 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 
 export const Targets = new Set([
 	'win32-x64',
-	'win32-ia32',
 	'win32-arm64',
 	'linux-x64',
 	'linux-arm64',
@@ -545,7 +545,9 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		if (!this.options.allowMissingRepository && !this.manifest.repository) {
-			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
+			util.log.warn(
+				`A 'repository' field is missing from the 'package.json' manifest file.\nUse --allow-missing-repository to bypass.`
+			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -554,7 +556,7 @@ export class ManifestProcessor extends BaseProcessor {
 
 		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
 			util.log.warn(
-				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
+				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up\nUse --allow-star-activation to bypass.`
 			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
@@ -919,19 +921,19 @@ export class ChangelogProcessor extends MarkdownProcessor {
 	}
 }
 
-class LicenseProcessor extends BaseProcessor {
+export class LicenseProcessor extends BaseProcessor {
 	private didFindLicense = false;
 	private expectedLicenseName: string;
 	filter: (name: string) => boolean;
 
-	constructor(manifest: Manifest) {
+	constructor(manifest: Manifest, private readonly options: IPackageOptions = {}) {
 		super(manifest);
 
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
 
 		if (!match || !match[1]) {
-			this.expectedLicenseName = 'LICENSE.md, LICENSE.txt or LICENSE';
-			this.filter = name => /^extension\/license(\.(md|txt))?$/i.test(name);
+			this.expectedLicenseName = 'LICENSE, LICENSE.md, or LICENSE.txt';
+			this.filter = name => /^extension\/licen[cs]e(\.(md|txt))?$/i.test(name);
 		} else {
 			this.expectedLicenseName = match[1];
 			const regexp = new RegExp('^extension/' + match[1] + '$');
@@ -961,7 +963,7 @@ class LicenseProcessor extends BaseProcessor {
 	}
 
 	async onEnd(): Promise<void> {
-		if (!this.didFindLicense) {
+		if (!this.didFindLicense && !this.options.skipLicense) {
 			util.log.warn(`${this.expectedLicenseName} not found`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
@@ -1198,7 +1200,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 	}
 
 	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
-		throw new Error('Pricing should be Free or Trial');
+		throw new Error('Pricing can only be "Free" or "Trial"');
 	}
 
 	validateVersion(manifest.version);
@@ -1628,7 +1630,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
 		new LaunchEntryPointProcessor(manifest),
-		new LicenseProcessor(manifest),
+		new LicenseProcessor(manifest, options),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),
 		new ValidationProcessor(manifest),

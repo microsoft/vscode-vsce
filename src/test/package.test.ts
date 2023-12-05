@@ -13,6 +13,7 @@ import {
 	ManifestProcessor,
 	versionBump,
 	VSIX,
+	LicenseProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -21,7 +22,7 @@ import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
-import { flatten } from '../util';
+import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
 
@@ -686,6 +687,32 @@ describe('toVsixManifest', () => {
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
+			});
+	});
+
+	it('should automatically detect misspelled license files', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/LICENCE.md', contents: '' }];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENCE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENCE.md');
 			});
 	});
 
@@ -2788,6 +2815,43 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
+	});
+});
+
+describe('LicenseProcessor', () => {
+	it('should fail if license file not specified', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const message = 'LICENSE, LICENSE.md, or LICENSE.txt not found';
+
+		const processor = new LicenseProcessor(createManifest(), {});
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 1);
+		assert.strictEqual(logs[0], message);
+	});
+
+	it('should pass if no license specified and --skip-license flag is passed', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const processor = new LicenseProcessor(createManifest(), { skipLicense: true });
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 0);
 	});
 });
 

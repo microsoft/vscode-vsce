@@ -58,11 +58,14 @@ export interface IPublishOptions {
 	readonly pat?: string;
 	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly skipDuplicate?: boolean;
+	readonly skipLicense?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -130,18 +133,24 @@ export interface IInternalPublishOptions {
 	readonly pat?: string;
 	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
 	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
-	// noVerify is left for compatibility reasons
-	if (!options.allowProposedApi && manifest.enableProposedApi || !options.noVerify && manifest.enableProposedApi) {
-		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
+		throw new Error(
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
+		);
 	}
-	if (!options.allowProposedApi && manifest.enabledApiProposals || !options.noVerify && manifest.enabledApiProposals) {
-		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+
+	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
+		throw new Error(
+			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
+		);
 	}
 
 	if (semver.prerelease(manifest.version)) {
@@ -176,17 +185,18 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 		}
 
 		if (extension && extension.versions) {
-			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
+			const versionExists = extension.versions.some(v =>
+				(v.version === manifest.version) &&
+				(v.targetPlatform === options.target));
 
-			if (sameVersion.length > 0) {
+			if (versionExists) {
 				if (options.skipDuplicate) {
 					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
 					return;
-				}
-
-				if (sameVersion.some(v => v.targetPlatform === options.target)) {
+				} else {
 					throw new Error(`${description} already exists.`);
 				}
+
 			}
 
 			try {

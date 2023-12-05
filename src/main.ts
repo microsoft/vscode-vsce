@@ -81,6 +81,7 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('package [version]')
+		.alias('pack')
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
@@ -112,6 +113,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-license', 'Allow packaging without license file')
 		.action(
 			(
 				version,
@@ -134,6 +136,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -157,6 +160,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipLicense,
 					})
 				)
 		);
@@ -189,7 +193,9 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
-		.option('--allow-proposed-api', 'Allow proposed (unstable) API in Insiders distribution. Use only in local extension development.')
+		.option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
+		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
+		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
@@ -198,6 +204,7 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
+		.option('--skip-license', 'Allow publishing without license file')
 		.action(
 			(
 				version,
@@ -215,12 +222,15 @@ module.exports = function (argv: string[]): void {
 					yarn,
 					allowProposedApi,
 					noVerify,
+					allowProposedApis,
+					allowAllProposedApis,
 					ignoreFile,
 					dependencies,
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
 					skipDuplicate,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -239,12 +249,15 @@ module.exports = function (argv: string[]): void {
 						useYarn: yarn,
 						allowProposedApi,
 						noVerify,
+						allowProposedApis,
+						allowAllProposedApis,
 						ignoreFile,
 						dependencies,
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
 						skipDuplicate,
+						skipLicense,
 					})
 				)
 		);
@@ -319,6 +332,10 @@ module.exports = function (argv: string[]): void {
 		});
 		process.exit(1);
 	});
+
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
 
 	program.parse(argv);
 };
