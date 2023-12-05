@@ -3,6 +3,7 @@
 
 	"node.label": "Node.js",
 
+	// Example comment
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
 	"node.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",

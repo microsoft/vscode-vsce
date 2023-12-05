@@ -1,0 +1,9 @@
+{
+	"name": "version",
+	"publisher": "joaomoreno",
+	"version": "1.0.0",
+	"icon": "./icon.png",
+	"engines": {
+		"vscode": "*"
+	}
+}

@@ -1,96 +1,24 @@
-import { publish as _publish } from './publish';
-import { packageCommand, listFiles as _listFiles } from './package';
+import { publish as _publish, IPublishOptions } from './publish';
+import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
 
-export interface IBaseVSIXOptions {
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
+/**
+ * @deprecated prefer IPackageOptions instead
+ * @public
+ */
+export type IBaseVSIXOptions = Pick<
+	IPackageOptions,
+	'baseContentUrl' | 'baseImagesUrl' | 'githubBranch' | 'gitlabBranch' | 'useYarn' | 'target' | 'preRelease'
+>;
 
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Github branch used to publish the package. Used to automatically infer
-	 * the base content and images URI.
-	 */
-	githubBranch?: string;
-
-	/**
-	 * Gitlab branch used to publish the package. Used to automatically infer
-	 * the base content and images URI.
-	 */
-	gitlabBranch?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
-
-	/**
-	 * Optional target the extension should run on.
-	 *
-	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
-	 */
-	target?: string;
-
-	/**
-	 * Mark this package as a pre-release
-	 */
-	preRelease?: boolean;
-}
-
-export interface ICreateVSIXOptions extends IBaseVSIXOptions {
-	/**
-	 * The location of the extension in the file system.
-	 *
-	 * Defaults to `process.cwd()`.
-	 */
-	cwd?: string;
-
-	/**
-	 * The destination of the packaged the VSIX.
-	 *
-	 * Defaults to `NAME-VERSION.vsix`.
-	 */
-	packagePath?: string;
-}
-
-export interface IPublishOptions {
-	/**
-	 * The location of the extension in the file system.
-	 *
-	 * Defaults to `process.cwd()`.
-	 */
-	cwd?: string;
-
-	/**
-	 * The Personal Access Token to use.
-	 *
-	 * Defaults to the stored one.
-	 */
-	pat?: string;
-
-	/**
-	 * The base URL for links detected in Markdown files.
-	 */
-	baseContentUrl?: string;
-
-	/**
-	 * The base URL for images detected in Markdown files.
-	 */
-	baseImagesUrl?: string;
-
-	/**
-	 * Should use Yarn instead of NPM.
-	 */
-	useYarn?: boolean;
-}
+/**
+ * @deprecated prefer IPackageOptions instead
+ * @public
+ */
+export type ICreateVSIXOptions = Pick<IPackageOptions, 'cwd' | 'packagePath'> & IBaseVSIXOptions;
 
 /**
  * The supported list of package managers.
+ * @public
  */
 export enum PackageManager {
 	Npm,
@@ -98,6 +26,10 @@ export enum PackageManager {
 	None,
 }
 
+/**
+ * Options for the `listFiles` function.
+ * @public
+ */
 export interface IListFilesOptions {
 	/**
 	 * The working directory of the extension. Defaults to `process.cwd()`.
@@ -124,24 +56,21 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export interface IPublishVSIXOptions extends IBaseVSIXOptions {
-	/**
-	 * The Personal Access Token to use.
-	 *
-	 * Defaults to the stored one.
-	 */
-	pat?: string;
-}
+export type { IPackageOptions } from './package';
 
 /**
  * Creates a VSIX from the extension in the current working directory.
+ * @public
  */
-export function createVSIX(options: ICreateVSIXOptions = {}): Promise<any> {
+export function createVSIX(options: IPackageOptions = {}): Promise<any> {
 	return packageCommand(options);
 }
 
+export type { IPublishOptions } from './publish';
+
 /**
  * Publishes the extension in the current working directory.
+ * @public
  */
 export function publish(options: IPublishOptions = {}): Promise<any> {
 	return _publish(options);
@@ -149,13 +78,25 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
 
 /**
  * Lists the files included in the extension's package.
+ * @public
  */
 export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
-	return _listFiles(options);
+	return _listFiles({
+		...options,
+		useYarn: options.packageManager === PackageManager.Yarn,
+		dependencies: options.packageManager !== PackageManager.None,
+	});
 }
 
 /**
+ * Options for the `publishVSIX` function.
+ * @public
+ */
+export type IPublishVSIXOptions = IPublishOptions & Pick<IPackageOptions, 'target'>;
+
+/**
  * Publishes a pre-build VSIX.
+ * @public
  */
 export function publishVSIX(packagePath: string | string[], options: IPublishVSIXOptions = {}): Promise<any> {
 	return _publish({

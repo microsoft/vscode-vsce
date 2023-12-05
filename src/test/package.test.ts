@@ -13,6 +13,7 @@ import {
 	ManifestProcessor,
 	versionBump,
 	VSIX,
+	LicenseProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -21,8 +22,9 @@ import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
-import { flatten } from '../util';
+import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
+import * as jsonc from 'jsonc-parser';
 
 // don't warn in tests
 console.warn = () => null;
@@ -235,31 +237,35 @@ describe('collect', function () {
 			assert.ok(!/\bnode_modules\b/i.test(file.path));
 		}
 	});
+
+	it('should handle relative icon paths', async function () {
+		const cwd = fixture('icon');
+		const manifest = await readManifest(cwd);
+		await collect(manifest, { cwd });
+	});
 });
 
 describe('readManifest', () => {
-	it('should patch NLS', () => {
+	it('should patch NLS', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd);
 
-		return readManifest(cwd).then((manifest: any) => {
-			assert.strictEqual(manifest.name, raw.name);
-			assert.strictEqual(manifest.description, translations['extension.description']);
-			assert.strictEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.strictEqual(manifest.description, translations['extension.description']);
+		assert.strictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 
-	it('should not patch NLS if required', () => {
+	it('should not patch NLS if required', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd, false);
 
-		return readManifest(cwd, false).then((manifest: any) => {
-			assert.strictEqual(manifest.name, raw.name);
-			assert.notEqual(manifest.description, translations['extension.description']);
-			assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.notStrictEqual(manifest.description, translations['extension.description']);
+		assert.notStrictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 });
 
@@ -382,6 +388,100 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ extensionKind: ['workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
 		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
+	});
+
+	it('should validate sponsor', () => {
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'hello' } })));
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'www.foo.com' } })));
+		validateManifest(createManifest({ sponsor: { url: 'https://foo.bar' } }));
+		validateManifest(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
+	});
+
+	it('should validate pricing', () => {
+		assert.throws(() => validateManifest(createManifest({ pricing: 'Paid' })));
+		validateManifest(createManifest({ pricing: 'Trial' }));
+		validateManifest(createManifest({ pricing: 'Free' }));
+		validateManifest(createManifest());
+	});
+
+	it('should allow implicit activation events', () => {
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		validateManifest(
+			createManifest({
+				engines: { vscode: '*' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				contributes: {
+					languages: [
+						{
+							id: 'typescript',
+						}
+					]
+				}
+			})
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					activationEvents: ['*'],
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+					contributes: {
+						commands: [
+							{
+								command: 'extension.helloWorld',
+								title: 'Hello World',
+							},
+						],
+					},
+				})
+			)
+		);
 	});
 });
 
@@ -587,6 +687,32 @@ describe('toVsixManifest', () => {
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
+			});
+	});
+
+	it('should automatically detect misspelled license files', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/LICENCE.md', contents: '' }];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENCE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENCE.md');
 			});
 	});
 
@@ -1660,6 +1786,34 @@ describe('toVsixManifest', () => {
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
 	});
 
+	it('should add sponsor link property', () => {
+		const sponsor = { url: 'https://foo.bar' };
+		const manifest: Manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			sponsor,
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const sponsorLinkProp = properties.find(p => p.$.Id === 'Microsoft.VisualStudio.Code.SponsorLink');
+				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor.url);
+			});
+	});
+
+	it('should automatically add sponsor tag for extension with sponsor link', async () => {
+		const manifest = createManifest({ sponsor: { url: 'https://foo.bar' } });
+		const vsixManifest = await _toVsixManifest(manifest, []);
+		const result = await parseXmlManifest(vsixManifest);
+
+		assert.ok(result.PackageManifest.Metadata[0].Tags[0].split(',').includes('__sponsor_extension'));
+	});
+
 	it('should add prerelease property when --pre-release flag is passed when engine property is for insiders', async () => {
 		const manifest = createManifest({ engines: { vscode: '>=1.64.0-insider' } });
 
@@ -1688,6 +1842,13 @@ describe('toVsixManifest', () => {
 		}
 
 		throw new Error('Should not reach here');
+	});
+
+	it('should identify trial version of an extension', async () => {
+		const manifest = createManifest({ pricing: 'Trial' });
+		var raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.Content.Pricing', 'Trial');
 	});
 });
 
@@ -2654,6 +2815,43 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		await throws(() => processor.onFile(readme));
+	});
+});
+
+describe('LicenseProcessor', () => {
+	it('should fail if license file not specified', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const message = 'LICENSE, LICENSE.md, or LICENSE.txt not found';
+
+		const processor = new LicenseProcessor(createManifest(), {});
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 1);
+		assert.strictEqual(logs[0], message);
+	});
+
+	it('should pass if no license specified and --skip-license flag is passed', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const processor = new LicenseProcessor(createManifest(), { skipLicense: true });
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 0);
 	});
 });
 

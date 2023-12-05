@@ -1,6 +1,6 @@
 import program from 'commander';
 import leven from 'leven';
-import { packageCommand, ls } from './package';
+import { packageCommand, ls, Targets } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
@@ -9,6 +9,7 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+
 const pkg = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
@@ -54,6 +55,8 @@ function main(task: Promise<any>): void {
 	});
 }
 
+const ValidTargets = [...Targets].join(', ');
+
 module.exports = function (argv: string[]): void {
 	program.version(pkg.version).usage('<command>');
 
@@ -69,16 +72,19 @@ module.exports = function (argv: string[]): void {
 			undefined
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
 			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
 
 	program
 		.command('package [version]')
+		.alias('pack')
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -87,11 +93,11 @@ module.exports = function (argv: string[]): void {
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
@@ -101,10 +107,13 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-license', 'Allow packaging without license file')
 		.action(
 			(
 				version,
@@ -127,6 +136,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -150,6 +160,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipLicense,
 					})
 				)
 		);
@@ -162,7 +173,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.option('-t, --target <targets...>', 'Target architectures')
+		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -172,11 +183,11 @@ module.exports = function (argv: string[]): void {
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
@@ -186,10 +197,14 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
 		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
+		.option('--skip-license', 'Allow publishing without license file')
 		.action(
 			(
 				version,
@@ -213,6 +228,8 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipDuplicate,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -237,6 +254,8 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipDuplicate,
+						skipLicense,
 					})
 				)
 		);
@@ -287,8 +306,10 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('search <text>')
 		.option('--json', 'Output result in json format', false)
+		.option('--stats', 'Shows the extension rating and download counts', false)
+		.option('-p, --pagesize [value]', 'Number of results to return', '100')
 		.description('search extension gallery')
-		.action((text, { json }) => main(search(text, json)));
+		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
@@ -310,6 +331,10 @@ Unknown command '${cmd}'`;
 		});
 		process.exit(1);
 	});
+
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
 
 	program.parse(argv);
 };
