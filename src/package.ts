@@ -1755,7 +1755,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 		);
 	}
 
-	if (options.version) {
+	if (options.version && !(options.updatePackageJson ?? true)) {
 		manifest.version = options.version;
 	}
 
