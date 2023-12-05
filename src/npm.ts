@@ -1,16 +1,13 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as denodeify from 'denodeify';
 import * as cp from 'child_process';
-import * as _ from 'lodash';
-import * as findWorkspaceRoot from 'find-yarn-workspace-root';
+import findWorkspaceRoot from 'find-yarn-workspace-root';
 import { Manifest } from './manifest';
 import { readNodeManifest } from './package';
 import { CancellationToken, log } from './util';
 
-const stat = denodeify(fs.stat);
 const exists = (file: string) =>
-	stat(file).then(
+	fs.promises.stat(file).then(
 		_ => true,
 		_ => false
 	);
@@ -35,7 +32,7 @@ function exec(
 	cancellationToken?: CancellationToken
 ): Promise<{ stdout: string; stderr: string }> {
 	return new Promise((c, e) => {
-		let disposeCancellationListener: Function = null;
+		let disposeCancellationListener: Function | null = null;
 
 		const child = cp.exec(command, { ...options, encoding: 'utf8' } as any, (err, stdout: string, stderr: string) => {
 			if (disposeCancellationListener) {
@@ -50,7 +47,7 @@ function exec(
 		});
 
 		if (cancellationToken) {
-			disposeCancellationListener = cancellationToken.subscribe(err => {
+			disposeCancellationListener = cancellationToken.subscribe((err: any) => {
 				child.kill();
 				e(err);
 			});
@@ -58,14 +55,13 @@ function exec(
 	});
 }
 
-function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
-	return exec('npm -v', {}, cancellationToken).then(({ stdout }) => {
-		const version = stdout.trim();
+async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
+	const { stdout } = await exec('npm -v', {}, cancellationToken);
+	const version = stdout.trim();
 
-		if (/^3\.7\.[0123]$/.test(version)) {
-			return Promise.reject(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
-		}
-	});
+	if (/^3\.7\.[0123]$/.test(version)) {
+		throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
+	}
 }
 
 function getNpmDependencies(cwd: string): Promise<SourceAndDestination[]> {
@@ -101,15 +97,19 @@ async function asYarnDependencies(root: string, rootDependencies: string[]): Pro
 				depPath = path.join(newPrefix, 'node_modules', name);
 				try {
 					depManifest = await readNodeManifest(depPath);
-				}
-				catch (err) {
+				} catch (err) {
 					newPrefix = path.join(newPrefix, '..');
 					if (newPrefix.length < root.length) {
 						throw err;
 					}
 				}
 			}
-			const result = {
+
+			if (!depPath || !depManifest) {
+				throw new Error(`Error finding dependencies`);
+			}
+
+			const result: YarnDependency = {
 				name,
 				path: {
 					src: depPath,
@@ -178,7 +178,7 @@ async function getYarnProductionDependencies(root: string, manifest: Manifest, p
 	let result = await asYarnDependencies(root, Object.keys(manifest.dependencies || {}));
 
 	if (usingPackagedDependencies) {
-		result = selectYarnDependencies(result, packagedDependencies);
+		result = selectYarnDependencies(result, packagedDependencies!);
 	}
 
 	return result;
@@ -199,15 +199,23 @@ async function getYarnDependencies(cwd: string, root: string, manifest: Manifest
 		deps.forEach(flatten);
 	}
 
-	return _.uniqBy(result, 'src');
+	const dedup = new Map();
+
+	for (const item of result) {
+		if (!dedup.has(item.src)) {
+			dedup.set(item.src, item);
+		}
+	}
+
+	return [...dedup.values()];
 }
 
 export async function detectYarn(root: string) {
-	for (const file of ['yarn.lock', '.yarnrc']) {
-		if (await exists(path.join(root, file))) {
+	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
+		if (await exists(path.join(root, name))) {
 			if (!process.env['VSCE_TESTS']) {
 				log.info(
-					`Detected presence of ${file}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+					`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
 				);
 			}
 			return true;
@@ -219,13 +227,18 @@ export async function detectYarn(root: string) {
 export async function getDependencies(
 	cwd: string,
 	manifest: Manifest,
-	useYarn?: boolean,
+	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<SourceAndDestination[]> {
 	const root = findWorkspaceRoot(cwd) || cwd;
-	return (useYarn !== undefined ? useYarn : await detectYarn(root))
-		? await getYarnDependencies(cwd, root, manifest, packagedDependencies)
-		: await getNpmDependencies(cwd);
+
+	if (dependencies === 'none') {
+		return [{ src: root, dest: '' }];
+	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(root)))) {
+		return await getYarnDependencies(cwd, root, manifest, packagedDependencies);
+	} else {
+		return await getNpmDependencies(cwd);
+	}
 }
 
 export function getLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {

@@ -13,16 +13,19 @@ import {
 	ManifestProcessor,
 	ILocalFile,
 	versionBump,
+	VSIX,
+	LicenseProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
-import { parseString } from 'xml2js';
-import * as denodeify from 'denodeify';
-import * as _ from 'lodash';
 import { spawnSync } from 'child_process';
+import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
+import { flatten, log } from '../util';
+import { validatePublisher } from '../validation';
+import * as jsonc from 'jsonc-parser';
 
 // don't warn in tests
 console.warn = () => null;
@@ -35,7 +38,7 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 	try {
 		await fn();
-	} catch (err) {
+	} catch (err: any) {
 		didThrow = true;
 	}
 
@@ -44,48 +47,14 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 	}
 }
 
-const fixture = name => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
-const readFile = denodeify<string, string, string>(fs.readFile);
-function createXMLParser<T>(): (raw: string) => Promise<T> {
-	return denodeify<string, T>(parseString);
-}
-
-type XMLManifest = {
-	PackageManifest: {
-		$: { Version: string; xmlns: string };
-		Metadata: {
-			Description: { _: string }[];
-			DisplayName: string[];
-			Identity: { $: { Id: string; Version: string; Publisher: string; TargetPlatform?: string } }[];
-			Tags: string[];
-			GalleryFlags: string[];
-			License: string[];
-			Icon: string[];
-			Properties: { Property: { $: { Id: string; Value: string } }[] }[];
-			Categories: string[];
-			Badges: { Badge: { $: { Link: string; ImgUri: string; Description: string } }[] }[];
-		}[];
-		Installation: { InstallationTarget: { $: { Id: string } }[] }[];
-		Dependencies: string[];
-		Assets: { Asset: { $: { Type: string; Path: string } }[] }[];
-	};
-};
-
-type ContentTypes = {
-	Types: {
-		Default: { $: { Extension: string; ContentType } }[];
-	};
-};
-
-const parseXmlManifest = createXMLParser<XMLManifest>();
-const parseContentTypes = createXMLParser<ContentTypes>();
+const fixture = (name: string) => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 
 function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
-		const assets = _.flatten(processors.map(p => p.assets));
-		const tags = _(_.flatten(processors.map(p => p.tags))).join(',');
-		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags });
+		const assets = flatten(processors.map(p => p.assets));
+		const tags = flatten(processors.map(p => p.tags)).join(',');
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
 
 		return toVsixManifest(vsix);
 	});
@@ -98,15 +67,15 @@ async function toXMLManifest(manifest: Manifest, files: IFile[] = []): Promise<X
 
 function assertProperty(manifest: XMLManifest, name: string, value: string): void {
 	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
-	assert.equal(property.length, 1, `Property '${name}' should exist`);
+	assert.strictEqual(property.length, 1, `Property '${name}' should exist`);
 
 	const enableMarketplaceQnA = property[0].$.Value;
-	assert.equal(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
+	assert.strictEqual(enableMarketplaceQnA, value, `Property '${name}' should have value '${value}'`);
 }
 
 function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	const property = manifest.PackageManifest.Metadata[0].Properties[0].Property.filter(p => p.$.Id === name);
-	assert.equal(property.length, 0, `Property '${name}' should not exist`);
+	assert.strictEqual(property.length, 0, `Property '${name}' should not exist`);
 }
 
 function createManifest(extra: Partial<Manifest> = {}): Manifest {
@@ -129,7 +98,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 3);
+				assert.strictEqual(files.length, 3);
 			});
 	});
 
@@ -147,7 +116,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.length, 3);
+				assert.strictEqual(files.length, 3);
 			});
 	});
 
@@ -181,7 +150,7 @@ describe('collect', function () {
 				// extension/node_modules/real_sub/package.json
 				// extension/node_modules/real/node_modules/real_sub/dependency.js
 				// extension/node_modules/real/node_modules/real_sub/package.json
-				assert.equal(files.length, 11);
+				assert.strictEqual(files.length, 11);
 				assert.ok(files.some(f => /real\/dependency\.js/.test(f.path)));
 				assert.ok(!files.some(f => /fake\/dependency\.js/.test(f.path)));
 			});
@@ -193,7 +162,7 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd }))
 			.then(files => {
-				assert.equal(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
+				assert.strictEqual(files.filter(f => /\.vsixmanifest$/.test(f.path)).length, 1);
 			});
 	});
 
@@ -203,14 +172,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, false);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, false);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -220,14 +189,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, dependencyEntryPoints: ['isexe'] }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, false);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, false);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -237,14 +206,14 @@ describe('collect', function () {
 		return readManifest(cwd)
 			.then(manifest => collect(manifest, { cwd, useYarn: true }))
 			.then(files => {
-				let seenWhich: boolean;
-				let seenIsexe: boolean;
-				files.forEach(file => {
+				let seenWhich: boolean = false;
+				let seenIsexe: boolean = false;
+				for (const file of files) {
 					seenWhich = file.path.indexOf('/node_modules/which/') >= 0;
 					seenIsexe = file.path.indexOf('/node_modules/isexe/') >= 0;
-				});
-				assert.equal(seenWhich, true);
-				assert.equal(seenIsexe, true);
+				}
+				assert.strictEqual(seenWhich, true);
+				assert.strictEqual(seenIsexe, true);
 			});
 	});
 
@@ -258,13 +227,31 @@ describe('collect', function () {
 			});
 	});
 
+	it('should skip all dependencies when using --no-dependencies', async () => {
+		const cwd = fixture('devDependencies');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd, dependencies: false });
+
+		assert.strictEqual(files.length, 3);
+
+		for (const file of files) {
+			assert.ok(!/\bnode_modules\b/i.test(file.path));
+		}
+	});
+
+	it('should handle relative icon paths', async function () {
+		const cwd = fixture('icon');
+		const manifest = await readManifest(cwd);
+		await collect(manifest, { cwd });
+	});
+
 	it('should collect the right files when using yarn workspaces', async () => {
 		// PackageB will act as the extension here
 		const root = fixture('yarnWorkspaces');
 		const cwd = path.join(root, 'packageB');
 		const manifest = await readManifest(cwd);
 
-		assert.equal(manifest.name, 'package-b');
+		assert.strictEqual(manifest.name, 'package-b');
 
 		const files = await collect(manifest, { cwd }) as ILocalFile[];
 
@@ -300,67 +287,64 @@ describe('collect', function () {
 		].forEach(expected => {
 			const found = files.find(f => f.path === expected.path || f.localPath === expected.localPath);
 			if (found) {
-				assert.equal(found.path, expected.path, 'path');
-				assert.equal(found.localPath, expected.localPath, 'localPath');
+				assert.strictEqual(found.path, expected.path, 'path');
+				assert.strictEqual(found.localPath, expected.localPath, 'localPath');
 			}
 		})
 		const ignoreFilename = 'extension/node_modules/package-a/logger.log';
 		const ignore = files.find(f => f.path === ignoreFilename);
 		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
-	})
+	});
 });
 
 describe('readManifest', () => {
-	it('should patch NLS', () => {
+	it('should patch NLS', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd);
 
-		return readManifest(cwd).then((manifest: any) => {
-			assert.equal(manifest.name, raw.name);
-			assert.equal(manifest.description, translations['extension.description']);
-			assert.equal(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.strictEqual(manifest.description, translations['extension.description']);
+		assert.strictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 
-	it('should not patch NLS if required', () => {
+	it('should not patch NLS if required', async function () {
 		const cwd = fixture('nls');
-		const raw = require(path.join(cwd, 'package.json'));
-		const translations = require(path.join(cwd, 'package.nls.json'));
+		const raw = JSON.parse(await fs.promises.readFile(path.join(cwd, 'package.json'), 'utf8'));
+		const translations = jsonc.parse(await fs.promises.readFile(path.join(cwd, 'package.nls.json'), 'utf8'));
+		const manifest = await readManifest(cwd, false);
 
-		return readManifest(cwd, false).then((manifest: any) => {
-			assert.equal(manifest.name, raw.name);
-			assert.notEqual(manifest.description, translations['extension.description']);
-			assert.notEqual(manifest.contributes.debuggers[0].label, translations['node.label']);
-		});
+		assert.strictEqual(manifest.name, raw.name);
+		assert.notStrictEqual(manifest.description, translations['extension.description']);
+		assert.notStrictEqual(manifest.contributes!.debuggers[0].label, translations['node.label']);
 	});
 });
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
+		assert.ok(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
 		assert.throws(() => {
-			validateManifest({ publisher: null, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } });
+			validateManifest({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: null, version: '1.0.0', engines: { vscode: '0.10.1' } });
-		});
-		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: null, engines: { vscode: '0.10.1' } });
+			validateManifest({ publisher: 'demo', name: 'demo', version: null!, engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
 			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null });
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null! });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } });
+			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } as any });
 		});
+		validatePublisher('demo');
+		assert.throws(() => validatePublisher(undefined!));
 	});
 
 	it('should prevent SVG icons', () => {
-		assert(validateManifest(createManifest({ icon: 'icon.png' })));
+		assert.ok(validateManifest(createManifest({ icon: 'icon.png' })));
 		assert.throws(() => {
 			validateManifest(createManifest({ icon: 'icon.svg' }));
 		});
@@ -387,7 +371,7 @@ describe('validateManifest', () => {
 	});
 
 	it('should allow non SVG badges', () => {
-		assert(
+		assert.ok(
 			validateManifest(
 				createManifest({
 					badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -397,7 +381,7 @@ describe('validateManifest', () => {
 	});
 
 	it('should allow SVG badges from trusted sources', () => {
-		assert(
+		assert.ok(
 			validateManifest(
 				createManifest({
 					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -408,7 +392,7 @@ describe('validateManifest', () => {
 
 	it('should prevent SVG badges from non trusted sources', () => {
 		assert.throws(() => {
-			assert(
+			assert.ok(
 				validateManifest(
 					createManifest({
 						badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
@@ -417,7 +401,7 @@ describe('validateManifest', () => {
 			);
 		});
 		assert.throws(() => {
-			assert(
+			assert.ok(
 				validateManifest(
 					createManifest({
 						badges: [
@@ -442,6 +426,115 @@ describe('validateManifest', () => {
 		validateManifest(createManifest({ activationEvents: ['any'], browser: 'browser.js' }));
 		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js', browser: 'browser.js' }));
 	});
+
+	it('should validate extensionKind', () => {
+		assert.throws(() => validateManifest(createManifest({ extensionKind: ['web'] })));
+		assert.throws(() => validateManifest(createManifest({ extensionKind: 'web' })));
+		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'ui', 'web'] })));
+		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'web'] })));
+		assert.throws(() => validateManifest(createManifest({ extensionKind: ['ui', 'web'] })));
+		assert.throws(() => validateManifest(createManifest(<any>{ extensionKind: ['any'] })));
+		validateManifest(createManifest({ extensionKind: 'ui' }));
+		validateManifest(createManifest({ extensionKind: ['ui'] }));
+		validateManifest(createManifest({ extensionKind: 'workspace' }));
+		validateManifest(createManifest({ extensionKind: ['workspace'] }));
+		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
+		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
+	});
+
+	it('should validate sponsor', () => {
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'hello' } })));
+		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'www.foo.com' } })));
+		validateManifest(createManifest({ sponsor: { url: 'https://foo.bar' } }));
+		validateManifest(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
+	});
+
+	it('should validate pricing', () => {
+		assert.throws(() => validateManifest(createManifest({ pricing: 'Paid' })));
+		validateManifest(createManifest({ pricing: 'Trial' }));
+		validateManifest(createManifest({ pricing: 'Free' }));
+		validateManifest(createManifest());
+	});
+
+	it('should allow implicit activation events', () => {
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		validateManifest(
+			createManifest({
+				engines: { vscode: '*' },
+				main: 'main.js',
+				contributes: {
+					commands: [
+						{
+							command: 'extension.helloWorld',
+							title: 'Hello World',
+						},
+					],
+				},
+			})
+		);
+
+		validateManifest(
+			createManifest({
+				engines: { vscode: '>=1.74.0' },
+				contributes: {
+					languages: [
+						{
+							id: 'typescript',
+						}
+					]
+				}
+			})
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					activationEvents: ['*'],
+				})
+			)
+		);
+
+		assert.throws(() =>
+			validateManifest(
+				createManifest({
+					engines: { vscode: '>=1.73.3' },
+					main: 'main.js',
+					contributes: {
+						commands: [
+							{
+								command: 'extension.helloWorld',
+								title: 'Hello World',
+							},
+						],
+					},
+				})
+			)
+		);
+	});
 });
 
 describe('toVsixManifest', () => {
@@ -460,29 +553,32 @@ describe('toVsixManifest', () => {
 				assert.ok(result);
 				assert.ok(result.PackageManifest);
 				assert.ok(result.PackageManifest.$);
-				assert.equal(result.PackageManifest.$.Version, '2.0.0');
-				assert.equal(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.$.Version, '2.0.0');
+				assert.strictEqual(result.PackageManifest.$.xmlns, 'http://schemas.microsoft.com/developer/vsx-schema/2011');
+				assert.strictEqual(
 					result.PackageManifest.$['xmlns:d'],
 					'http://schemas.microsoft.com/developer/vsx-schema-design/2011'
 				);
 				assert.ok(result.PackageManifest.Metadata);
-				assert.equal(result.PackageManifest.Metadata.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, 'test extension');
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'test');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+				assert.strictEqual(result.PackageManifest.Metadata.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Description[0]._, 'test extension');
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
 				assert.deepEqual(result.PackageManifest.Metadata[0].Tags, ['__web_extension']);
 				assert.deepEqual(result.PackageManifest.Metadata[0].GalleryFlags, ['Public']);
-				assert.equal(result.PackageManifest.Installation.length, 1);
-				assert.equal(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
-				assert.equal(result.PackageManifest.Installation[0].InstallationTarget[0].$.Id, 'Microsoft.VisualStudio.Code');
+				assert.strictEqual(result.PackageManifest.Installation.length, 1);
+				assert.strictEqual(result.PackageManifest.Installation[0].InstallationTarget.length, 1);
+				assert.strictEqual(
+					result.PackageManifest.Installation[0].InstallationTarget[0].$.Id,
+					'Microsoft.VisualStudio.Code'
+				);
 				assert.deepEqual(result.PackageManifest.Dependencies, ['']);
-				assert.equal(result.PackageManifest.Assets.length, 1);
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 1);
-				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
-				assert.equal(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
+				assert.strictEqual(result.PackageManifest.Assets.length, 1);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 1);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Type, 'Microsoft.VisualStudio.Code.Manifest');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[0].$.Path, 'extension/package.json');
 			});
 	});
 
@@ -505,10 +601,10 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], name);
-				assert.equal(result.PackageManifest.Metadata[0].Description[0]._, description);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Version, version);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Publisher, publisher);
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], name);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Description[0]._, description);
 			});
 	});
 
@@ -526,12 +622,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Details'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
 
@@ -549,12 +645,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Changelog'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
 
@@ -570,8 +666,8 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
-				assert.equal(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+				assert.strictEqual(result.PackageManifest.Metadata[0].DisplayName[0], 'Test Extension');
 			});
 	});
 
@@ -590,12 +686,12 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/thelicense.md');
 			});
 	});
 
@@ -615,8 +711,8 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
-				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -635,14 +731,40 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].License);
-				assert.equal(result.PackageManifest.Metadata[0].License.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
-				assert.equal(result.PackageManifest.Assets[0].Asset.length, 2);
-				assert.equal(
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENSE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.License'
 				);
-				assert.equal(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENSE.md');
+			});
+	});
+
+	it('should automatically detect misspelled license files', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/LICENCE.md', contents: '' }];
+
+		return _toVsixManifest(manifest, files)
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.ok(result.PackageManifest.Metadata[0].License);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/LICENCE.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.License'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/LICENCE.md');
 			});
 	});
 
@@ -666,9 +788,9 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
-				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -715,9 +837,9 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.ok(result.PackageManifest.Metadata[0].Icon);
-				assert.equal(result.PackageManifest.Metadata[0].Icon.length, 1);
-				assert.equal(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
-				assert.equal(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon.length, 1);
+				assert.strictEqual(result.PackageManifest.Metadata[0].Icon[0], 'extension/fake.png');
+				assert.strictEqual(result.PackageManifest.Metadata[0].License[0], 'extension/thelicense.md');
 			});
 	});
 
@@ -831,6 +953,43 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should detect short gitlab repositories', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'gitlab:Microsoft/vscode-spell-check',
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property.map(p => p.$);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Repository' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check.git'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Support' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check/issues'
+					)
+				);
+				assert.ok(
+					properties.some(
+						p =>
+							p.Id === 'Microsoft.VisualStudio.Services.Links.Learn' &&
+							p.Value === 'https://gitlab.com/Microsoft/vscode-spell-check#readme'
+					)
+				);
+			});
+	});
+
 	it('should detect short github repositories', () => {
 		const manifest = {
 			name: 'test',
@@ -904,7 +1063,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'theme'));
+				assert.ok(tags.some(tag => tag === 'theme'));
 			});
 	});
 
@@ -939,7 +1098,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'color-theme'));
+				assert.ok(tags.some(tag => tag === 'color-theme'));
 			});
 	});
 
@@ -958,7 +1117,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'theme'));
+				assert.ok(tags.some(tag => tag === 'theme'));
 			});
 	});
 
@@ -977,7 +1136,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'icon-theme'));
+				assert.ok(tags.some(tag => tag === 'icon-theme'));
 			});
 	});
 
@@ -996,7 +1155,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'product-icon-theme'));
+				assert.ok(tags.some(tag => tag === 'product-icon-theme'));
 			});
 	});
 
@@ -1021,7 +1180,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'remote-menu'));
+				assert.ok(tags.some(tag => tag === 'remote-menu'));
 			});
 	});
 
@@ -1100,7 +1259,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'keybindings'));
+				assert.ok(tags.some(tag => tag === 'keybindings'));
 			});
 	});
 
@@ -1127,7 +1286,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'debuggers'));
+				assert.ok(tags.some(tag => tag === 'debuggers'));
 			});
 	});
 
@@ -1151,7 +1310,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'json'));
+				assert.ok(tags.some(tag => tag === 'json'));
 			});
 	});
 
@@ -1168,19 +1327,19 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'c++'),
 					'detect c++'
 				);
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'ftp'),
 					'detect ftp'
 				);
-				assert(
+				assert.ok(
 					tags.some(tag => tag === 'javascript'),
 					'detect javascript'
 				);
-				assert(!_.includes(tags, 'java'), "don't detect java");
+				assert.ok(!tags.includes('java'), "don't detect java");
 			});
 	});
 
@@ -1205,7 +1364,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'shellscript'));
+				assert.ok(tags.some(tag => tag === 'shellscript'));
 			});
 	});
 
@@ -1229,9 +1388,9 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'go'));
-				assert(tags.some(tag => tag === 'golang'));
-				assert(tags.some(tag => tag === 'google-go'));
+				assert.ok(tags.some(tag => tag === 'go'));
+				assert.ok(tags.some(tag => tag === 'golang'));
+				assert.ok(tags.some(tag => tag === 'google-go'));
 			});
 	});
 
@@ -1258,11 +1417,11 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === 'lp-de'));
-				assert(tags.some(tag => tag === '__lp_vscode'));
-				assert(tags.some(tag => tag === '__lp-de_vscode'));
-				assert(tags.some(tag => tag === '__lp_vscode.go'));
-				assert(tags.some(tag => tag === '__lp-de_vscode.go'));
+				assert.ok(tags.some(tag => tag === 'lp-de'));
+				assert.ok(tags.some(tag => tag === '__lp_vscode'));
+				assert.ok(tags.some(tag => tag === '__lp-de_vscode'));
+				assert.ok(tags.some(tag => tag === '__lp_vscode.go'));
+				assert.ok(tags.some(tag => tag === '__lp-de_vscode.go'));
 			});
 	});
 
@@ -1301,13 +1460,13 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const assets = result.PackageManifest.Assets[0].Asset;
-				assert(
+				assert.ok(
 					assets.some(
 						asset =>
 							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.DE' && asset.$.Path === 'extension/de.json'
 					)
 				);
-				assert(
+				assert.ok(
 					assets.some(
 						asset =>
 							asset.$.Type === 'Microsoft.VisualStudio.Code.Translation.PT' &&
@@ -1317,12 +1476,12 @@ describe('toVsixManifest', () => {
 
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const localizedLangProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.LocalizedLanguages');
-				assert.equal(localizedLangProp.length, 1);
+				assert.strictEqual(localizedLangProp.length, 1);
 
 				const localizedLangs = localizedLangProp[0].$.Value.split(',');
-				assert.equal(localizedLangs.length, 2);
-				assert.equal(localizedLangs[0], 'German');
-				assert.equal(localizedLangs[1], 'Português');
+				assert.strictEqual(localizedLangs.length, 2);
+				assert.strictEqual(localizedLangs[0], 'German');
+				assert.strictEqual(localizedLangs[1], 'Português');
 			});
 	});
 
@@ -1346,8 +1505,8 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === '__ext_go'));
-				assert(tags.some(tag => tag === '__ext_golang'));
+				assert.ok(tags.some(tag => tag === '__ext_go'));
+				assert.ok(tags.some(tag => tag === '__ext_golang'));
 			});
 	});
 
@@ -1371,7 +1530,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				assert(tags.some(tag => tag === '__ext_go'));
+				assert.ok(tags.some(tag => tag === '__ext_go'));
 			});
 	});
 
@@ -1391,13 +1550,13 @@ describe('toVsixManifest', () => {
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				const badges = result.PackageManifest.Metadata[0].Badges[0].Badge;
-				assert.equal(badges.length, 2);
-				assert.equal(badges[0].$.Link, 'http://badgeurl');
-				assert.equal(badges[0].$.ImgUri, 'http://badgeurl.png');
-				assert.equal(badges[0].$.Description, 'this is a badge');
-				assert.equal(badges[1].$.Link, 'http://anotherbadgeurl');
-				assert.equal(badges[1].$.ImgUri, 'http://anotherbadgeurl.png');
-				assert.equal(badges[1].$.Description, 'this is another badge');
+				assert.strictEqual(badges.length, 2);
+				assert.strictEqual(badges[0].$.Link, 'http://badgeurl');
+				assert.strictEqual(badges[0].$.ImgUri, 'http://badgeurl.png');
+				assert.strictEqual(badges[0].$.Description, 'this is a badge');
+				assert.strictEqual(badges[1].$.Link, 'http://anotherbadgeurl');
+				assert.strictEqual(badges[1].$.ImgUri, 'http://anotherbadgeurl.png');
+				assert.strictEqual(badges[1].$.Description, 'this is another badge');
 			});
 	});
 
@@ -1415,6 +1574,7 @@ describe('toVsixManifest', () => {
 						path: './syntaxes/Babel Language.json',
 					},
 					{
+						language: 'regex',
 						scopeName: 'source.regexp.babel',
 						path: './syntaxes/Babel Regex.json',
 					},
@@ -1426,7 +1586,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
-				tags.forEach(tag => assert(tag, `Found empty tag '${tag}'.`));
+				tags.forEach(tag => assert.ok(tag, `Found empty tag '${tag}'.`));
 			});
 	});
 
@@ -1444,10 +1604,10 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const engineProperties = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.Engine');
-				assert.equal(engineProperties.length, 1);
+				assert.strictEqual(engineProperties.length, 1);
 
 				const engine = engineProperties[0].$.Value;
-				assert.equal(engine, '^1.0.0');
+				assert.strictEqual(engine, '^1.0.0');
 			});
 	});
 
@@ -1464,7 +1624,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
 					)
@@ -1486,7 +1646,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'false'
 					)
@@ -1508,7 +1668,7 @@ describe('toVsixManifest', () => {
 			.then(parseXmlManifest)
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
-				assert(
+				assert.ok(
 					properties.some(
 						p => p.$.Id === 'Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown' && p.$.Value === 'true'
 					)
@@ -1531,12 +1691,12 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 				const dependenciesProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionDependencies');
-				assert.equal(dependenciesProp.length, 1);
+				assert.strictEqual(dependenciesProp.length, 1);
 
 				const dependencies = dependenciesProp[0].$.Value.split(',');
-				assert.equal(dependencies.length, 2);
-				assert(dependencies.some(d => d === 'foo.bar'));
-				assert(dependencies.some(d => d === 'monkey.hello'));
+				assert.strictEqual(dependencies.length, 2);
+				assert.ok(dependencies.some(d => d === 'foo.bar'));
+				assert.ok(dependencies.some(d => d === 'monkey.hello'));
 			});
 	});
 
@@ -1556,8 +1716,8 @@ describe('toVsixManifest', () => {
 
 		try {
 			await _toVsixManifest(manifest, files);
-		} catch (err) {
-			assert(/have the same case insensitive path/i.test(err.message));
+		} catch (err: any) {
+			assert.ok(/have the same case insensitive path/i.test(err.message));
 			return;
 		}
 
@@ -1584,7 +1744,7 @@ describe('toVsixManifest', () => {
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
-		assert.equal(extensionKindProps[0].$.Value, ['ui', 'workspace', 'web'].join(','));
+		assert.strictEqual(extensionKindProps[0].$.Value, ['ui', 'workspace', 'web'].join(','));
 	});
 
 	it('should expose extension kind properties when derived', async () => {
@@ -1597,7 +1757,7 @@ describe('toVsixManifest', () => {
 		const result = await parseXmlManifest(vsixManifest);
 		const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
 		const extensionKindProps = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.ExtensionKind');
-		assert.equal(extensionKindProps[0].$.Value, 'workspace');
+		assert.strictEqual(extensionKindProps[0].$.Value, 'workspace');
 	});
 
 	it('should not have target platform by default', async () => {
@@ -1622,15 +1782,125 @@ describe('toVsixManifest', () => {
 		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
 	});
 
+	it('should set the target platform when engine is set to insider', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.62.0-insider' } });
+		const raw = await _toVsixManifest(manifest, [], { target: 'win32-x64' });
+		const dom = await parseXmlManifest(raw);
+
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Id, 'test');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Version, '0.0.1');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.Publisher, 'mocha');
+		assert.strictEqual(dom.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform, 'win32-x64');
+	});
+
+	it('should fail when target is invalid', async () => {
+		const manifest = createManifest();
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'what' });
+		} catch (err: any) {
+			return assert.ok(/is not a valid VS Code target/i.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
+	});
+
 	it('should throw when using an invalid target platform', async () => {
 		const manifest = createManifest();
 
 		try {
 			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
-			throw new Error('oops');
-		} catch (err) {
-			assert(/not a valid VS Code target/.test(err.message));
+		} catch (err: any) {
+			return assert.ok(/not a valid VS Code target/.test(err.message));
 		}
+
+		throw new Error('Should not reach here');
+	});
+
+	it('should throw when targeting an old VS Code version with platform specific', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.60.0' } });
+
+		try {
+			await _toVsixManifest(manifest, [], { target: 'linux-ia32' });
+		} catch (err: any) {
+			return assert.ok(/>=1.61/.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
+	});
+
+	it('should add prerelease property when --pre-release flag is passed', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.63.0' } });
+
+		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
+	});
+
+	it('should add sponsor link property', () => {
+		const sponsor = { url: 'https://foo.bar' };
+		const manifest: Manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			sponsor,
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const sponsorLinkProp = properties.find(p => p.$.Id === 'Microsoft.VisualStudio.Code.SponsorLink');
+				assert.strictEqual(sponsorLinkProp?.$.Value, sponsor.url);
+			});
+	});
+
+	it('should automatically add sponsor tag for extension with sponsor link', async () => {
+		const manifest = createManifest({ sponsor: { url: 'https://foo.bar' } });
+		const vsixManifest = await _toVsixManifest(manifest, []);
+		const result = await parseXmlManifest(vsixManifest);
+
+		assert.ok(result.PackageManifest.Metadata[0].Tags[0].split(',').includes('__sponsor_extension'));
+	});
+
+	it('should add prerelease property when --pre-release flag is passed when engine property is for insiders', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.64.0-insider' } });
+
+		const raw = await _toVsixManifest(manifest, [], { preRelease: true });
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
+	});
+
+	it('should not add prerelease property when --pre-release flag is not passed', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.64.0' } });
+
+		const raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease');
+	});
+
+	it('should throw when targeting an old VS Code version with --pre-release', async () => {
+		const manifest = createManifest({ engines: { vscode: '>=1.62.0' } });
+
+		try {
+			await _toVsixManifest(manifest, [], { preRelease: true });
+		} catch (err: any) {
+			return assert.ok(/>=1.63/.test(err.message));
+		}
+
+		throw new Error('Should not reach here');
+	});
+
+	it('should identify trial version of an extension', async () => {
+		const manifest = createManifest({ pricing: 'Trial' });
+		var raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.Content.Pricing', 'Trial');
 	});
 });
 
@@ -1722,7 +1992,7 @@ describe('toContentTypes', () => {
 				assert.ok(result);
 				assert.ok(result.Types);
 				assert.ok(result.Types.Default);
-				assert.equal(result.Types.Default.length, 2);
+				assert.strictEqual(result.Types.Default.length, 2);
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.vsixmanifest' && d.$.ContentType === 'text/xml'));
 				assert.ok(result.Types.Default.some(d => d.$.Extension === '.json' && d.$.ContentType === 'application/json'));
 			});
@@ -1757,10 +2027,39 @@ describe('toContentTypes', () => {
 	});
 });
 
+describe('LaunchEntryPointProcessor', () => {
+	it('should detect when declared entrypoint is not in package', async () => {
+		const manifest = createManifest({ main: 'main.js' });
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
+
+		let didErr = false;
+
+		try {
+			await _toVsixManifest(manifest, files);
+		} catch (err: any) {
+			const message = err.message;
+			didErr = message.includes('entrypoint(s) missing') && message.includes('main.js');
+		}
+
+		assert.ok(didErr);
+	});
+
+	it('should work even if .js extension is not used', async () => {
+		const manifest = createManifest({ main: 'out/src/extension' });
+		const files = [{ path: 'extension/out/src/extension.js', contents: Buffer.from('') }];
+		await _toVsixManifest(manifest, files);
+	});
+
+	it('should accept manifest if no entrypoints defined', async () => {
+		const manifest = createManifest({});
+		const files = [{ path: 'extension/something.js', contents: Buffer.from('') }];
+		await _toVsixManifest(manifest, files);
+	});
+});
 describe('ManifestProcessor', () => {
 	it('should ensure that package.json is writable', async () => {
 		const root = fixture('uuid');
-		const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+		const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		const processor = new ManifestProcessor(manifest);
 		const packageJson = {
 			path: 'extension/package.json',
@@ -1768,7 +2067,48 @@ describe('ManifestProcessor', () => {
 		};
 
 		const outPackageJson = await processor.onFile(packageJson);
+		assert.ok(outPackageJson.mode);
 		assert.ok(outPackageJson.mode & 0o200);
+	});
+
+	it('should bump package.json version in-memory when using --no-update-package-json', async () => {
+		const root = fixture('uuid');
+
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+
+		const processor = new ManifestProcessor(manifest, { version: '1.1.1', updatePackageJson: false });
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
+		assert.deepStrictEqual(manifest.version, '1.1.1');
+		assert.deepStrictEqual(processor.vsix.version, '1.1.1');
+
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+	});
+
+	it('should not bump package.json version in-memory when not using --no-update-package-json', async () => {
+		const root = fixture('uuid');
+
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+
+		const processor = new ManifestProcessor(manifest, { version: '1.1.1' });
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(processor.vsix.version, '1.0.0');
+
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
 });
 
@@ -1793,7 +2133,7 @@ describe('MarkdownProcessor', () => {
 
 		try {
 			await processor.onFile(readme);
-		} catch (err) {
+		} catch (err: any) {
 			didThrow = true;
 		}
 
@@ -1823,8 +2163,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1850,8 +2190,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1879,8 +2219,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.branch.main.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1910,9 +2250,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.branch.override.images.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 
@@ -1940,9 +2282,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.branch.override.content.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 
@@ -1967,8 +2311,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -1994,8 +2338,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2021,8 +2365,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2048,8 +2392,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2075,8 +2419,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.default.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2104,8 +2448,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.branch.main.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2135,9 +2479,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.gitlab.branch.override.images.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 
@@ -2165,9 +2511,11 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
-				});
+				return fs.promises
+					.readFile(path.join(root, 'readme.gitlab.branch.override.content.expected.md'), 'utf8')
+					.then(expected => {
+						assert.strictEqual(actual, expected);
+					});
 			});
 	});
 
@@ -2196,8 +2544,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.images.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2223,8 +2571,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.github.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2250,8 +2598,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2277,8 +2625,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.github.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2304,8 +2652,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.expected.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2331,8 +2679,8 @@ describe('MarkdownProcessor', () => {
 			.onFile(readme)
 			.then(file => read(file))
 			.then(actual => {
-				return readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
-					assert.equal(actual, expected);
+				return fs.promises.readFile(path.join(root, 'readme.gitlab.md'), 'utf8').then(expected => {
+					assert.strictEqual(actual, expected);
 				});
 			});
 	});
@@ -2395,7 +2743,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should allow SVG from GitHub actions in image tag (old url format)', async () => {
@@ -2411,7 +2759,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should allow SVG from GitHub actions in image tag', async () => {
@@ -2427,7 +2775,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should prevent SVG from a GitHub repo in image tag', async () => {
@@ -2473,7 +2821,7 @@ describe('MarkdownProcessor', () => {
 		const readme = { path: 'extension/readme.md', contents };
 
 		const file = await processor.onFile(readme);
-		assert(file);
+		assert.ok(file);
 	});
 
 	it('should prevent SVG tags', async () => {
@@ -2522,10 +2870,49 @@ describe('MarkdownProcessor', () => {
 	});
 });
 
-describe('version', () => {
+describe('LicenseProcessor', () => {
+	it('should fail if license file not specified', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const message = 'LICENSE, LICENSE.md, or LICENSE.txt not found';
+
+		const processor = new LicenseProcessor(createManifest(), {});
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 1);
+		assert.strictEqual(logs[0], message);
+	});
+
+	it('should pass if no license specified and --skip-license flag is passed', async () => {
+		const originalUtilWarn = log.warn;
+		const logs: string[] = [];
+
+		log.warn = (message) => {
+			logs.push(message);
+		};
+
+		const processor = new LicenseProcessor(createManifest(), { skipLicense: true });
+		await processor.onEnd();
+
+		log.warn = originalUtilWarn;
+
+		assert.strictEqual(logs.length, 0);
+	});
+});
+
+describe('version', function () {
+	this.timeout(5000);
+
 	let dir: tmp.DirResult;
 	const fixtureFolder = fixture('vsixmanifest');
-	let cwd;
+	let cwd: string;
 
 	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8' });
 
@@ -2543,7 +2930,7 @@ describe('version', () => {
 	});
 
 	it('should bump patch version', async () => {
-		await versionBump(cwd, 'patch');
+		await versionBump({ cwd, version: 'patch' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2551,7 +2938,7 @@ describe('version', () => {
 	});
 
 	it('should bump minor version', async () => {
-		await versionBump(cwd, 'minor');
+		await versionBump({ cwd, version: 'minor' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2559,7 +2946,7 @@ describe('version', () => {
 	});
 
 	it('should bump major version', async () => {
-		await versionBump(cwd, 'major');
+		await versionBump({ cwd, version: 'major' });
 
 		const newManifest = await readManifest(cwd);
 
@@ -2567,27 +2954,24 @@ describe('version', () => {
 	});
 
 	it('should set custom version', async () => {
-		await versionBump(cwd, '1.1.1');
+		await versionBump({ cwd, version: '1.1.1' });
 
 		const newManifest = await readManifest(cwd);
 
 		assert.strictEqual(newManifest.version, '1.1.1');
 	});
 
-	it('should fail with not allowed version bump', () => {
-		assert.rejects(versionBump(cwd, 'prepatch'));
-		assert.rejects(versionBump(cwd, 'preminor'));
-		assert.rejects(versionBump(cwd, 'premajor'));
-		assert.rejects(versionBump(cwd, 'prerelease'));
-		assert.rejects(versionBump(cwd, 'from-git'));
-	});
-
-	it('should fail with invalid version', () => {
-		assert.rejects(versionBump(cwd, 'a1.a.2'));
+	it('should fail with invalid version', async () => {
+		await assert.rejects(versionBump({ cwd, version: 'a1.a.2' }));
+		await assert.rejects(versionBump({ cwd, version: 'prepatch' }));
+		await assert.rejects(versionBump({ cwd, version: 'preminor' }));
+		await assert.rejects(versionBump({ cwd, version: 'premajor' }));
+		await assert.rejects(versionBump({ cwd, version: 'prerelease' }));
+		await assert.rejects(versionBump({ cwd, version: 'from-git' }));
 	});
 
 	it('should create git tag and commit', async () => {
-		await versionBump(cwd, '1.1.1');
+		await versionBump({ cwd, version: '1.1.1' });
 
 		assert.strictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
 		assert.strictEqual(git(['rev-parse', 'HEAD']).status, 0);
@@ -2595,15 +2979,21 @@ describe('version', () => {
 
 	it('should use custom commit message', async () => {
 		const commitMessage = 'test commit message';
-		await versionBump(cwd, '1.1.1', commitMessage);
+		await versionBump({ cwd, version: '1.1.1', commitMessage });
 
 		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
 	});
 
 	it('should not create git tag and commit', async () => {
-		await versionBump(cwd, '1.1.1', undefined, false);
+		await versionBump({ cwd, version: '1.1.1', gitTagVersion: false });
 
 		assert.notDeepStrictEqual(git(['rev-parse', 'v1.1.1']).status, 0);
 		assert.notDeepStrictEqual(git(['rev-parse', 'HEAD']).status, 0);
+	});
+
+	it('should not write to package.json with --no-update-package-json', async () => {
+		await versionBump({ cwd, version: '1.1.1', updatePackageJson: false });
+		const newManifest = await readManifest(cwd);
+		assert.strictEqual(newManifest.version, '1.0.0');
 	});
 });

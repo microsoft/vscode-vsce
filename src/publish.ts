@@ -1,61 +1,160 @@
 import * as fs from 'fs';
+import { promisify } from 'util';
+import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, IPackage, versionBump, IPackageOptions } from './package';
+import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
 import { Manifest } from './manifest';
-import * as denodeify from 'denodeify';
-import * as yauzl from 'yauzl';
+import { readVSIXPackage } from './zip';
+import { validatePublisher } from './validation';
 
-const tmpName = denodeify<string>(tmp.tmpName);
+const tmpName = promisify(tmp.tmpName);
 
-function readManifestFromPackage(packagePath: string): Promise<Manifest> {
-	return new Promise<Manifest>((c, e) => {
-		yauzl.open(packagePath, (err, zipfile) => {
-			if (err) {
-				return e(err);
-			}
+/**
+ * Options for the `publish` function.
+ * @public
+ */
+export interface IPublishOptions {
+	readonly packagePath?: string[];
+	readonly version?: string;
+	readonly targets?: string[];
+	readonly commitMessage?: string;
+	readonly gitTagVersion?: boolean;
+	readonly updatePackageJson?: boolean;
 
-			const onEnd = () => e(new Error('Manifest not found'));
-			zipfile.once('end', onEnd);
+	/**
+	 * The location of the extension in the file system.
+	 *
+	 * Defaults to `process.cwd()`.
+	 */
+	readonly cwd?: string;
+	readonly githubBranch?: string;
+	readonly gitlabBranch?: string;
 
-			zipfile.on('entry', entry => {
-				if (!/^extension\/package\.json$/i.test(entry.fileName)) {
-					return;
-				}
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
+	readonly baseContentUrl?: string;
 
-				zipfile.removeListener('end', onEnd);
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
+	readonly baseImagesUrl?: string;
 
-				zipfile.openReadStream(entry, (err, stream) => {
-					if (err) {
-						return e(err);
-					}
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
+	readonly useYarn?: boolean;
+	readonly dependencyEntryPoints?: string[];
+	readonly ignoreFile?: string;
 
-					const buffers = [];
-					stream.on('data', buffer => buffers.push(buffer));
-					stream.once('error', e);
-					stream.once('end', () => {
-						try {
-							c(JSON.parse(Buffer.concat(buffers).toString('utf8')));
-						} catch (err) {
-							e(err);
-						}
-					});
-				});
-			});
-		});
-	});
+	/**
+	 * The Personal Access Token to use.
+	 *
+	 * Defaults to the stored one.
+	 */
+	readonly pat?: string;
+	readonly noVerify?: boolean;
+	readonly dependencies?: boolean;
+	readonly preRelease?: boolean;
+	readonly allowStarActivation?: boolean;
+	readonly allowMissingRepository?: boolean;
+	readonly skipDuplicate?: boolean;
+	readonly skipLicense?: boolean;
 }
 
-async function _publish(packagePath: string, pat: string, manifest: Manifest, options: IPublishOptions): Promise<void> {
+export async function publish(options: IPublishOptions = {}): Promise<any> {
+	if (options.packagePath) {
+		if (options.version) {
+			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
+		} else if (options.targets) {
+			throw new Error(
+				`Both options not supported simultaneously: 'packagePath' and 'target'. Use 'vsce package --target <target>' to first create a platform specific package, then use 'vsce publish --packagePath <path>' to publish it.`
+			);
+		}
+
+		for (const packagePath of options.packagePath) {
+			const vsix = await readVSIXPackage(packagePath);
+			let target: string | undefined;
+
+			try {
+				target = vsix.xmlManifest.PackageManifest.Metadata[0].Identity[0].$.TargetPlatform ?? undefined;
+			} catch (err) {
+				throw new Error(`Invalid extension VSIX manifest. ${err}`);
+			}
+
+			if (options.preRelease) {
+				let isPreReleasePackage = false;
+				try {
+					isPreReleasePackage = !!vsix.xmlManifest.PackageManifest.Metadata[0].Properties[0].Property.some(
+						p => p.$.Id === 'Microsoft.VisualStudio.Code.PreRelease'
+					);
+				} catch (err) {
+					throw new Error(`Invalid extension VSIX manifest. ${err}`);
+				}
+				if (!isPreReleasePackage) {
+					throw new Error(
+						`Cannot use '--pre-release' flag with a package that was not packaged as pre-release. Please package it using the '--pre-release' flag and publish again.`
+					);
+				}
+			}
+
+			await _publish(packagePath, vsix.manifest, { ...options, target });
+		}
+	} else {
+		const cwd = options.cwd || process.cwd();
+		const manifest = await readManifest(cwd);
+		patchOptionsWithManifest(options, manifest);
+
+		await prepublish(cwd, manifest, options.useYarn);
+		await versionBump(options);
+
+		if (options.targets) {
+			for (const target of options.targets) {
+				const packagePath = await tmpName();
+				const packageResult = await pack({ ...options, target, packagePath });
+				await _publish(packagePath, packageResult.manifest, { ...options, target });
+			}
+		} else {
+			const packagePath = await tmpName();
+			const packageResult = await pack({ ...options, packagePath });
+			await _publish(packagePath, packageResult.manifest, options);
+		}
+	}
+}
+
+export interface IInternalPublishOptions {
+	readonly target?: string;
+	readonly pat?: string;
+	readonly noVerify?: boolean;
+	readonly skipDuplicate?: boolean;
+}
+
+async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
+	validatePublisher(manifest.publisher);
+
+	if (!options.noVerify && manifest.enableProposedApi) {
+		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	}
+	if (!options.noVerify && manifest.enabledApiProposals) {
+		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+	}
+
+	if (semver.prerelease(manifest.version)) {
+		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'`);
+	}
+
+	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
 	const api = await getGalleryAPI(pat);
-
 	const packageStream = fs.createReadStream(packagePath);
-
 	const name = `${manifest.publisher}.${manifest.name}`;
-	const fullName = `${name}@${manifest.version}`;
-	console.log(`Publishing ${fullName}...`);
+	const description = options.target
+		? `${name} (${options.target}) v${manifest.version}`
+		: `${name} v${manifest.version}`;
+
+	log.info(`Publishing '${description}'...`);
 
 	let extension: PublishedExtension | null = null;
 
@@ -65,25 +164,40 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 				null,
 				manifest.publisher,
 				manifest.name,
-				null,
+				undefined,
 				ExtensionQueryFlags.IncludeVersions
 			);
-		} catch (err) {
+		} catch (err: any) {
 			if (err.statusCode !== 404) {
 				throw err;
 			}
 		}
 
-		if (!options.target && extension && extension.versions.some(v => v.version === manifest.version)) {
-			throw new Error(`${fullName} already exists. Version number cannot be the same.`);
-		}
+		if (extension && extension.versions) {
+			const versionExists = extension.versions.some(v =>
+				(v.version === manifest.version) &&
+				(v.targetPlatform === options.target));
 
-		if (extension) {
+			if (versionExists) {
+				if (options.skipDuplicate) {
+					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+					return;
+				} else {
+					throw new Error(`${description} already exists.`);
+				}
+
+			}
+
 			try {
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
-			} catch (err) {
+			} catch (err: any) {
 				if (err.statusCode === 409) {
-					throw new Error(`${fullName} already exists.`);
+					if (options.skipDuplicate) {
+						log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+						return;
+					} else {
+						throw new Error(`${description} already exists.`);
+					}
 				} else {
 					throw err;
 				}
@@ -91,10 +205,12 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 		} else {
 			await api.createExtension(undefined, packageStream);
 		}
-	} catch (err) {
+	} catch (err: any) {
 		const message = (err && err.message) || '';
 
-		if (/Invalid Resource/.test(message)) {
+		if (/Personal Access Token used has expired/.test(message)) {
+			err.message = `${err.message}\n\nYou're using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
+		} else if (/Invalid Resource/.test(message)) {
 			err.message = `${err.message}\n\nYou're likely using an expired Personal Access Token, please get a new PAT.\nMore info: https://aka.ms/vscodepat`;
 		}
 
@@ -103,41 +219,7 @@ async function _publish(packagePath: string, pat: string, manifest: Manifest, op
 
 	log.info(`Extension URL (might take a few minutes): ${getPublishedUrl(name)}`);
 	log.info(`Hub URL: ${getHubUrl(manifest.publisher, manifest.name)}`);
-	log.done(`Published ${fullName}.`);
-}
-
-export interface IPublishOptions extends IPackageOptions {
-	readonly pat?: string;
-	readonly noVerify?: boolean;
-}
-
-export function publish(options: IPublishOptions = {}): Promise<any> {
-	let promise: Promise<IPackage>;
-
-	if (options.packagePath) {
-		if (options.version) {
-			return Promise.reject(`Not supported: packagePath and version.`);
-		}
-
-		promise = readManifestFromPackage(options.packagePath).then(manifest => ({
-			manifest,
-			packagePath: options.packagePath,
-		}));
-	} else {
-		promise = versionBump(options.cwd, options.version, options.commitMessage, options.gitTagVersion)
-			.then(() => tmpName())
-			.then(packagePath => pack({ ...options, packagePath }));
-	}
-
-	return promise.then(async ({ manifest, packagePath }) => {
-		if (!options.noVerify && manifest.enableProposedApi) {
-			throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
-		}
-
-		const patPromise = options.pat ? Promise.resolve(options.pat) : getPublisher(manifest.publisher).then(p => p.pat);
-
-		return patPromise.then(pat => _publish(packagePath, pat, manifest, options));
-	});
+	log.done(`Published ${description}.`);
 }
 
 export interface IUnpublishOptions extends IPublishOptions {
@@ -159,14 +241,14 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	const fullName = `${publisher}.${name}`;
 
 	if (!options.force) {
-		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+		const answer = await read(`This will delete ALL published versions! Please type '${fullName}' to confirm: `);
 
-		if (!/^y$/i.test(answer)) {
+		if (answer !== fullName) {
 			throw new Error('Aborted');
 		}
 	}
 
-	const pat = options.pat || (await getPublisher(publisher).then(p => p.pat));
+	const pat = options.pat ?? (await getPublisher(publisher)).pat;
 	const api = await getGalleryAPI(pat);
 
 	await api.deleteExtension(publisher, name);

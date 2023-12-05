@@ -21,7 +21,10 @@ The status bar lets you quickly navigate to any issue and you can see all positi
 [![Jump to issues](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)](http://shouldnottouchthis/)
 [![Jump to issues](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)](https://github.com/username/repository/blob/HEAD/monkey)
 ![](https://github.com/username/repository/path/to/images/SpellMDDemo2.gif)
+![](https://github.com/username/repository/path/to/SpellMDDemo2.gif)
+![](https://github.com/username/repository/path/to/SpellMDDemo2.gif#gh-light-mode-only)
 <img src="https://github.com/username/repository/path/to/images/myImage.gif">
+<img src="https://github.com/username/repository/path/to/images/myImage.gif#gh-light-mode-only">
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.
 

@@ -1,57 +1,116 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { home } from 'osenv';
+import { homedir } from 'os';
 import { read, getGalleryAPI, getSecurityRolesAPI, log } from './util';
 import { validatePublisher } from './validation';
-import * as denodeify from 'denodeify';
 import { readManifest } from './package';
 
-const readFile = denodeify<string, string, string>(fs.readFile);
-const writeFile = denodeify<string, string, object, void>(fs.writeFile as any);
-const storePath = path.join(home(), '.vsce');
-
 export interface IPublisher {
-	name: string;
-	pat: string;
+	readonly name: string;
+	readonly pat: string;
 }
 
-export interface IStore {
-	publishers: IPublisher[];
+export interface IStore extends Iterable<IPublisher> {
+	readonly size: number;
+	get(name: string): IPublisher | undefined;
+	add(publisher: IPublisher): Promise<void>;
+	delete(name: string): Promise<void>;
 }
 
-export interface IGetOptions {
-	promptToOverwrite?: boolean;
-	promptIfMissing?: boolean;
-}
+export class FileStore implements IStore {
+	private static readonly DefaultPath = path.join(homedir(), '.vsce');
 
-function load(): Promise<IStore> {
-	return readFile(storePath, 'utf8')
-		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
-		.then<IStore>(rawStore => {
-			try {
-				return Promise.resolve(JSON.parse(rawStore));
-			} catch (e) {
-				return Promise.reject(`Error parsing store: ${storePath}`);
+	static async open(path: string = FileStore.DefaultPath): Promise<FileStore> {
+		try {
+			const rawStore = await fs.promises.readFile(path, 'utf8');
+			return new FileStore(path, JSON.parse(rawStore).publishers);
+		} catch (err: any) {
+			if (err.code === 'ENOENT') {
+				return new FileStore(path, []);
+			} else if (/SyntaxError/.test(err)) {
+				throw new Error(`Error parsing file store: ${path}`);
 			}
-		})
-		.then(store => {
-			store.publishers = store.publishers || [];
-			return Promise.resolve(store);
-		});
+
+			throw err;
+		}
+	}
+
+	get size(): number {
+		return this.publishers.length;
+	}
+
+	private constructor(readonly path: string, private publishers: IPublisher[]) {}
+
+	private async save(): Promise<void> {
+		await fs.promises.writeFile(this.path, JSON.stringify({ publishers: this.publishers }), { mode: '0600' });
+	}
+
+	async deleteStore(): Promise<void> {
+		try {
+			await fs.promises.unlink(this.path);
+		} catch {
+			// noop
+		}
+	}
+
+	get(name: string): IPublisher | undefined {
+		return this.publishers.filter(p => p.name === name)[0];
+	}
+
+	async add(publisher: IPublisher): Promise<void> {
+		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
+		await this.save();
+	}
+
+	async delete(name: string): Promise<void> {
+		this.publishers = this.publishers.filter(p => p.name !== name);
+		await this.save();
+	}
+
+	[Symbol.iterator]() {
+		return this.publishers[Symbol.iterator]();
+	}
 }
 
-function save(store: IStore): Promise<IStore> {
-	return writeFile(storePath, JSON.stringify(store), { mode: '0600' }).then(() => store);
-}
+export class KeytarStore implements IStore {
+	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
+		const keytar = await import('keytar');
+		const creds = await keytar.findCredentials(serviceName);
 
-function addPublisherToStore(store: IStore, publisher: IPublisher): Promise<IPublisher> {
-	store.publishers = [...store.publishers.filter(p => p.name !== publisher.name), publisher];
-	return save(store).then(() => publisher);
-}
+		return new KeytarStore(
+			keytar,
+			serviceName,
+			creds.map(({ account, password }) => ({ name: account, pat: password }))
+		);
+	}
 
-function removePublisherFromStore(store: IStore, publisherName: string): Promise<any> {
-	store.publishers = store.publishers.filter(p => p.name !== publisherName);
-	return save(store);
+	get size(): number {
+		return this.publishers.length;
+	}
+
+	private constructor(
+		private readonly keytar: typeof import('keytar'),
+		private readonly serviceName: string,
+		private publishers: IPublisher[]
+	) {}
+
+	get(name: string): IPublisher {
+		return this.publishers.filter(p => p.name === name)[0];
+	}
+
+	async add(publisher: IPublisher): Promise<void> {
+		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
+		await this.keytar.setPassword(this.serviceName, publisher.name, publisher.pat);
+	}
+
+	async delete(name: string): Promise<void> {
+		this.publishers = this.publishers.filter(p => p.name !== name);
+		await this.keytar.deletePassword(this.serviceName, name);
+	}
+
+	[Symbol.iterator](): Iterator<IPublisher, any, undefined> {
+		return this.publishers[Symbol.iterator]();
+	}
 }
 
 export async function verifyPat(pat: string, publisherName?: string): Promise<void> {
@@ -82,69 +141,118 @@ export async function verifyPat(pat: string, publisherName?: string): Promise<vo
 	console.log(`The Personal Access Token verification succeeded for the publisher '${publisherName}'.`);
 }
 
-async function requestPAT(store: IStore, publisherName: string): Promise<IPublisher> {
+async function requestPAT(publisherName: string): Promise<string> {
+	console.log('https://marketplace.visualstudio.com/manage/publishers/');
+
 	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
-
 	await verifyPat(pat, publisherName);
-
-	return await addPublisherToStore(store, { name: publisherName, pat });
+	return pat;
 }
 
-export function getPublisher(publisherName: string): Promise<IPublisher> {
-	validatePublisher(publisherName);
+async function openDefaultStore(): Promise<IStore> {
+	if (/^file$/i.test(process.env['VSCE_STORE'] ?? '')) {
+		return await FileStore.open();
+	}
 
-	return load().then(store => {
-		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
-		return publisher ? Promise.resolve(publisher) : requestPAT(store, publisherName);
-	});
-}
+	let keytarStore: IStore;
 
-export function loginPublisher(publisherName: string): Promise<IPublisher> {
-	validatePublisher(publisherName);
+	try {
+		keytarStore = await KeytarStore.open();
+	} catch (err) {
+		const store = await FileStore.open();
+		log.warn(`Failed to open credential store. Falling back to storing secrets clear-text in: ${store.path}`);
+		return store;
+	}
 
-	return load()
-		.then<IStore>(store => {
-			const publisher = store.publishers.filter(p => p.name === publisherName)[0];
+	const fileStore = await FileStore.open();
 
-			if (publisher) {
-				console.log(`Publisher '${publisherName}' is already known`);
-				return read('Do you want to overwrite its PAT? [y/N] ').then(answer =>
-					/^y$/i.test(answer) ? store : Promise.reject('Aborted')
-				);
-			}
-
-			return Promise.resolve(store);
-		})
-		.then(store => requestPAT(store, publisherName));
-}
-
-export function logoutPublisher(publisherName: string): Promise<any> {
-	validatePublisher(publisherName);
-
-	return load().then(store => {
-		const publisher = store.publishers.filter(p => p.name === publisherName)[0];
-
-		if (!publisher) {
-			return Promise.reject(`Unknown publisher '${publisherName}'`);
+	// migrate from file store
+	if (fileStore.size) {
+		for (const publisher of fileStore) {
+			await keytarStore.add(publisher);
 		}
 
-		return removePublisherFromStore(store, publisherName);
-	});
+		await fileStore.deleteStore();
+		log.info(
+			`Migrated ${fileStore.size} publishers to system credential manager. Deleted local store '${fileStore.path}'.`
+		);
+	}
+
+	return keytarStore;
 }
 
-export function deletePublisher(publisherName: string): Promise<any> {
-	return getPublisher(publisherName).then(({ pat }) => {
-		return read(`This will FOREVER delete '${publisherName}'! Are you sure? [y/N] `)
-			.then(answer => (/^y$/i.test(answer) ? null : Promise.reject('Aborted')))
-			.then(() => getGalleryAPI(pat))
-			.then(api => api.deletePublisher(publisherName))
-			.then(() => load().then(store => removePublisherFromStore(store, publisherName)))
-			.then(() => log.done(`Deleted publisher '${publisherName}'.`));
-	});
+export async function getPublisher(publisherName: string): Promise<IPublisher> {
+	validatePublisher(publisherName);
+
+	const store = await openDefaultStore();
+	let publisher = store.get(publisherName);
+
+	if (publisher) {
+		return publisher;
+	}
+
+	const pat = await requestPAT(publisherName);
+	publisher = { name: publisherName, pat };
+	await store.add(publisher);
+
+	return publisher;
 }
 
-export function listPublishers(): Promise<void> {
-	return load()
-		.then(store => store.publishers)
-		.then(publishers => publishers.forEach(p => console.log(p.name)));
+export async function loginPublisher(publisherName: string): Promise<IPublisher> {
+	validatePublisher(publisherName);
+
+	const store = await openDefaultStore();
+	let publisher = store.get(publisherName);
+
+	if (publisher) {
+		console.log(`Publisher '${publisherName}' is already known`);
+		const answer = await read('Do you want to overwrite its PAT? [y/N] ');
+
+		if (!/^y$/i.test(answer)) {
+			throw new Error('Aborted');
+		}
+	}
+
+	const pat = await requestPAT(publisherName);
+	publisher = { name: publisherName, pat };
+	await store.add(publisher);
+
+	return publisher;
+}
+
+export async function logoutPublisher(publisherName: string): Promise<void> {
+	validatePublisher(publisherName);
+
+	const store = await openDefaultStore();
+	const publisher = store.get(publisherName);
+
+	if (!publisher) {
+		throw new Error(`Unknown publisher '${publisherName}'`);
+	}
+
+	await store.delete(publisherName);
+}
+
+export async function deletePublisher(publisherName: string): Promise<void> {
+	const publisher = await getPublisher(publisherName);
+	const answer = await read(`This will FOREVER delete '${publisherName}'! Are you sure? [y/N] `);
+
+	if (!/^y$/i.test(answer)) {
+		throw new Error('Aborted');
+	}
+
+	const api = await getGalleryAPI(publisher.pat);
+	await api.deletePublisher(publisherName);
+
+	const store = await openDefaultStore();
+	await store.delete(publisherName);
+	log.done(`Deleted publisher '${publisherName}'.`);
+}
+
+export async function listPublishers(): Promise<void> {
+	const store = await openDefaultStore();
+
+	for (const publisher of store) {
+		console.log(publisher.name);
+	}
 }

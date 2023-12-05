@@ -16,9 +16,50 @@ export interface Localization {
 	translations: Translation[];
 }
 
+export interface Language {
+	readonly id: string;
+	readonly aliases?: string[];
+	readonly extensions?: string[];
+}
+
+export interface Grammar {
+	readonly language: string;
+	readonly scopeName: string;
+	readonly path: string;
+}
+
+export interface Command {
+	readonly command: string;
+	readonly title: string;
+}
+
+export interface Authentication {
+	readonly id: string;
+	readonly label: string;
+}
+
+export interface CustomEditor {
+	readonly viewType: string;
+	readonly priority: string;
+	readonly selector: readonly {
+		readonly filenamePattern?: string;
+	}[];
+}
+
+export interface View {
+	readonly id: string;
+	readonly name: string;
+}
+
 export interface Contributions {
-	localizations?: Localization[];
-	[contributionType: string]: any;
+	readonly localizations?: Localization[];
+	readonly languages?: Language[];
+	readonly grammars?: Grammar[];
+	readonly commands?: Command[];
+	readonly authentication?: Authentication[];
+	readonly customEditors?: CustomEditor[];
+	readonly views?: { [location: string]: View[] };
+	readonly [contributionType: string]: any;
 }
 
 export type ExtensionKind = 'ui' | 'workspace' | 'web';
@@ -43,8 +84,10 @@ export interface Manifest {
 	_bundling?: { [name: string]: string }[];
 	_testing?: string;
 	enableProposedApi?: boolean;
+	enabledApiProposals?: readonly string[];
 	qna?: 'marketplace' | string | false;
 	extensionKind?: ExtensionKind | ExtensionKind[];
+	sponsor?: { url: string };
 
 	// optional (npm)
 	author?: string | Person;
@@ -63,6 +106,10 @@ export interface Manifest {
 	dependencies?: { [name: string]: string };
 	devDependencies?: { [name: string]: string };
 	private?: boolean;
+	pricing?: string;
+
+	// vsce
+	vsce?: any;
 
 	// not supported (npm)
 	// files?: string[];

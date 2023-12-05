@@ -1,12 +1,14 @@
-import * as _read from 'read';
+import { promisify } from 'util';
+import _read from 'read';
 import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
-import * as denodeify from 'denodeify';
 import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
+import { Manifest } from './manifest';
+import { EOL } from 'os';
 
-const __read = denodeify<_read.Options, string>(_read);
+const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
 	if (process.env['VSCE_TESTS'] || !process.stdout.isTTY) {
 		return Promise.resolve('y');
@@ -61,7 +63,11 @@ export function chain<T, P>(initial: T, processors: P[], process: (a: T, b: P) =
 }
 
 export function flatten<T>(arr: T[][]): T[] {
-	return [].concat.apply([], arr) as T[];
+	return ([] as T[]).concat.apply([], arr) as T[];
+}
+
+export function nonnull<T>(arg: T | null | undefined): arg is T {
+	return !!arg;
 }
 
 const CancelledError = 'Cancelled';
@@ -124,12 +130,29 @@ function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	args = [LogPrefix[type], msg, ...args];
 
 	if (type === LogMessageType.WARNING) {
-		console.warn(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('warning', msg) : console.warn(...args);
 	} else if (type === LogMessageType.ERROR) {
-		console.error(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('error', msg) : console.error(...args);
 	} else {
-		console.log(...args);
+		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('info', msg) : console.log(...args);
 	}
+}
+
+const EscapeCharacters = new Map([
+	['%', '%25'],
+	['\r', '%0D'],
+	['\n', '%0A'],
+]);
+
+const EscapeRegex = new RegExp(`[${[...EscapeCharacters.keys()].join('')}]`, 'g');
+
+function escapeGitHubActionsMessage(message: string): string {
+	return message.replace(EscapeRegex, c => EscapeCharacters.get(c) ?? c);
+}
+
+function logToGitHubActions(type: string, message: string): void {
+	const command = type === 'info' ? message : `::${type}::${escapeGitHubActionsMessage(message)}`;
+	process.stdout.write(command + EOL);
 }
 
 export interface LogFn {
@@ -142,3 +165,17 @@ export const log = {
 	warn: _log.bind(null, LogMessageType.WARNING) as LogFn,
 	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };
+
+export function patchOptionsWithManifest(options: any, manifest: Manifest): void {
+	if (!manifest.vsce) {
+		return;
+	}
+
+	for (const key of Object.keys(manifest.vsce)) {
+		const optionsKey = key === 'yarn' ? 'useYarn' : key;
+
+		if (options[optionsKey] === undefined) {
+			options[optionsKey] = manifest.vsce[key];
+		}
+	}
+}

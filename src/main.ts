@@ -1,7 +1,6 @@
-import * as program from 'commander';
-import * as leven from 'leven';
-
-import { packageCommand, ls } from './package';
+import program from 'commander';
+import leven from 'leven';
+import { packageCommand, ls, Targets } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
@@ -10,6 +9,7 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+
 const pkg = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
@@ -32,7 +32,7 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 }
 
 function main(task: Promise<any>): void {
-	let latestVersion: string = null;
+	let latestVersion: string | null = null;
 
 	const token = new CancellationToken();
 
@@ -55,47 +55,65 @@ function main(task: Promise<any>): void {
 	});
 }
 
+const ValidTargets = [...Targets].join(', ');
+
 module.exports = function (argv: string[]): void {
-	program.version(pkg.version).usage('<command> [options]');
+	program.version(pkg.version).usage('<command>');
 
 	program
 		.command('ls')
 		.description('Lists all the files that will be published')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option(
+		.option<string[]>(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
 			(val, all) => (all ? all.concat(val) : [val]),
 			undefined
 		)
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
-		.action(({ yarn, packagedDependencies, ignoreFile }) =>
-			main(ls(undefined, yarn, packagedDependencies, ignoreFile))
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
+		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
+			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
 
 	program
-		.command('package [<version>]')
+		.command('package [version]')
+		.alias('pack')
 		.description('Packages an extension')
-		.option('-o, --out [path]', 'Output .vsix extension file to [path] location (defaults to <name>-<version>.vsix)')
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
+		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
 		.option(
-			'--githubBranch [branch]',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
+		.option(
+			'--githubBranch <branch>',
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
-			'--gitlabBranch [branch]',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'--gitlabBranch <branch>',
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
-		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn')
+		.option('--pre-release', 'Mark this package as a pre-release')
+		.option('--allow-star-activation', 'Allow using * in activation events')
+		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-license', 'Allow packaging without license file')
 		.action(
 			(
 				version,
@@ -104,14 +122,21 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					githubBranch,
 					gitlabBranch,
+					rewriteRelativeLinks,
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
+					dependencies,
+					preRelease,
+					allowStarActivation,
+					allowMissingRepository,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -121,44 +146,63 @@ module.exports = function (argv: string[]): void {
 						target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						githubBranch,
 						gitlabBranch,
+						rewriteRelativeLinks,
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
+						dependencies,
+						preRelease,
+						allowStarActivation,
+						allowMissingRepository,
+						skipLicense,
 					})
 				)
 		);
 
 	program
-		.command('publish [<version>]')
+		.command('publish [version]')
 		.description('Publishes an extension')
 		.option(
 			'-p, --pat <token>',
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.option('-t, --target <target>', 'Target architecture')
+		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
-		.option('--no-git-tag-version', 'Do not create a version commit and tag when calling `npm version`.')
-		.option('--packagePath [path]', 'Publish the VSIX package located at the specified path.')
 		.option(
-			'--githubBranch [branch]',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'--no-git-tag-version',
+			'Do not create a version commit and tag when calling `npm version`. Valid only when [version] is provided.'
+		)
+		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
+		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
+		.option(
+			'--githubBranch <branch>',
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
-			'--gitlabBranch [branch]',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'--gitlabBranch <branch>',
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
-		.option('--baseContentUrl [url]', 'Prepend all relative links in README.md with this url.')
-		.option('--baseImagesUrl [url]', 'Prepend all relative image links in README.md with this url.')
+		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
+		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
 		.option('--noVerify')
-		.option('--ignoreFile [path]', 'Indicate alternative .vscodeignore')
+		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
+		// default must remain undefined for dependencies or we will fail to load defaults from package.json
+		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
+		.option('--pre-release', 'Mark this package as a pre-release')
+		.option('--allow-star-activation', 'Allow using * in activation events')
+		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
+		.option('--skip-license', 'Allow publishing without license file')
 		.action(
 			(
 				version,
@@ -167,6 +211,7 @@ module.exports = function (argv: string[]): void {
 					target,
 					message,
 					gitTagVersion,
+					updatePackageJson,
 					packagePath,
 					githubBranch,
 					gitlabBranch,
@@ -175,15 +220,22 @@ module.exports = function (argv: string[]): void {
 					yarn,
 					noVerify,
 					ignoreFile,
+					dependencies,
+					preRelease,
+					allowStarActivation,
+					allowMissingRepository,
+					skipDuplicate,
+					skipLicense,
 				}
 			) =>
 				main(
 					publish({
 						pat,
 						version,
-						target,
+						targets: target,
 						commitMessage: message,
 						gitTagVersion,
+						updatePackageJson,
 						packagePath,
 						githubBranch,
 						gitlabBranch,
@@ -192,12 +244,18 @@ module.exports = function (argv: string[]): void {
 						useYarn: yarn,
 						noVerify,
 						ignoreFile,
+						dependencies,
+						preRelease,
+						allowStarActivation,
+						allowMissingRepository,
+						skipDuplicate,
+						skipLicense,
 					})
 				)
 		);
 
 	program
-		.command('unpublish [<extensionid>]')
+		.command('unpublish [extensionid]')
 		.description('Unpublishes an extension. Example extension id: microsoft.csharp.')
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('-f, --force', 'Forces Unpublished Extension')
@@ -224,7 +282,7 @@ module.exports = function (argv: string[]): void {
 		.action(name => main(logoutPublisher(name)));
 
 	program
-		.command('verify-pat [<publisher>]')
+		.command('verify-pat [publisher]')
 		.option(
 			'-p, --pat <token>',
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
@@ -242,8 +300,10 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('search <text>')
 		.option('--json', 'Output result in json format', false)
+		.option('--stats', 'Shows the extension rating and download counts', false)
+		.option('-p, --pagesize [value]', 'Number of results to return', '100')
 		.description('search extension gallery')
-		.action((text, { json }) => main(search(text, json)));
+		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
@@ -265,6 +325,10 @@ Unknown command '${cmd}'`;
 		});
 		process.exit(1);
 	});
+
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
 
 	program.parse(argv);
 };

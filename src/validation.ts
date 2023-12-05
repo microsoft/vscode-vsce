@@ -1,5 +1,5 @@
 import * as semver from 'semver';
-import * as parseSemver from 'parse-semver';
+import parseSemver from 'parse-semver';
 
 const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
@@ -49,6 +49,9 @@ export function validateEngineCompatibility(version: string): void {
 
 /**
  * User shouldn't use a newer version of @types/vscode than the one specified in engines.vscode
+ *
+ * NOTE: This is enforced at the major and minor level. Since we don't have control over the patch
+ * version (it's auto-incremented by DefinitelyTyped), we don't look at the patch version at all.
  */
 export function validateVSCodeTypesCompatibility(engineVersion: string, typeVersion: string): void {
 	if (engineVersion === '*') {
@@ -78,14 +81,14 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 	// For all `x`, use smallest version for comparison
 	plainEngineVersion = plainEngineVersion.replace(/x/g, '0');
 
-	const [typeMajor, typeMinor, typePatch] = plainTypeVersion.split('.').map(x => {
+	const [typeMajor, typeMinor] = plainTypeVersion.split('.').map(x => {
 		try {
 			return parseInt(x);
 		} catch (err) {
 			return 0;
 		}
 	});
-	const [engineMajor, engineMinor, enginePatch] = plainEngineVersion.split('.').map(x => {
+	const [engineMajor, engineMinor] = plainEngineVersion.split('.').map(x => {
 		try {
 			return parseInt(x);
 		} catch (err) {
@@ -94,16 +97,13 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 	});
 
 	const error = new Error(
-		`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Consider upgrade engines.vscode or use an older @types/vscode version`
+		`@types/vscode ${typeVersion} greater than engines.vscode ${engineVersion}. Either upgrade engines.vscode or use an older @types/vscode version`
 	);
 
 	if (typeMajor > engineMajor) {
 		throw error;
 	}
 	if (typeMajor === engineMajor && typeMinor > engineMinor) {
-		throw error;
-	}
-	if (typeMajor === engineMajor && typeMinor === engineMinor && typePatch > enginePatch) {
 		throw error;
 	}
 }

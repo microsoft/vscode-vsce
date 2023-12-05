@@ -1,5 +1,6 @@
 node_modules/
 out/
+dist/
 npm-debug.log
 !src/test/**/node_modules
 yarn.lock

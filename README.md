@@ -2,25 +2,37 @@
 
 > _The Visual Studio Code Extension Manager_
 
-[![Build Status](https://dev.azure.com/vscode/VSCE/_apis/build/status/VSCE?branchName=main)](https://dev.azure.com/vscode/VSCE/_build/latest?definitionId=16&branchName=main) [![npm version](https://badge.fury.io/js/vsce.svg)](https://badge.fury.io/js/vsce)
+[![Build Status](https://dev.azure.com/monacotools/Monaco/_apis/build/status/npm/microsoft.vscode-vsce?repoName=microsoft%2Fvscode-vsce&branchName=main)](https://dev.azure.com/monacotools/Monaco/_build/latest?definitionId=446&repoName=microsoft%2Fvscode-vsce&branchName=main)
+[![Version](https://img.shields.io/npm/v/@vscode/vsce.svg)](https://npmjs.org/package/@vscode/vsce)
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `10.x.x`
+- [Node.js](https://nodejs.org/en/) at least `14.x.x`
 
-Or simply [Docker](#via-docker).
+Or simply [Docker](#usage-via-docker).
+
+### Linux
+
+In order to save credentials safely, this project uses [keytar](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using keytar.
+
+Depending on your distribution, you will need to run the following command:
+
+- Debian/Ubuntu: `sudo apt-get install libsecret-1-dev`
+- Alpine: `apk add libsecret`
+- Red Hat-based: `sudo yum install libsecret-devel`
+- Arch Linux: `sudo pacman -S libsecret`
 
 ## Usage
 
 Install vsce globally:
 
-```sh
-npm install -g vsce
+```console
+npm install --global @vscode/vsce
 ```
 
 Verify the installation:
 
-```sh
+```console
 vsce --version
 ```
 
@@ -30,48 +42,66 @@ vsce --version
 
 You can also build a container for running vsce:
 
-```sh
-git clone https://github.com/microsoft/vscode-vsce
-cd vscode-vsce
-docker build -t vsce .
+```console
+$ DOCKER_BUILDKIT=1 docker build --tag vsce "https://github.com/microsoft/vscode-vsce.git#main"
 ```
 
 Validate the container:
 
-```sh
-docker run -it vsce --version
+```console
+docker run --rm -it vsce --version
 ```
 
 Publish your local extension:
 
-```sh
-docker run -it -v $(pwd):/workspace vsce publish
+```console
+docker run --rm -it -v "$(pwd)":/workspace vsce publish
+```
+
+## Configuration
+
+You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` to list them all). Example:
+
+```console
+vsce publish --baseImagesUrl https://my.custom/base/images/url
+```
+
+Or you can also set them in the `package.json`, so that you avoid having to retype the common options again. Example:
+
+```jsonc
+// package.json
+{
+  "vsce": {
+    "baseImagesUrl": "https://my.custom/base/images/url",
+    "dependencies": true,
+    "yarn": false
+  }
+}
 ```
 
 ## Development
 
 First clone this repository, then:
 
-```sh
-npm i
-npm run watch # or `watch-test` to also run tests
+```console
+$ npm install
+
+$ npm run watch:build # or `watch:test` to also build tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
-```sh
-npm run vsce
+```console
+node vsce
 ```
 
-### Publish to NPM
+Tests can be executed with:
 
-Simply push a new tag and the CI will automatically publish to NPM. The usual flow is:
-
-```sh
-npm version [minor|patch]
-git push --follow-tags
+```npm
+$ npm test
 ```
 
+> **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
 ## About
 
 This tool assists in packaging and publishing Visual Studio Code extensions.
