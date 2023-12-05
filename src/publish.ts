@@ -12,6 +12,10 @@ import { validatePublisher } from './validation';
 
 const tmpName = promisify(tmp.tmpName);
 
+/**
+ * Options for the `publish` function.
+ * @public
+ */
 export interface IPublishOptions {
 	readonly packagePath?: string[];
 	readonly version?: string;
@@ -19,20 +23,48 @@ export interface IPublishOptions {
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;
+
+	/**
+	 * The location of the extension in the file system.
+	 *
+	 * Defaults to `process.cwd()`.
+	 */
 	readonly cwd?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
+
+	/**
+	 * The base URL for links detected in Markdown files.
+	 */
 	readonly baseContentUrl?: string;
+
+	/**
+	 * The base URL for images detected in Markdown files.
+	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * Should use Yarn instead of NPM.
+	 */
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+
+	/**
+	 * The Personal Access Token to use.
+	 *
+	 * Defaults to the stored one.
+	 */
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
+	readonly skipDuplicate?: boolean;
+	readonly skipLicense?: boolean;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -99,16 +131,24 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
+	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
-	if (!options.noVerify && manifest.enableProposedApi) {
-		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
+		throw new Error(
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
+		);
 	}
-	if (!options.noVerify && manifest.enabledApiProposals) {
-		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+
+	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
+		throw new Error(
+			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
+		);
 	}
 
 	if (semver.prerelease(manifest.version)) {
@@ -143,27 +183,30 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 		}
 
 		if (extension && extension.versions) {
-			const sameVersion = extension.versions.filter(v => v.version === manifest.version);
+			const versionExists = extension.versions.some(v =>
+				(v.version === manifest.version) &&
+				(v.targetPlatform === options.target));
 
-			if (sameVersion.length > 0) {
-				if (!options.target) {
+			if (versionExists) {
+				if (options.skipDuplicate) {
+					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+					return;
+				} else {
 					throw new Error(`${description} already exists.`);
 				}
 
-				if (sameVersion.some(v => !v.targetPlatform)) {
-					throw new Error(`${name} (no target) v${manifest.version} already exists.`);
-				}
-
-				if (sameVersion.some(v => v.targetPlatform === options.target)) {
-					throw new Error(`${description} already exists.`);
-				}
 			}
 
 			try {
 				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
 			} catch (err: any) {
 				if (err.statusCode === 409) {
-					throw new Error(`${description} already exists.`);
+					if (options.skipDuplicate) {
+						log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+						return;
+					} else {
+						throw new Error(`${description} already exists.`);
+					}
 				} else {
 					throw err;
 				}
@@ -207,9 +250,9 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	const fullName = `${publisher}.${name}`;
 
 	if (!options.force) {
-		const answer = await read(`This will FOREVER delete '${fullName}'! Are you sure? [y/N] `);
+		const answer = await read(`This will delete ALL published versions! Please type '${fullName}' to confirm: `);
 
-		if (!/^y$/i.test(answer)) {
+		if (answer !== fullName) {
 			throw new Error('Aborted');
 		}
 	}

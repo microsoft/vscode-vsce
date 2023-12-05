@@ -81,6 +81,7 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('package [version]')
+		.alias('pack')
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
@@ -92,11 +93,11 @@ module.exports = function (argv: string[]): void {
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
@@ -112,6 +113,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-license', 'Allow packaging without license file')
 		.action(
 			(
 				version,
@@ -134,6 +136,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -157,6 +160,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipLicense,
 					})
 				)
 		);
@@ -179,17 +183,19 @@ module.exports = function (argv: string[]): void {
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
-			'The GitHub branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option(
 			'--gitlabBranch <branch>',
-			'The GitLab branch used to infer relative links in README.md. Can be overriden by --baseContentUrl and --baseImagesUrl.'
+			'The GitLab branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
 		)
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with this url.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with this url.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from lack of yarn.lock or .yarnrc)')
-		.option('--noVerify')
+		.option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
+		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
+		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
@@ -197,6 +203,8 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
+		.option('--skip-license', 'Allow publishing without license file')
 		.action(
 			(
 				version,
@@ -213,11 +221,15 @@ module.exports = function (argv: string[]): void {
 					baseImagesUrl,
 					yarn,
 					noVerify,
+					allowProposedApis,
+					allowAllProposedApis,
 					ignoreFile,
 					dependencies,
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					skipDuplicate,
+					skipLicense,
 				}
 			) =>
 				main(
@@ -235,11 +247,15 @@ module.exports = function (argv: string[]): void {
 						baseImagesUrl,
 						useYarn: yarn,
 						noVerify,
+						allowProposedApis,
+						allowAllProposedApis,
 						ignoreFile,
 						dependencies,
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						skipDuplicate,
+						skipLicense,
 					})
 				)
 		);
@@ -315,6 +331,10 @@ Unknown command '${cmd}'`;
 		});
 		process.exit(1);
 	});
+
+	program.description(`${pkg.description}
+To learn more about the VS Code extension API: https://aka.ms/vscode-extension-api
+To connect with the VS Code extension developer community: https://aka.ms/vscode-discussions`);
 
 	program.parse(argv);
 };
