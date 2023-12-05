@@ -56,6 +56,7 @@ export interface IPublishOptions {
 	 * Defaults to the stored one.
 	 */
 	readonly pat?: string;
+	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
 	readonly allowAllProposedApis?: boolean;
@@ -130,6 +131,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
+	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
 	readonly allowAllProposedApis?: boolean;
