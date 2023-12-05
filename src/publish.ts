@@ -57,6 +57,8 @@ export interface IPublishOptions {
 	 */
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
@@ -129,17 +131,24 @@ export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
 	readonly noVerify?: boolean;
+	readonly allowProposedApis?: string[];
+	readonly allowAllProposedApis?: boolean;
 	readonly skipDuplicate?: boolean;
 }
 
 async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
-	if (!options.noVerify && manifest.enableProposedApi) {
-		throw new Error("Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace");
+	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
+		throw new Error(
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
+		);
 	}
-	if (!options.noVerify && manifest.enabledApiProposals) {
-		throw new Error("Extensions using proposed API (enabledApiProposals: [...]) can't be published to the Marketplace");
+
+	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
+		throw new Error(
+			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
+		);
 	}
 
 	if (semver.prerelease(manifest.version)) {
