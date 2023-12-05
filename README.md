@@ -1,4 +1,4 @@
-# vsce
+# @vscode/vsce
 
 > _The Visual Studio Code Extension Manager_
 
@@ -11,11 +11,7 @@ Read the [**Documentation**](https://code.visualstudio.com/api/working-with-exte
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/en/) at least `14.x.x`
-
-    or
-
-- [Docker](#usage-via-docker)
+[Node.js](https://nodejs.org/en/) at least `18.x.x`.
 
 ### Linux
 
@@ -30,48 +26,18 @@ Depending on your distribution, you will need to run the following command:
 
 ## Usage
 
-### via npm
-
-Install vsce globally:
-
 ```console
-npm install --global @vscode/vsce
+$ npx @vscode/vsce --version
 ```
 
-Verify the installation:
-
-```console
-vsce --version
-```
-
-`vsce` is meant to be mainly used as a command-line tool. It can also be used as a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using `vsce` as a library, be sure to sanitize any user input used in API calls to prevent security issues.
-
-### via Docker
-
-1. Build a container:
-
-    ```console
-    $ DOCKER_BUILDKIT=1 docker build --tag vsce "https://github.com/microsoft/vscode-vsce.git#main"
-    ```
-
-1. Validate the container:
-
-    ```console
-    docker run --rm -it vsce --version
-    ```
-
-1. Publish your local extension:
-
-    ```console
-    docker run --rm -it -v "$(pwd)":/workspace vsce publish
-    ```
+`@vscode/vsce` is meant to be mainly used as a command-line tool. It can also be used as a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using `@vscode/vsce` as a library, be sure to sanitize any user input used in API calls to prevent security issues.
 
 ## Configuration
 
 You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` to list them all). Example:
 
 ```console
-vsce publish --baseImagesUrl https://my.custom/base/images/url
+$ npx @vscode/vsce publish --baseImagesUrl https://my.custom/base/images/url
 ```
 
 Or you can also set them in the `package.json`, so that you avoid having to retype the common options again. Example:
@@ -93,19 +59,18 @@ First clone this repository, then:
 
 ```console
 $ npm install
-
 $ npm run watch:build # or `watch:test` to also build tests
 ```
 
 Once the watcher is up and running, you can run out of sources with:
 
 ```console
-node vsce
+$ node vsce
 ```
 
 Tests can be executed with:
 
-```npm
+```console
 $ npm test
 ```
 
