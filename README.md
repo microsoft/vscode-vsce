@@ -32,6 +32,11 @@ $ npx @vscode/vsce --version
 
 `@vscode/vsce` is meant to be mainly used as a command-line tool. It can also be used as a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using `@vscode/vsce` as a library, be sure to sanitize any user input used in API calls to prevent security issues.
 
+Supported package managers:
+
+- `npm >=6`
+- `yarn >=1 <2`
+
 ## Configuration
 
 You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` to list them all). Example:
