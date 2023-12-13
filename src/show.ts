@@ -37,6 +37,28 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 		});
 }
 
+function round(num: number): number {
+	return Math.round(num * 100) / 100;
+}
+
+function unit(value: number, statisticName: string): string {
+	switch (statisticName) {
+		case 'install':
+			return `${value} installs`;
+		case 'updateCount':
+			return `${value} updates`;
+		case 'averagerating':
+		case 'weightedRating':
+			return `${value} stars`;
+		case 'ratingcount':
+			return `${value} ratings`;
+		case 'downloadCount':
+			return `${value} downloads`;
+		default:
+			return `${value}`;
+	}
+}
+
 function showOverview({
 	displayName = 'unknown',
 	extensionName = 'unknown',
@@ -66,8 +88,8 @@ function showOverview({
 		[
 			`${displayName}`,
 			`${publisherDisplayName} | ${icons.download} ` +
-				`${Number(installs).toLocaleString()} installs |` +
-				` ${ratingStars(averagerating)} (${ratingcount})`,
+			`${Number(installs).toLocaleString()} installs |` +
+			` ${ratingStars(averagerating)} (${ratingcount})`,
 			'',
 			`${shortDescription}`,
 			'',
@@ -91,7 +113,9 @@ function showOverview({
 			'',
 			'Statistics:',
 			...tableView(
-				<ViewTable>statistics.map(({ statisticName, value }) => [statisticName, Number(value).toFixed(2)])
+				<ViewTable>statistics
+					.filter(({ statisticName }) => !/^trending/.test(statisticName!))
+					.map(({ statisticName, value }) => [statisticName, unit(round(value!), statisticName!)])
 			).map(indentRow),
 		]
 			.map(line => wordWrap(line))
