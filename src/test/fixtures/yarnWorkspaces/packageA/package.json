@@ -1,0 +1,15 @@
+{
+	"name": "package-a",
+	"publisher": "mocha",
+	"version": "1.0.0",
+	"engines": {
+		"vscode": "*"
+	},
+	"dependencies": {
+		"curry": "1.2.0",
+		"filter-obj": "2.0.1"
+	},
+	"devDependencies": {
+		"is-number": "7.0.0"
+	}
+}
