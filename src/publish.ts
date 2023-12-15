@@ -20,6 +20,7 @@ export interface IPublishOptions {
 	readonly packagePath?: string[];
 	readonly version?: string;
 	readonly targets?: string[];
+	readonly ignoreOtherTargetFolders?: boolean;
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;

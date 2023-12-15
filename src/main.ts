@@ -85,6 +85,7 @@ module.exports = function (argv: string[]): void {
 		.description('Packages an extension')
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
+		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -120,6 +121,7 @@ module.exports = function (argv: string[]): void {
 				{
 					out,
 					target,
+					ignoreOtherTargetFolders,
 					message,
 					gitTagVersion,
 					updatePackageJson,
@@ -144,6 +146,7 @@ module.exports = function (argv: string[]): void {
 						packagePath: out,
 						version,
 						target,
+						ignoreOtherTargetFolders,
 						commitMessage: message,
 						gitTagVersion,
 						updatePackageJson,
@@ -174,6 +177,7 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
+		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -211,6 +215,7 @@ module.exports = function (argv: string[]): void {
 				{
 					pat,
 					target,
+					ignoreOtherTargetFolders,
 					message,
 					gitTagVersion,
 					updatePackageJson,
@@ -237,6 +242,7 @@ module.exports = function (argv: string[]): void {
 						pat,
 						version,
 						targets: target,
+						ignoreOtherTargetFolders,
 						commitMessage: message,
 						gitTagVersion,
 						updatePackageJson,

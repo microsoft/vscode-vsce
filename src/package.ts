@@ -86,6 +86,17 @@ export interface IPackageOptions {
 	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
 	 */
 	readonly target?: string;
+
+	/**
+	 * Ignore all files inside folders named as other targets. Only relevant when
+	 * `target` is set. For example, if `target` is `linux-x64` and there are
+	 * folders named `win32-x64`, `darwin-arm64` or `web`, the files inside
+	 * those folders will be ignored.
+	 * 
+	 * @default false
+	 */
+	readonly ignoreOtherTargetFolders?: boolean;
+
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
 	readonly updatePackageJson?: boolean;
@@ -1538,7 +1549,7 @@ async function collectAllFiles(
 	const promises = deps.map(dep =>
 		promisify(glob)('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => ({
-				src: path.relative(cwd, path.join(dep.src, f.replace(/\\/g, '/'))),
+				src: path.relative(cwd, path.join(dep.src, f)).replace(/\\/g, '/'),
 				dest: path.join(dep.dest, f).replace(/\\/g, '/')
 			}))
 		)
@@ -1547,15 +1558,38 @@ async function collectAllFiles(
 	return Promise.all(promises).then(util.flatten);
 }
 
+function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+	if (options.dependencies === false) {
+		return 'none';
+	}
+
+	switch (options.useYarn) {
+		case true:
+			return 'yarn';
+		case false:
+			return 'npm';
+		default:
+			return undefined;
+	}
+}
+
 function collectFiles(
 	cwd: string,
 	manifest: Manifest,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
-	dependencyEntryPoints?: string[],
-	ignoreFile?: string
+	options: IPackageOptions
 ): Promise<SourceAndDestination[]> {
-	return collectAllFiles(cwd, manifest, dependencies, dependencyEntryPoints).then(files => {
+	const packagedDependencies = options.dependencyEntryPoints || undefined;
+	const ignoreFile = options.ignoreFile || undefined;
+	const target = options.target || undefined;
+
+	return collectAllFiles(cwd, manifest, getDependenciesOption(options), packagedDependencies).then(files => {
 		files = files.filter(f => !/\r$/m.test(f.src));
+
+		// Filter data from other platforms
+		if (target && options.ignoreOtherTargetFolders) {
+			const regex = new RegExp(`(^|/)(${Array.from(Targets, v => v).filter(v => v !== target).join('|')})/`);
+			files = files.filter(f => !regex.test(f.src))
+		}
 
 		return (
 			fs.promises
@@ -1646,28 +1680,11 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
-function getDependenciesOption(options: IListFilesOptions): 'npm' | 'yarn' | 'none' | undefined {
-	if (options.dependencies === false) {
-		return 'none';
-	}
-
-	switch (options.useYarn) {
-		case true:
-			return 'yarn';
-		case false:
-			return 'npm';
-		default:
-			return undefined;
-	}
-}
-
 export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
-	const packagedDependencies = options.dependencyEntryPoints || undefined;
-	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, manifest, getDependenciesOption(options), packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, manifest, options).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f.dest}`, localPath: path.join(cwd, f.src) }));
 
 		return processFiles(processors, files);
@@ -1819,7 +1836,8 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return (await collectFiles(cwd, manifest, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile)).map(f => f.src);
+	const files = await collectFiles(cwd, manifest, options);
+	return files.map(f => f.src);
 }
 
 /**

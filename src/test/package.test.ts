@@ -295,6 +295,48 @@ describe('collect', function () {
 		const ignore = files.find(f => f.path === ignoreFilename);
 		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
 	});
+
+	it('should handle target and ignoreOtherTargetFolders', async function () {
+		const cwd = fixture('target');
+		const manifest = await readManifest(cwd);
+		let files = await collect(manifest, { cwd });
+
+		assert.strictEqual(files.length, 13);
+		assert.ok(files.some(f => f.path === 'extension/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/linux-x64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/linux-x64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/web/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/web/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/darwin-arm64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/darwin-arm64/file.txt'));
+
+		files = await collect(manifest, { cwd, target: 'linux-x64' });
+
+		assert.strictEqual(files.length, 13);
+		assert.ok(files.some(f => f.path === 'extension/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/linux-x64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/linux-x64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/web/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/web/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/darwin-arm64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/darwin-arm64/file.txt'));
+
+		files = await collect(manifest, { cwd, target: 'linux-x64', ignoreOtherTargetFolders: true });
+
+		assert.strictEqual(files.length, 9);
+		assert.ok(files.some(f => f.path === 'extension/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/random/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/linux-x64/file.txt'));
+		assert.ok(files.some(f => f.path === 'extension/deep/linux-x64/file.txt'));
+	});
 });
 
 describe('readManifest', () => {
