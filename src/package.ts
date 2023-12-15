@@ -108,6 +108,9 @@ export interface IPackageOptions {
 	 */
 	readonly cwd?: string;
 
+	readonly readmePath?: string;
+	readonly changelogPath?: string;
+
 	/**
 	 * GitHub branch used to publish the package. Used to automatically infer
 	 * the base content and images URI.
@@ -693,7 +696,9 @@ export class TagsProcessor extends BaseProcessor {
 	}
 }
 
-export class MarkdownProcessor extends BaseProcessor {
+export abstract class MarkdownProcessor extends BaseProcessor {
+
+	private regexp: RegExp;
 	private baseContentUrl: string | undefined;
 	private baseImagesUrl: string | undefined;
 	private rewriteRelativeLinks: boolean;
@@ -706,14 +711,15 @@ export class MarkdownProcessor extends BaseProcessor {
 	constructor(
 		manifest: Manifest,
 		private name: string,
-		private regexp: RegExp,
+		filePath: string,
 		private assetType: string,
 		options: IPackageOptions = {}
 	) {
 		super(manifest);
 
-		const guess = this.guessBaseUrls(options.githubBranch || options.gitlabBranch);
+		this.regexp = new RegExp(`^extension/${filePath}$`, 'i');
 
+		const guess = this.guessBaseUrls(options.githubBranch || options.gitlabBranch);
 		this.baseContentUrl = options.baseContentUrl || (guess && guess.content);
 		this.baseImagesUrl = options.baseImagesUrl || options.baseContentUrl || (guess && guess.images);
 		this.rewriteRelativeLinks = options.rewriteRelativeLinks ?? true;
@@ -923,15 +929,22 @@ export class MarkdownProcessor extends BaseProcessor {
 
 export class ReadmeProcessor extends MarkdownProcessor {
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
-		super(manifest, 'README.md', /^extension\/readme.md$/i, 'Microsoft.VisualStudio.Services.Content.Details', options);
+		super(
+			manifest,
+			'README.md',
+			options.readmePath ?? 'readme.md',
+			'Microsoft.VisualStudio.Services.Content.Details',
+			options
+		);
 	}
 }
+
 export class ChangelogProcessor extends MarkdownProcessor {
 	constructor(manifest: Manifest, options: IPackageOptions = {}) {
 		super(
 			manifest,
 			'CHANGELOG.md',
-			/^extension\/changelog.md$/i,
+			options.changelogPath ?? 'changelog.md',
 			'Microsoft.VisualStudio.Services.Content.Changelog',
 			options
 		);

@@ -86,6 +86,8 @@ module.exports = function (argv: string[]): void {
 		.option('-o, --out <path>', 'Output .vsix extension file to <path> location (defaults to <name>-<version>.vsix)')
 		.option('-t, --target <target>', `Target architecture. Valid targets: ${ValidTargets}`)
 		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
+		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
+		.option('--changelog-path <path>', 'Path to CHANGELOG file (defaults to CHANGELOG.md)')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -122,6 +124,8 @@ module.exports = function (argv: string[]): void {
 					out,
 					target,
 					ignoreOtherTargetFolders,
+					readmePath,
+					changelogPath,
 					message,
 					gitTagVersion,
 					updatePackageJson,
@@ -147,6 +151,8 @@ module.exports = function (argv: string[]): void {
 						version,
 						target,
 						ignoreOtherTargetFolders,
+						readmePath,
+						changelogPath,
 						commitMessage: message,
 						gitTagVersion,
 						updatePackageJson,
@@ -178,6 +184,8 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
+		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
+		.option('--changelog-path <path>', 'Path to CHANGELOG file (defaults to CHANGELOG.md)')
 		.option('-m, --message <commit message>', 'Commit message used when calling `npm version`.')
 		.option(
 			'--no-git-tag-version',
@@ -216,6 +224,8 @@ module.exports = function (argv: string[]): void {
 					pat,
 					target,
 					ignoreOtherTargetFolders,
+					readmePath,
+					changelogPath,
 					message,
 					gitTagVersion,
 					updatePackageJson,
@@ -243,6 +253,8 @@ module.exports = function (argv: string[]): void {
 						version,
 						targets: target,
 						ignoreOtherTargetFolders,
+						readmePath,
+						changelogPath,
 						commitMessage: message,
 						gitTagVersion,
 						updatePackageJson,
