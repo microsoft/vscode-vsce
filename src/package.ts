@@ -20,7 +20,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { detectYarn, getDependencies, SourceAndDestination } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -556,7 +556,9 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		if (!this.options.allowMissingRepository && !this.manifest.repository) {
-			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.`);
+			util.log.warn(
+				`A 'repository' field is missing from the 'package.json' manifest file.\nUse --allow-missing-repository to bypass.`
+			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -565,7 +567,7 @@ export class ManifestProcessor extends BaseProcessor {
 
 		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
 			util.log.warn(
-				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up`
+				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up\nUse --allow-star-activation to bypass.`
 			);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
@@ -1324,10 +1326,8 @@ export function validateManifest(manifest: Manifest): Manifest {
 	return manifest;
 }
 
-export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+export function readNodeManifest(cwd = process.cwd()): Promise<Manifest> {
 	const manifestPath = path.join(cwd, 'package.json');
-	const manifestNLSPath = path.join(cwd, 'package.nls.json');
-
 	const manifest = fs.promises
 		.readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
@@ -1338,13 +1338,19 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 				console.error(`Error parsing 'package.json' manifest file: not a valid JSON file.`);
 				throw e;
 			}
-		})
+		});
+	return manifest;
+}
+
+export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+	const manifest = readNodeManifest(cwd)
 		.then(validateManifest);
 
 	if (!nls) {
 		return manifest;
 	}
 
+	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 	const manifestNLS = fs.promises
 		.readFile(manifestNLSPath, 'utf8')
 		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
@@ -1535,13 +1541,17 @@ const notIgnored = ['!package.json', '!README.md'];
 
 async function collectAllFiles(
 	cwd: string,
+	manifest: Manifest,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[]
-): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+): Promise<SourceAndDestination[]> {
+	const deps = await getDependencies(cwd, manifest, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
-			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
+		promisify(glob)('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+			files.map(f => ({
+				src: path.relative(cwd, path.join(dep.src, f.replace(/\\/g, '/'))),
+				dest: path.join(dep.dest, f).replace(/\\/g, '/')
+			}))
 		)
 	);
 
@@ -1565,19 +1575,20 @@ function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none
 
 function collectFiles(
 	cwd: string,
+	manifest: Manifest,
 	options: IPackageOptions
-): Promise<string[]> {
+): Promise<SourceAndDestination[]> {
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const target = options.target || undefined;
 
-	return collectAllFiles(cwd, getDependenciesOption(options), packagedDependencies).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	return collectAllFiles(cwd, manifest, getDependenciesOption(options), packagedDependencies).then(files => {
+		files = files.filter(f => !/\r$/m.test(f.src));
 
 		// Filter data from other platforms
 		if (target && options.ignoreOtherTargetFolders) {
 			const regex = new RegExp(`(^|/)(${Array.from(Targets, v => v).filter(v => v !== target).join('|')})/`);
-			files = files.filter(f => !regex.test(f))
+			files = files.filter(f => !regex.test(f.src))
 		}
 
 		return (
@@ -1618,8 +1629,8 @@ function collectFiles(
 				.then(({ ignore, negate }) =>
 					files.filter(
 						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
+							!ignore.some(i => minimatch(f.src, i, MinimatchOptions)) ||
+							negate.some(i => minimatch(f.src, i.substr(1), MinimatchOptions))
 					)
 				)
 		);
@@ -1673,8 +1684,8 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const cwd = options.cwd || process.cwd();
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, options).then(fileNames => {
-		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
+	return collectFiles(cwd, manifest, options).then(fileNames => {
+		const files = fileNames.map(f => ({ path: `extension/${f.dest}`, localPath: path.join(cwd, f.src) }));
 
 		return processFiles(processors, files);
 	});
@@ -1770,7 +1781,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 		);
 	}
 
-	if (options.version) {
+	if (options.version && !(options.updatePackageJson ?? true)) {
 		manifest.version = options.version;
 	}
 
@@ -1825,7 +1836,8 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, options);
+	const files = await collectFiles(cwd, manifest, options);
+	return files.map(f => f.src);
 }
 
 /**

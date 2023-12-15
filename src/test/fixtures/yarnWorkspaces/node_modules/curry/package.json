@@ -1,0 +1,43 @@
+{
+  "name": "curry",
+  "description": "flexible but simple curry function",
+  "version": "1.2.0",
+  "homepage": "https://github.com/dominictarr/curry",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dominictarr/curry.git"
+  },
+  "author": "Dominic Tarr <dominic.tarr@gmail.com>",
+  "contributors": [
+    "Hugh FD Jackson <hughfdjackson@googlemail.com>"
+  ],
+  "main": "./curry",
+  "devDependencies": {
+    "mocha": "1.8.1",
+    "browserify": "2.17.2",
+    "uglify-js": "2.3.6",
+    "lodash": "2.1.0",
+    "delve": "0.3.2"
+  },
+  "testling": {
+    "files": "test/*-test.js",
+    "browsers": [
+      "iexplore/6.0",
+      "iexplore/7.0",
+      "iexplore/8.0",
+      "iexplore/9.0",
+      "iexplore/10.0",
+      "chrome/4.0",
+      "chrome/23.0",
+      "firefox/3.0",
+      "firefox/17.0",
+      "safari/5.0.5",
+      "safari/5.1"
+    ],
+    "harness": "mocha"
+  },
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha test",
+    "prepublish": "./node_modules/browserify/bin/cmd.js --standalone curry -e curry.js | ./node_modules/uglify-js/bin/uglifyjs > curry.min.js"
+  }
+}

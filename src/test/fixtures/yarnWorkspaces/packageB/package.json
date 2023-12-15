@@ -1,0 +1,15 @@
+{
+	"name": "package-b",
+	"publisher": "mocha",
+	"version": "1.0.0",
+	"engines": {
+		"vscode": "*"
+	},
+	"dependencies": {
+		"map-obj": "4.1.0",
+		"package-a": "*"
+	},
+	"devDependencies": {
+		"in-array": "0.1.2"
+	}
+}

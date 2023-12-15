@@ -42,6 +42,7 @@
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
 		"commander": "^6.2.1",
+		"find-yarn-workspace-root": "^2.0.0",
 		"glob": "^7.0.6",
 		"hosted-git-info": "^4.0.2",
 		"jsonc-parser": "^3.2.0",
