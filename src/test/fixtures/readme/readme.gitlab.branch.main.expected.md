@@ -25,6 +25,8 @@ The status bar lets you quickly navigate to any issue and you can see all positi
 ![](https://gitlab.com/username/repository/-/raw/main/SpellMDDemo2.gif#gh-light-mode-only)
 <img src="https://gitlab.com/username/repository/-/raw/main/images/myImage.gif">
 <img src="https://gitlab.com/username/repository/-/raw/main/images/myImage.gif#gh-light-mode-only">
+<video src="https://gitlab.com/username/repository/-/raw/main/videos/myVideo.mp4"></video>
+<video src="https://gitlab.com/username/repository/-/raw/main/videos/myVideo.mp4#gh-light-mode-only"></video>
 
 The `spellMD.json` config file is watched so you can add more ignores or change mappings at will.
 
