@@ -673,6 +673,29 @@ describe('toVsixManifest', () => {
 			});
 	});
 
+	it('should handle readmePath', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/foo/readme-foo.md', contents: Buffer.from('') }];
+
+		return _toVsixManifest(manifest, files, { readmePath: 'foo/readme-foo.md' })
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.Details'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/foo/readme-foo.md');
+			});
+	});
+
 	it('should treat CHANGELOG.md as asset', () => {
 		const manifest = {
 			name: 'test',
@@ -693,6 +716,29 @@ describe('toVsixManifest', () => {
 					'Microsoft.VisualStudio.Services.Content.Changelog'
 				);
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
+			});
+	});
+
+	it('should handle changelogPath', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+		};
+
+		const files = [{ path: 'extension/foo/changelog-foo.md', contents: Buffer.from('') }];
+
+		return _toVsixManifest(manifest, files, { changelogPath: 'foo/changelog-foo.md' })
+			.then(xml => parseXmlManifest(xml))
+			.then(result => {
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
+				assert.strictEqual(
+					result.PackageManifest.Assets[0].Asset[1].$.Type,
+					'Microsoft.VisualStudio.Services.Content.Changelog'
+				);
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/foo/changelog-foo.md');
 			});
 	});
 

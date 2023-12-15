@@ -31,6 +31,8 @@ export interface IPublishOptions {
 	 * Defaults to `process.cwd()`.
 	 */
 	readonly cwd?: string;
+	readonly readmePath?: string;
+	readonly changelogPath?: string;
 	readonly githubBranch?: string;
 	readonly gitlabBranch?: string;
 
