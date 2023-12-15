@@ -772,7 +772,7 @@ export class MarkdownProcessor extends BaseProcessor {
 			contents = contents.replace(markdownPathRegex, urlReplace);
 
 			// Replace <img> links with urls
-			contents = contents.replace(/<img.+?src=["']([/.\w\s#-]+)['"].*?>/g, (all, link) => {
+			contents = contents.replace(/<img[^>]+src=["']([/.\w\s#-]+)['"][^>]*>/gm, (all, link) => {
 				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
 
 				if (!this.baseImagesUrl && isLinkRelative) {
@@ -840,7 +840,13 @@ export class MarkdownProcessor extends BaseProcessor {
 				}
 
 				const src = decodeURI(rawSrc);
-				const srcUrl = new url.URL(src);
+				let srcUrl: url.URL
+
+				try {
+					srcUrl = new url.URL(src);
+				} catch (err) {
+					throw new Error(`Invalid image source in ${this.name}: ${src}`);
+				}
 
 				if (/^data:$/i.test(srcUrl.protocol) && /^image$/i.test(srcUrl.host) && /\/svg/i.test(srcUrl.pathname)) {
 					throw new Error(`SVG data URLs are not allowed in ${this.name}: ${src}`);
@@ -1273,7 +1279,13 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	(manifest.badges ?? []).forEach(badge => {
 		const decodedUrl = decodeURI(badge.url);
-		const srcUrl = new url.URL(decodedUrl);
+		let srcUrl: url.URL;
+
+		try {
+			srcUrl = new url.URL(decodedUrl);
+		} catch (err) {
+			throw new Error(`Badge URL is invalid: ${badge.url}`);
+		}
 
 		if (!/^https:$/i.test(srcUrl.protocol)) {
 			throw new Error(`Badge URLs must come from an HTTPS source: ${badge.url}`);

@@ -2896,6 +2896,22 @@ describe('MarkdownProcessor', () => {
 		await throws(() => processor.onFile(readme));
 	});
 
+	it('should allow img tags spanning across lines, issue #904', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+		const contents = `<img src="img/screenshots/demo.webp" width="556" height="482"\nalt="recording of  exploring view opened from the command 'Snippets Ranger: Show me that dur Range, Partner'. An entry of 'Markdown snippets' from the table of contents is selected and clicked, it takes the user down to the table with the snippets displayed for that extension."/>`;
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		assert.ok(file);
+	});
+
 	it('should catch an unchanged README.md', async () => {
 		const manifest = {
 			name: 'test',
