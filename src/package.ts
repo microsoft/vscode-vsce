@@ -1549,7 +1549,7 @@ async function collectAllFiles(
 	const promises = deps.map(dep =>
 		promisify(glob)('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => ({
-				src: path.relative(cwd, path.join(dep.src, f.replace(/\\/g, '/'))),
+				src: path.relative(cwd, path.join(dep.src, f)).replace(/\\/g, '/'),
 				dest: path.join(dep.dest, f).replace(/\\/g, '/')
 			}))
 		)
