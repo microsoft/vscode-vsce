@@ -21,6 +21,7 @@ export function show(extensionId: string, json: boolean = false): Promise<any> {
 		ExtensionQueryFlags.IncludeMetadata,
 		ExtensionQueryFlags.IncludeStatistics,
 		ExtensionQueryFlags.IncludeVersions,
+		ExtensionQueryFlags.IncludeVersionProperties,
 	];
 	return getPublicGalleryAPI()
 		.getExtension(extensionId, flags)
@@ -74,9 +75,22 @@ function showOverview({
 	const [{ version = 'unknown' } = {}] = versions;
 
 	// Create formatted table list of versions
-	const versionList = <ViewTable>(
-		versions.slice(0, limitVersions).map(({ version, lastUpdated }) => [version, formatDate(lastUpdated!)])
-	);
+	const versionList = versions
+		.slice(0, limitVersions)
+		.map(({ version, lastUpdated, properties }) => [version, formatDate(lastUpdated!), properties?.some(p => p.key === 'Microsoft.VisualStudio.Code.PreRelease')]);
+
+	// Only show pre-release column if there are any pre-releases
+	if (versionList.every(v => !v[2])) {
+		for (const version of versionList) {
+			version.pop();
+		}
+		versionList.unshift(['Version', 'Last Updated']);
+	} else {
+		for (const version of versionList) {
+			version[2] = version[2] ? `✔️` : '';
+		}
+		versionList.unshift(['Version', 'Last Updated', 'Pre-release']);
+	}
 
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
@@ -93,8 +107,7 @@ function showOverview({
 			'',
 			`${shortDescription}`,
 			'',
-			'Recent versions:',
-			...(versionList.length ? tableView(versionList).map(indentRow) : ['no versions found']),
+			...(versionList.length ? tableView(<ViewTable>versionList).map(indentRow) : ['no versions found']),
 			'',
 			'Categories:',
 			`  ${categories.join(', ')}`,
