@@ -1,5 +1,5 @@
 import { getPublicGalleryAPI, log } from './util';
-import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
+import { ExtensionQueryFlags, ExtensionVersion, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { ViewTable, formatDate, formatDateTime, ratingStars, tableView, indentRow, wordWrap, icons } from './viewutils';
 
 const limitVersions = 6;
@@ -60,6 +60,33 @@ function unit(value: number, statisticName: string): string {
 	}
 }
 
+function getVersionTable(versions: ExtensionVersion[]): ViewTable {
+	if (!versions.length) {
+		return [];
+	}
+
+	const set = new Set<string>();
+	const result = versions
+		.filter(({ version }) => !set.has(version!) && set.add(version!))
+		.slice(0, limitVersions)
+		.map(({ version, lastUpdated, properties }) => [version, formatDate(lastUpdated!), properties?.some(p => p.key === 'Microsoft.VisualStudio.Code.PreRelease')]);
+
+	// Only show pre-release column if there are any pre-releases
+	if (result.every(v => !v[2])) {
+		for (const version of result) {
+			version.pop();
+		}
+		result.unshift(['Version', 'Last Updated']);
+	} else {
+		for (const version of result) {
+			version[2] = version[2] ? `✔️` : '';
+		}
+		result.unshift(['Version', 'Last Updated', 'Pre-release']);
+	}
+
+	return result as ViewTable;
+}
+
 function showOverview({
 	displayName = 'unknown',
 	extensionName = 'unknown',
@@ -73,65 +100,62 @@ function showOverview({
 	lastUpdated,
 }: VSCodePublishedExtension) {
 	const [{ version = 'unknown' } = {}] = versions;
+	const versionTable = getVersionTable(versions);
 
-	// Create formatted table list of versions
-	const versionList = versions
-		.slice(0, limitVersions)
-		.map(({ version, lastUpdated, properties }) => [version, formatDate(lastUpdated!), properties?.some(p => p.key === 'Microsoft.VisualStudio.Code.PreRelease')]);
-
-	// Only show pre-release column if there are any pre-releases
-	if (versionList.every(v => !v[2])) {
-		for (const version of versionList) {
-			version.pop();
-		}
-		versionList.unshift(['Version', 'Last Updated']);
-	} else {
-		for (const version of versionList) {
-			version[2] = version[2] ? `✔️` : '';
-		}
-		versionList.unshift(['Version', 'Last Updated', 'Pre-release']);
-	}
+	const latestVersionTargets = versions
+		.filter(v => v.version === version)
+		.filter(v => v.targetPlatform)
+		.map(v => v.targetPlatform);
 
 	const { install: installs = 0, averagerating = 0, ratingcount = 0 } = statistics.reduce(
 		(map, { statisticName, value }) => ({ ...map, [statisticName!]: value }),
 		<ExtensionStatisticsMap>{}
 	);
 
-	// Render
-	console.log(
-		[
-			`${displayName}`,
-			`${publisherDisplayName} | ${icons.download} ` +
-			`${Number(installs).toLocaleString()} installs |` +
-			` ${ratingStars(averagerating)} (${ratingcount})`,
+	const rows = [
+		`${displayName}`,
+		`${publisherDisplayName} | ${icons.download} ` +
+		`${Number(installs).toLocaleString()} installs |` +
+		` ${ratingStars(averagerating)} (${ratingcount})`,
+		'',
+		`${shortDescription}`,
+		'',
+		...(versionTable.length ? tableView(versionTable).map(indentRow) : ['no versions found']),
+		'',
+		'Categories:',
+		`  ${categories.join(', ')}`,
+		'',
+		'Tags:',
+		`  ${tags.filter(tag => !isExtensionTag.test(tag)).join(', ')}`
+	];
+
+	if (latestVersionTargets.length) {
+		rows.push(
 			'',
-			`${shortDescription}`,
-			'',
-			...(versionList.length ? tableView(<ViewTable>versionList).map(indentRow) : ['no versions found']),
-			'',
-			'Categories:',
-			`  ${categories.join(', ')}`,
-			'',
-			'Tags:',
-			`  ${tags.filter(tag => !isExtensionTag.test(tag)).join(', ')}`,
-			'',
-			'More info:',
-			...tableView([
-				['Unique identifier:', `${publisherName}.${extensionName}`],
-				['Version:', version],
-				['Last updated:', formatDateTime(lastUpdated!)],
-				['Publisher:', publisherDisplayName],
-				['Published at:', formatDate(publishedDate!)],
-			]).map(indentRow),
-			'',
-			'Statistics:',
-			...tableView(
-				<ViewTable>statistics
-					.filter(({ statisticName }) => !/^trending/.test(statisticName!))
-					.map(({ statisticName, value }) => [statisticName, unit(round(value!), statisticName!)])
-			).map(indentRow),
-		]
-			.map(line => wordWrap(line))
-			.join('\n')
+			'Targets:',
+			`  ${latestVersionTargets.join(', ')}`,
+		);
+	}
+
+	rows.push(
+		'',
+		'More info:',
+		...tableView([
+			['Unique identifier:', `${publisherName}.${extensionName}`],
+			['Version:', version],
+			['Last updated:', formatDateTime(lastUpdated!)],
+			['Publisher:', publisherDisplayName],
+			['Published at:', formatDate(publishedDate!)],
+		]).map(indentRow),
+		'',
+		'Statistics:',
+		...tableView(
+			<ViewTable>statistics
+				.filter(({ statisticName }) => !/^trending/.test(statisticName!))
+				.map(({ statisticName, value }) => [statisticName, unit(round(value!), statisticName!)])
+		).map(indentRow),
 	);
+
+	// Render
+	console.log(rows.map(line => wordWrap(line)).join('\n'));
 }
