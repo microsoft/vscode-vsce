@@ -38,7 +38,12 @@ extends:
         testSteps:
           - script: npm ci
           - script: npm test
-        ${{ if eq(parameters.nextVersion, 'none') }}:
+        ${{ if and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
+          publishPackage: true
+          publishRequiresApproval: false
+          nextVersion: prerelease
+          tag: next
+        ${{ elseif eq(parameters.nextVersion, 'none') }}:
           publishPackage: false
         ${{ else }}:
           publishPackage: true
