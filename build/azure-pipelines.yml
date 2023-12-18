@@ -20,6 +20,13 @@ parameters:
     type: string
     default: 'none'
 
+variables:
+  - name: nextVersion
+    ${{ if and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
+      value: 'prerelease'
+    ${{ else }}:
+      value: ${{ parameters.nextVersion }}
+
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
   parameters:
@@ -40,6 +47,11 @@ extends:
           - script: npm test
         ${{ if eq(parameters.nextVersion, 'none') }}:
           publishPackage: false
+        ${{ else if eq(parameters.nextVersion, 'prerelease') }}:
+          publishPackage: true
+          publishRequiresApproval: false
+          nextVersion: prerelease
+          tag: next
         ${{ else }}:
           publishPackage: true
-          nextVersion: ${{ parameters.nextVersion }}
+          nextVersion: ${{ variables.nextVersion }}
