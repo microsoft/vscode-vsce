@@ -47,7 +47,7 @@ extends:
           - script: npm test
         ${{ if eq(parameters.nextVersion, 'none') }}:
           publishPackage: false
-        ${{ else if eq(parameters.nextVersion, 'prerelease') }}:
+        ${{ elseif eq(parameters.nextVersion, 'prerelease') }}:
           publishPackage: true
           publishRequiresApproval: false
           nextVersion: prerelease
