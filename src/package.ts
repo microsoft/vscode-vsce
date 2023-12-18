@@ -779,7 +779,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 
 			// Replace <img> links with urls
 			contents = contents.replace(/<(?:img|video)[^>]+src=["']([/.\w\s#-]+)['"][^>]*>/gm, (all, link) => {
-				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#';
+				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#' && !link.startsWith('data:');
 
 				if (!this.baseImagesUrl && isLinkRelative) {
 					throw new Error(
