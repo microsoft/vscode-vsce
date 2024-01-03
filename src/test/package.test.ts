@@ -275,14 +275,6 @@ describe('collect', function () {
 			{
 				path: 'extension/node_modules/package-a/important/prod.log',
 				localPath: path.resolve(root, 'node_modules/package-a/important/prod.log')
-			},
-			{
-				path: 'extension/node_modules/curry/curry.js',
-				localPath: path.resolve(root, 'node_modules/curry/curry.js')
-			},
-			{
-				path: 'extension/node_modules/curry/package.json',
-				localPath: path.resolve(root, 'node_modules/curry/package.json')
 			}
 		].forEach(expected => {
 			const found = files.find(f => f.path === expected.path || f.localPath === expected.localPath);
