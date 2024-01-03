@@ -6,7 +6,6 @@
 		"vscode": "*"
 	},
 	"dependencies": {
-		"curry": "1.2.0",
 		"filter-obj": "2.0.1"
 	},
 	"devDependencies": {

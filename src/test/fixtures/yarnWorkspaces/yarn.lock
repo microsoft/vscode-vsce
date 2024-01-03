@@ -2,11 +2,6 @@
 # yarn lockfile v1
 
 
-curry@1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/curry/-/curry-1.2.0.tgz#9e6dd289548dba7e653d5ae3fe903fe7dfb33af2"
-  integrity sha1-nm3SiVSNun5lPVrj/pA/59+zOvI=
-
 filter-obj@2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/filter-obj/-/filter-obj-2.0.1.tgz#34d9f0536786f072df7aeac3a8bda1c6e767aec6"
