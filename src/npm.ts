@@ -64,18 +64,12 @@ async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 	}
 }
 
-function getNpmDependencies(cwd: string): Promise<SourceAndDestination[]> {
+function getNpmDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
 		.then(() =>
 			exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
 		)
-		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
-			.map(dir => {
-				return {
-					src: dir,
-					dest: path.relative(cwd, dir)
-				}
-			}));
+		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir)));
 }
 
 export interface YarnDependency {
@@ -229,11 +223,11 @@ export async function getDependencies(
 	manifest: Manifest,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	packagedDependencies?: string[]
-): Promise<SourceAndDestination[]> {
+): Promise<Array<SourceAndDestination |string>> {
 	const root = findWorkspaceRoot(cwd) || cwd;
 
 	if (dependencies === 'none') {
-		return [{ src: root, dest: '' }];
+		return [cwd];
 	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(root)))) {
 		return await getYarnDependencies(cwd, root, manifest, packagedDependencies);
 	} else {

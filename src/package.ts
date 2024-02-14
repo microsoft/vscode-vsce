@@ -1572,12 +1572,23 @@ async function collectAllFiles(
 ): Promise<SourceAndDestination[]> {
 	const deps = await getDependencies(cwd, manifest, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		promisify(glob)('**', { cwd: dep.src, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
-			files.map(f => ({
-				src: path.relative(cwd, path.join(dep.src, f)).replace(/\\/g, '/'),
-				dest: path.join(dep.dest, f).replace(/\\/g, '/')
-			}))
-		)
+		promisify(glob)('**', { cwd: typeof dep === 'string' ? dep : dep.src, nodir: true, dot: true, ignore: 'node_modules/**' })
+			.then(files =>
+				files.map(f => {
+					if (typeof dep === 'string') {
+						const src = path.relative(cwd, path.join(dep, f)).replace(/\\/g, '/');
+						return {
+							src,
+							dest: src
+						};
+					} else {
+						return {
+							src: path.relative(cwd, path.join(dep.src, f)).replace(/\\/g, '/'),
+							dest: path.join(dep.dest, f).replace(/\\/g, '/')
+						};
+					}
+				})
+			)
 	);
 
 	return Promise.all(promises).then(util.flatten);

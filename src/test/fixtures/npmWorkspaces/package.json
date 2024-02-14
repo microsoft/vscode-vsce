@@ -1,0 +1,15 @@
+{
+	"name": "npm-workspaces-monorepo",
+	"publisher": "mocha",
+	"version": "1.0.0",
+	"private": true,
+	"engines": { "vscode": "*" },
+  "workspaces": [
+    "packageA",
+    "packageB"
+  ],
+	"dependencies": {
+	},
+	"devDependencies": {
+	}
+}

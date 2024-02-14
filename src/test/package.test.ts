@@ -288,6 +288,49 @@ describe('collect', function () {
 		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
 	});
 
+	it('should collect the right files when using npm workspaces', async () => {
+		// PackageB will act as the extension here
+		const root = fixture('npmWorkspaces');
+		const cwd = path.join(root, 'packageB');
+		const manifest = await readManifest(cwd);
+
+		assert.strictEqual(manifest.name, 'package-b');
+
+		const files = await collect(manifest, { cwd }) as ILocalFile[];
+
+		[
+			{
+				path: 'extension/main.js',
+				localPath: path.resolve(cwd, 'main.js')
+			},
+			{
+				path: 'extension/package.json',
+				localPath: path.resolve(cwd, 'package.json')
+			},
+			{
+				path: 'extension/../node_modules/package-a/main.js',
+				localPath: path.resolve(root, 'node_modules/package-a/main.js')
+			},
+			{
+				path: 'extension/../node_modules/package-a/package.json',
+				localPath: path.resolve(root, 'node_modules/package-a/package.json')
+			},
+			{
+				path: 'extension/../node_modules/package-a/important/prod.log',
+				localPath: path.resolve(root, 'node_modules/package-a/important/prod.log')
+			}
+		].forEach(expected => {
+			const found = files.find(f => f.path === expected.path || f.localPath === expected.localPath);
+			if (found) {
+				assert.strictEqual(found.path, expected.path, 'path');
+				assert.strictEqual(found.localPath, expected.localPath, 'localPath');
+			}
+		})
+		const ignoreFilename = 'extension/node_modules/package-a/logger.log';
+		const ignore = files.find(f => f.path === ignoreFilename);
+		assert.ok(!ignore, 'should ignore ' + ignoreFilename)
+	});
+
 	it('should handle target and ignoreOtherTargetFolders', async function () {
 		const cwd = fixture('target');
 		const manifest = await readManifest(cwd);
@@ -319,7 +362,7 @@ describe('collect', function () {
 		assert.ok(files.some(f => f.path === 'extension/darwin-arm64/file.txt'));
 		assert.ok(files.some(f => f.path === 'extension/deep/darwin-arm64/file.txt'));
 
-		files = await collect(manifest, { cwd, target: 'linux-x64', ignoreOtherTargetFolders: true });
+		files = await collect(manifest, { cwd, target: 'linux-x64' });
 
 		assert.strictEqual(files.length, 9);
 		assert.ok(files.some(f => f.path === 'extension/file.txt'));
@@ -676,7 +719,7 @@ describe('toVsixManifest', () => {
 
 		const files = [{ path: 'extension/foo/readme-foo.md', contents: Buffer.from('') }];
 
-		return _toVsixManifest(manifest, files, { readmePath: 'foo/readme-foo.md' })
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
@@ -722,7 +765,7 @@ describe('toVsixManifest', () => {
 
 		const files = [{ path: 'extension/foo/changelog-foo.md', contents: Buffer.from('') }];
 
-		return _toVsixManifest(manifest, files, { changelogPath: 'foo/changelog-foo.md' })
+		return _toVsixManifest(manifest, files)
 			.then(xml => parseXmlManifest(xml))
 			.then(result => {
 				assert.strictEqual(result.PackageManifest.Assets[0].Asset.length, 2);
