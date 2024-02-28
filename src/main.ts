@@ -193,6 +193,7 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
+		.option('--sigzipPath <paths...>', 'Signature archives to publish alongside the VSIX packages.')
 		.option(
 			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
@@ -230,6 +231,7 @@ module.exports = function (argv: string[]): void {
 					gitTagVersion,
 					updatePackageJson,
 					packagePath,
+					signatureArchivePath,
 					githubBranch,
 					gitlabBranch,
 					baseContentUrl,
@@ -259,6 +261,7 @@ module.exports = function (argv: string[]): void {
 						gitTagVersion,
 						updatePackageJson,
 						packagePath,
+						signatureArchivePath,
 						githubBranch,
 						gitlabBranch,
 						baseContentUrl,
