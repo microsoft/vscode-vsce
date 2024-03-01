@@ -11,6 +11,7 @@ import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import FormData from 'form-data';
+import { basename } from 'path';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -208,7 +209,7 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 			}
 
 			if (sigzipPath) {
-				await _publishSignedPackage(api, packageStream, fs.createReadStream(sigzipPath), manifest);
+				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
 			} else {
 				try {
 					await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
@@ -227,7 +228,7 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 			}
 		} else {
 			if (sigzipPath) {
-				await _publishSignedPackage(api, packageStream, fs.createReadStream(sigzipPath), manifest);
+				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
 			} else {
 				await api.createExtension(undefined, packageStream);
 			}
@@ -249,20 +250,30 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 	log.done(`Published ${description}.`);
 }
 
-async function _publishSignedPackage(api: GalleryApi, packageStream: fs.ReadStream, sigZipStream: fs.ReadStream, manifest: Manifest) {
+async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: Manifest) {
 	const apiVersion = '7.2-preview.1';
 	const url = encodeURI(`${api.baseUrl}/_apis/gallery/publishers/${manifest.publisher}/publishersignedextension/${manifest.name}?extensionType=Visual Studio Code&api-version=${apiVersion}&reCaptchaToken=`);
 	const requestOptions = api.createRequestOptions('application/json', apiVersion);
-	
+
 	const form = new FormData();
 	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
-	form.append('vsix', packageStream);
-	form.append('sigzip', sigZipStream);
+	form.append('vsix', packageStream, {
+		header: {
+			'Content-Disposition': `attachment; name="vsix"; filename="${packageName}"`,
+			'Content-Type': 'application/octet-stream'
+		}
+	});
+	form.append('sigzip', sigzipStream, {
+		header: {
+			'Content-Disposition': `attachment; name="sigzip"; filename="${sigzipName}"`,
+			'Content-Type': 'application/octet-stream'
+		}
+	});
 	requestOptions.additionalHeaders = {
 		...form.getHeaders(),
 		'Content-Type': `multipart/related; boundary=${form.getBoundary()}`
 	};
-	
+
 	const response = await api.rest.uploadStream('PUT', url, form, requestOptions);
 	return api.formatResponse(response.result, {}, false);
 }
