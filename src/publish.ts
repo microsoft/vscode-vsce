@@ -72,7 +72,7 @@ export interface IPublishOptions {
 	readonly skipDuplicate?: boolean;
 	readonly skipLicense?: boolean;
 
-	readonly signatureArchivePath?: string[];
+	readonly sigzipPath?: string[];
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -112,7 +112,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 			}
 
-			await _publish(packagePath, options.signatureArchivePath?.[index], vsix.manifest, { ...options, target });
+			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
@@ -146,7 +146,7 @@ export interface IInternalPublishOptions {
 	readonly skipDuplicate?: boolean;
 }
 
-async function _publish(packagePath: string, signatureArchivePath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
+async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
 	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
@@ -207,8 +207,8 @@ async function _publish(packagePath: string, signatureArchivePath: string | unde
 
 			}
 
-			if (signatureArchivePath) {
-				await _publishSignedPackage(api, packageStream, fs.createReadStream(signatureArchivePath), manifest);
+			if (sigzipPath) {
+				await _publishSignedPackage(api, packageStream, fs.createReadStream(sigzipPath), manifest);
 			} else {
 				try {
 					await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
@@ -226,8 +226,8 @@ async function _publish(packagePath: string, signatureArchivePath: string | unde
 				}
 			}
 		} else {
-			if (signatureArchivePath) {
-				await _publishSignedPackage(api, packageStream, fs.createReadStream(signatureArchivePath), manifest);
+			if (sigzipPath) {
+				await _publishSignedPackage(api, packageStream, fs.createReadStream(sigzipPath), manifest);
 			} else {
 				await api.createExtension(undefined, packageStream);
 			}
