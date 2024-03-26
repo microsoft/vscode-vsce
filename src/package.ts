@@ -1550,6 +1550,7 @@ const defaultIgnore = [
 	'.github',
 	'.travis.yml',
 	'appveyor.yml',
+	'**/.git',
 	'**/.git/**',
 	'**/*.vsix',
 	'**/.DS_Store',
