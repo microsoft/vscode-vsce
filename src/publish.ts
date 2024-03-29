@@ -251,10 +251,7 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 }
 
 async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: Manifest) {
-	const apiVersion = '7.2-preview.1';
-	const url = encodeURI(`${api.baseUrl}/_apis/gallery/publishers/${manifest.publisher}/publishersignedextension/${manifest.name}?extensionType=Visual Studio Code&api-version=${apiVersion}&reCaptchaToken=`);
-	const requestOptions = api.createRequestOptions('application/json', apiVersion);
-
+	const extensionType = 'Visual Studio Code';
 	const form = new FormData();
 	const lineBreak = '\r\n';
 	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
@@ -264,13 +261,8 @@ async function _publishSignedPackage(api: GalleryApi, packageName: string, packa
 	form.append('sigzip', sigzipStream, {
 		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=${sigzipName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
 	});
-	requestOptions.additionalHeaders = {
-		...form.getHeaders(),
-		'Content-Type': `multipart/related; boundary=${form.getBoundary()}`
-	};
 
-	const response = await api.rest.uploadStream('PUT', url, form, requestOptions);
-	return api.formatResponse(response.result, {}, false);
+	return await api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType);
 }
 
 export interface IUnpublishOptions extends IPublishOptions {

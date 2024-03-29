@@ -23,6 +23,10 @@ export function getPublishedUrl(extension: string): string {
 	return `${marketplaceUrl}/items?itemName=${extension}`;
 }
 
+export function getMarketplaceUrl(): string {
+	return marketplaceUrl;
+}
+
 export function getHubUrl(publisher: string, name: string): string {
 	return `${marketplaceUrl}/manage/publishers/${publisher}/extensions/${name}/hub`;
 }
