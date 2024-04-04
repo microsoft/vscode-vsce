@@ -9,6 +9,9 @@ import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithM
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
+import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
+import FormData from 'form-data';
+import { basename } from 'path';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -69,6 +72,8 @@ export interface IPublishOptions {
 	readonly allowMissingRepository?: boolean;
 	readonly skipDuplicate?: boolean;
 	readonly skipLicense?: boolean;
+
+	readonly sigzipPath?: string[];
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -81,7 +86,8 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			);
 		}
 
-		for (const packagePath of options.packagePath) {
+		for (let index = 0; index < options.packagePath.length; index++) {
+			const packagePath = options.packagePath[index];
 			const vsix = await readVSIXPackage(packagePath);
 			let target: string | undefined;
 
@@ -107,7 +113,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 			}
 
-			await _publish(packagePath, vsix.manifest, { ...options, target });
+			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
@@ -121,12 +127,12 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			for (const target of options.targets) {
 				const packagePath = await tmpName();
 				const packageResult = await pack({ ...options, target, packagePath });
-				await _publish(packagePath, packageResult.manifest, { ...options, target });
+				await _publish(packagePath, undefined, packageResult.manifest, { ...options, target });
 			}
 		} else {
 			const packagePath = await tmpName();
 			const packageResult = await pack({ ...options, packagePath });
-			await _publish(packagePath, packageResult.manifest, options);
+			await _publish(packagePath, undefined, packageResult.manifest, options);
 		}
 	}
 }
@@ -141,7 +147,7 @@ export interface IInternalPublishOptions {
 	readonly skipDuplicate?: boolean;
 }
 
-async function _publish(packagePath: string, manifest: Manifest, options: IInternalPublishOptions) {
+async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
 	validatePublisher(manifest.publisher);
 
 	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
@@ -202,22 +208,30 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 
 			}
 
-			try {
-				await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
-			} catch (err: any) {
-				if (err.statusCode === 409) {
-					if (options.skipDuplicate) {
-						log.done(`Version ${manifest.version} is already published. Skipping publish.`);
-						return;
+			if (sigzipPath) {
+				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
+			} else {
+				try {
+					await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
+				} catch (err: any) {
+					if (err.statusCode === 409) {
+						if (options.skipDuplicate) {
+							log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+							return;
+						} else {
+							throw new Error(`${description} already exists.`);
+						}
 					} else {
-						throw new Error(`${description} already exists.`);
+						throw err;
 					}
-				} else {
-					throw err;
 				}
 			}
 		} else {
-			await api.createExtension(undefined, packageStream);
+			if (sigzipPath) {
+				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
+			} else {
+				await api.createExtension(undefined, packageStream);
+			}
 		}
 	} catch (err: any) {
 		const message = (err && err.message) || '';
@@ -234,6 +248,21 @@ async function _publish(packagePath: string, manifest: Manifest, options: IInter
 	log.info(`Extension URL (might take a few minutes): ${getPublishedUrl(name)}`);
 	log.info(`Hub URL: ${getHubUrl(manifest.publisher, manifest.name)}`);
 	log.done(`Published ${description}.`);
+}
+
+async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: Manifest) {
+	const extensionType = 'Visual Studio Code';
+	const form = new FormData();
+	const lineBreak = '\r\n';
+	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
+	form.append('vsix', packageStream, {
+		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=vsix; filename=${packageName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
+	});
+	form.append('sigzip', sigzipStream, {
+		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=${sigzipName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
+	});
+
+	return await api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType);
 }
 
 export interface IUnpublishOptions extends IPublishOptions {
