@@ -3,5 +3,5 @@
 	"publisher": "joaomoreno",
 	"version": "1.0.0",
 	"engines": { "vscode": "*" },
-	"files": ["foo", "foo2/bar2/include.me", "package.json"]
+	"files": ["foo", "foo2/bar2/include.me", "*/bar3/**", "package.json"]
 }

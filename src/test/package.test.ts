@@ -144,6 +144,7 @@ describe('collect', function () {
 			'extension.vsixmanifest',
 			'extension/foo/bar/hello.txt',
 			'extension/foo2/bar2/include.me',
+			'extension/foo3/bar3/hello.txt',
 			'extension/package.json',
 		]);
 	});

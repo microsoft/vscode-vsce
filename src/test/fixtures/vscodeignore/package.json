@@ -3,5 +3,5 @@
 	"publisher": "joaomoreno",
 	"version": "1.0.0",
 	"engines": { "vscode": "*" },
-	"files": ["foo", "package.json"]
+	"files": []
 }
