@@ -133,6 +133,21 @@ describe('collect', function () {
 		]);
 	});
 
+	it('should include content of manifest.files', async () => {
+		const cwd = fixture('manifestFiles');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd });
+		const names = files.map(f => f.path).sort();
+
+		assert.deepStrictEqual(names, [
+			'[Content_Types].xml',
+			'extension.vsixmanifest',
+			'extension/foo/bar/hello.txt',
+			'extension/foo2/bar2/include.me',
+			'extension/package.json',
+		]);
+	});
+
 	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
 		return readManifest(cwd)

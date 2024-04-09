@@ -1594,7 +1594,8 @@ function collectFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
-	ignoreFile?: string
+	ignoreFile?: string,
+	manifestFileIncludes?: string[]
 ): Promise<string[]> {
 	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
@@ -1603,7 +1604,16 @@ function collectFiles(
 			fs.promises
 				.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
 				.catch<string>(err =>
-					err.code !== 'ENOENT' ? Promise.reject(err) : ignoreFile ? Promise.reject(err) : Promise.resolve('')
+					err.code !== 'ENOENT' ?
+						Promise.reject(err) :
+						ignoreFile ?
+							Promise.reject(err) :
+							// No .vscodeignore file exists
+							manifestFileIncludes ?
+								// include all files in manifestFileIncludes and ignore the rest
+								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
+								// "files" property not used in package.json 
+								Promise.resolve('')
 				)
 
 				// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
@@ -1694,7 +1704,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile).then(fileNames => {
+	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files).then(fileNames => {
 		const files = fileNames.map(f => ({ path: `extension/${f}`, localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1846,7 +1856,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile);
+	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files);
 }
 
 /**
