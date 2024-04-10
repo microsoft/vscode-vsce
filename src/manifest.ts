@@ -107,12 +107,12 @@ export interface Manifest {
 	devDependencies?: { [name: string]: string };
 	private?: boolean;
 	pricing?: string;
+	files?: string[];
 
 	// vsce
 	vsce?: any;
 
 	// not supported (npm)
-	// files?: string[];
 	// bin
 	// man
 	// directories
