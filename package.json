@@ -41,6 +41,7 @@
 		"azure-devops-node-api": "^12.5.0",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
+		"cockatiel": "^3.1.2",
 		"commander": "^6.2.1",
 		"form-data": "^4.0.0",
 		"glob": "^7.0.6",
