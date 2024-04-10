@@ -63,7 +63,9 @@ describe('validateVersion', () => {
 	it('should validate', () => {
 		validateVersion('1.0.0');
 		validateVersion('0.1.1');
-		validateVersion('0.1.1-pre');
+
+		// Marketplace does not support pre-release versions
+		assert.throws(() => validateVersion('0.1.1-pre'));
 
 		assert.throws(() => validateVersion('.'));
 		assert.throws(() => validateVersion('..'));
