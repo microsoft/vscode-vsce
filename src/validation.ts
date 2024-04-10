@@ -35,10 +35,6 @@ export function validateVersion(version: string): void {
 	if (!semver.valid(version)) {
 		throw new Error(`Invalid extension version '${version}'`);
 	}
-
-	if (semver.prerelease(version)) {
-		throw new Error(`Extension version '${version}' should not include a pre-release version. Checkout our pre-release versioning recommendation here: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions`);
-	}
 }
 
 export function validateEngineCompatibility(version: string): void {

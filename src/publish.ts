@@ -113,12 +113,18 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 			}
 
-			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
+			const publishOptions = { ...options, target };
+			validateMarketplaceRequirements(vsix.manifest, publishOptions);
+
+			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, publishOptions);
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
 		const manifest = await readManifest(cwd);
 		patchOptionsWithManifest(options, manifest);
+
+		// Validate marketplace requirements before prepublish to avoid unnecessary work
+		validateMarketplaceRequirements(manifest, options);
 
 		await prepublish(cwd, manifest, options.useYarn);
 		await versionBump(options);
@@ -148,24 +154,6 @@ export interface IInternalPublishOptions {
 }
 
 async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
-	validatePublisher(manifest.publisher);
-
-	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
-		throw new Error(
-			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
-		);
-	}
-
-	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
-		throw new Error(
-			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
-		);
-	}
-
-	if (semver.prerelease(manifest.version)) {
-		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'`);
-	}
-
 	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
 	const api = await getGalleryAPI(pat);
 	const packageStream = fs.createReadStream(packagePath);
@@ -296,4 +284,24 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 
 	await api.deleteExtension(publisher, name);
 	log.done(`Deleted extension: ${fullName}!`);
+}
+
+function validateMarketplaceRequirements(manifest: Manifest, options: IInternalPublishOptions) {
+	validatePublisher(manifest.publisher);
+
+	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
+		throw new Error(
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
+		);
+	}
+
+	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
+		throw new Error(
+			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
+		);
+	}
+
+	if (semver.prerelease(manifest.version)) {
+		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'. Checkout our pre-release versioning recommendation here: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions`);
+	}
 }
