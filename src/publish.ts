@@ -113,10 +113,9 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 			}
 
-			const publishOptions = { ...options, target };
-			validateMarketplaceRequirements(vsix.manifest, publishOptions);
+			validateMarketplaceRequirements(vsix.manifest, options);
 
-			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, publishOptions);
+			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
