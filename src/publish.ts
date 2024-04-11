@@ -298,13 +298,13 @@ function validateMarketplaceRequirements(manifest: Manifest, options: IInternalP
 
 	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
 		throw new Error(
-			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass."
+			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass. https://code.visualstudio.com/api/advanced-topics/using-proposed-api"
 		);
 	}
 
 	if (manifest.enabledApiProposals && !options.allowAllProposedApis && !options.noVerify && manifest.enabledApiProposals?.some(p => !options.allowProposedApis?.includes(p))) {
 		throw new Error(
-			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass.`
+			`Extensions using unallowed proposed API (enabledApiProposals: [${manifest.enabledApiProposals}], allowed: [${options.allowProposedApis ?? []}]) can't be published to the Marketplace. Use --allow-proposed-apis <APIS...> or --allow-all-proposed-apis to bypass. https://code.visualstudio.com/api/advanced-topics/using-proposed-api`
 		);
 	}
 
