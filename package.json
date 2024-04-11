@@ -35,12 +35,13 @@
 		"watch:test": "npm run test -- --watch"
 	},
 	"engines": {
-		"node": ">= 14"
+		"node": ">= 16"
 	},
 	"dependencies": {
 		"azure-devops-node-api": "^12.5.0",
 		"chalk": "^2.4.2",
 		"cheerio": "^1.0.0-rc.9",
+		"cockatiel": "^3.1.2",
 		"commander": "^6.2.1",
 		"form-data": "^4.0.0",
 		"glob": "^7.0.6",
@@ -69,7 +70,7 @@
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^14.17.32",
+		"@types/node": "^16.11.7",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
 		"@types/tmp": "^0.2.2",

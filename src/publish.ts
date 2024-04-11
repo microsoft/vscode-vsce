@@ -12,6 +12,7 @@ import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import FormData from 'form-data';
 import { basename } from 'path';
+import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -249,7 +250,14 @@ async function _publishSignedPackage(api: GalleryApi, packageName: string, packa
 		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=${sigzipName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
 	});
 
-	return await api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType);
+	const publishWithRetry = retry(handleWhen(err => err.message.includes('timeout')), {
+		maxAttempts: 3,
+		backoff: new IterableBackoff([5_000, 10_000, 20_000])
+	});
+
+	return await publishWithRetry.execute(async () => {
+		return await api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType);
+	});
 }
 
 export interface IUnpublishOptions extends IPublishOptions {
