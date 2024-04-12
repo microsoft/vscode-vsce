@@ -73,6 +73,7 @@ describe('validateVersion', () => {
 		assert.throws(() => validateVersion('0.1.'));
 		assert.throws(() => validateVersion('0.0.0.1'));
 		assert.throws(() => validateVersion('1.0-pre'));
+		assert.throws(() => validateVersion('pre'));
 	});
 });
 
