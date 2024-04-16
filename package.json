@@ -1,5 +1,5 @@
 {
-	"name": "@vscode/vsce",
+	"name": "vsce",
 	"version": "0.0.0",
 	"description": "VS Code Extensions Manager",
 	"repository": {
@@ -24,7 +24,7 @@
 	"main": "out/api.js",
 	"typings": "dist/vsce.d.ts",
 	"bin": {
-		"vsce": "vsce"
+		"vsce": "out/vsce"
 	},
 	"scripts": {
 		"compile": "tsc",

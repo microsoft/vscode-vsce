@@ -218,6 +218,8 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
 		.option('--skip-license', 'Allow publishing without license file')
+		 .option('--prePublishScript <path>', 'Script to run before publishing a release version')
+		 .option('--prePublishPreReleaseScript <path>', 'Script to run before publishing a pre-release version')
 		.action(
 			(
 				version,

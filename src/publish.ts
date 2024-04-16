@@ -75,7 +75,19 @@ export interface IPublishOptions {
 	readonly skipLicense?: boolean;
 
 	readonly sigzipPath?: string[];
+
+	/**
+	 * The script to run before publishing a release version.
+	 */
+	readonly prePublishScript?: string;
+
+	/**
+	 * The script to run before publishing a pre-release version.
+	 */
+	readonly prePublishPreReleaseScript?: string;
 }
+
+import { execSync } from 'child_process';
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
 	if (options.packagePath) {
@@ -116,6 +128,15 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 
 			validateMarketplaceRequirements(vsix.manifest, options);
 
+            // Execute pre-publish scripts based on preRelease flag
+            if (options.preRelease && options.prePublishPreReleaseScript) {
+                // Execute the pre-publish script for pre-release
+                execSync(options.prePublishPreReleaseScript);
+            } else if (options.prePublishScript) {
+                // Execute the pre-publish script for release
+                execSync(options.prePublishScript);
+            }
+
 			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
 		}
 	} else {
@@ -125,6 +146,15 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 
 		// Validate marketplace requirements before prepublish to avoid unnecessary work
 		validateMarketplaceRequirements(manifest, options);
+
+        // Execute pre-publish scripts based on preRelease flag
+        if (options.preRelease && options.prePublishPreReleaseScript) {
+            // Execute the pre-publish script for pre-release
+            execSync(options.prePublishPreReleaseScript);
+        } else if (options.prePublishScript) {
+            // Execute the pre-publish script for release
+            execSync(options.prePublishScript);
+        }
 
 		await prepublish(cwd, manifest, options.useYarn);
 		await versionBump(options);
