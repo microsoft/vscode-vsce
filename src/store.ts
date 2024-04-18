@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { homedir } from 'os';
-import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl, getAzureCredentialAccessToken } from './util';
+import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
 import { getPAT } from './publish';
