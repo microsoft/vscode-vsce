@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { homedir } from 'os';
-import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl } from './util';
+import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl, getAzureCredentialAccessToken } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
 
@@ -113,9 +113,13 @@ export class KeytarStore implements IStore {
 	}
 }
 
-export async function verifyPat(pat: string, publisherName?: string): Promise<void> {
-	if (!pat) {
-		throw new Error('The Personal Access Token is mandatory.');
+export async function verifyPat(pat: string, azureCredential?: boolean, publisherName?: string): Promise<void> {
+	if (!pat && !azureCredential) {
+		throw new Error('The Personal Access Token or the `--azure-credential` option is mandatory.');
+	}
+
+	if (azureCredential) {
+		pat = await getAzureCredentialAccessToken();
 	}
 
 	if (!publisherName) {
@@ -145,7 +149,7 @@ async function requestPAT(publisherName: string): Promise<string> {
 	console.log(`${getMarketplaceUrl()}/manage/publishers/`);
 
 	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
-	await verifyPat(pat, publisherName);
+	await verifyPat(pat, false, publisherName);
 	return pat;
 }
 

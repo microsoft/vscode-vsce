@@ -5,7 +5,7 @@ import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/i
 import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest, getAzureCredentialAccessToken } from './util';
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
@@ -63,6 +63,7 @@ export interface IPublishOptions {
 	 * Defaults to the stored one.
 	 */
 	readonly pat?: string;
+	readonly azureCredential?: boolean;
 	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
@@ -154,7 +155,7 @@ export interface IInternalPublishOptions {
 }
 
 async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
-	const pat = options.pat ?? (await getPublisher(manifest.publisher)).pat;
+	const pat = await getPAT(manifest.publisher, options);
 	const api = await getGalleryAPI(pat);
 	const packageStream = fs.createReadStream(packagePath);
 	const name = `${manifest.publisher}.${manifest.name}`;
@@ -286,7 +287,7 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 		}
 	}
 
-	const pat = options.pat ?? (await getPublisher(publisher)).pat;
+	const pat = await getPAT(publisher, options);
 	const api = await getGalleryAPI(pat);
 
 	await api.deleteExtension(publisher, name);
@@ -311,4 +312,16 @@ function validateMarketplaceRequirements(manifest: Manifest, options: IInternalP
 	if (semver.prerelease(manifest.version)) {
 		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'. Checkout our pre-release versioning recommendation here: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions`);
 	}
+}
+
+export async function getPAT(publisher: string, options: IPublishOptions | IUnpublishOptions): Promise<string> {
+	if (options.pat) {
+		return options.pat;
+	}
+
+	if (options.azureCredential) {
+		return await getAzureCredentialAccessToken();
+	}
+
+	return (await getPublisher(publisher)).pat;
 }
