@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl } from './util';
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
+import { getPAT } from './publish';
 
 export interface IPublisher {
 	readonly name: string;
@@ -116,11 +117,12 @@ export class KeytarStore implements IStore {
 export interface IVerifyPatOptions {
 	readonly publisherName?: string;
 	readonly pat?: string;
+	readonly azureCredential?: boolean;
 }
 
 export async function verifyPat(options: IVerifyPatOptions): Promise<void> {
 	const publisherName = options.publisherName ?? (await readManifest()).publisher;
-	const pat = options.pat ?? (await getPublisher(publisherName)).pat;
+	const pat = await getPAT(publisherName, options);
 
 	try {
 		// If the caller of the `getRoleAssignments` API has any of the roles

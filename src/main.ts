@@ -182,6 +182,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
+		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
@@ -223,6 +224,7 @@ module.exports = function (argv: string[]): void {
 				version,
 				{
 					pat,
+					azureCredential,
 					target,
 					ignoreOtherTargetFolders,
 					readmePath,
@@ -252,6 +254,7 @@ module.exports = function (argv: string[]): void {
 				main(
 					publish({
 						pat,
+						azureCredential,
 						version,
 						targets: target,
 						ignoreOtherTargetFolders,
@@ -285,8 +288,9 @@ module.exports = function (argv: string[]): void {
 		.command('unpublish [extensionid]')
 		.description('Unpublishes an extension. Example extension id: ms-vscode.live-server.')
 		.option('-p, --pat <token>', 'Personal Access Token')
+		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
-		.action((id, { pat, force }) => main(unpublish({ id, pat, force })));
+		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force })));
 
 	program
 		.command('ls-publishers')
@@ -310,13 +314,14 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('verify-pat [publisher]')
-		.description('Verifies if the Personal Access Token has publish rights for the publisher')
+		.description('Verifies if the Personal Access Token or Azure identity has publish rights for the publisher')
 		.option(
 			'-p, --pat <token>',
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.action((publisherName, { pat }) => main(verifyPat({ publisherName, pat })));
+		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
+		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential })));
 
 	program
 		.command('show <extensionid>')
