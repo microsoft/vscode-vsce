@@ -4,7 +4,7 @@ import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump, prepublish } from './package';
 import * as tmp from 'tmp';
-import { getPublisher } from './store';
+import { IVerifyPatOptions, getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest, getAzureCredentialAccessToken } from './util';
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
@@ -314,7 +314,7 @@ function validateMarketplaceRequirements(manifest: Manifest, options: IInternalP
 	}
 }
 
-export async function getPAT(publisher: string, options: IPublishOptions | IUnpublishOptions): Promise<string> {
+export async function getPAT(publisher: string, options: IPublishOptions | IUnpublishOptions | IVerifyPatOptions): Promise<string> {
 	if (options.pat) {
 		return options.pat;
 	}

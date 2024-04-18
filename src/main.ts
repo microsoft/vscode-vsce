@@ -321,7 +321,7 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
-		.action((name, { pat, azureCredential }) => main(verifyPat(pat, azureCredential, name)));
+		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential })));
 
 	program
 		.command('show <extensionid>')
