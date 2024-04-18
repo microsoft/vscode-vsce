@@ -39,7 +39,7 @@ export class FileStore implements IStore {
 		return this.publishers.length;
 	}
 
-	private constructor(readonly path: string, private publishers: IPublisher[]) {}
+	private constructor(readonly path: string, private publishers: IPublisher[]) { }
 
 	private async save(): Promise<void> {
 		await fs.promises.writeFile(this.path, JSON.stringify({ publishers: this.publishers }), { mode: '0600' });
@@ -92,7 +92,7 @@ export class KeytarStore implements IStore {
 		private readonly keytar: typeof import('keytar'),
 		private readonly serviceName: string,
 		private publishers: IPublisher[]
-	) {}
+	) { }
 
 	get(name: string): IPublisher {
 		return this.publishers.filter(p => p.name === name)[0];
@@ -113,20 +113,14 @@ export class KeytarStore implements IStore {
 	}
 }
 
-export async function verifyPat(pat: string, publisherName?: string): Promise<void> {
-	if (!pat) {
-		throw new Error('The Personal Access Token is mandatory.');
-	}
+export interface IVerifyPatOptions {
+	readonly publisherName?: string;
+	readonly pat?: string;
+}
 
-	if (!publisherName) {
-		try {
-			publisherName = (await readManifest()).publisher;
-		} catch (error) {
-			throw new Error(
-				`Can not read the publisher's name. Either supply it as an argument or run vsce from the extension folder. Additional information:\n\n${error}`
-			);
-		}
-	}
+export async function verifyPat(options: IVerifyPatOptions): Promise<void> {
+	const publisherName = options.publisherName ?? (await readManifest()).publisher;
+	const pat = options.pat ?? (await getPublisher(publisherName)).pat;
 
 	try {
 		// If the caller of the `getRoleAssignments` API has any of the roles
@@ -145,7 +139,7 @@ async function requestPAT(publisherName: string): Promise<string> {
 	console.log(`${getMarketplaceUrl()}/manage/publishers/`);
 
 	const pat = await read(`Personal Access Token for publisher '${publisherName}':`, { silent: true, replace: '*' });
-	await verifyPat(pat, publisherName);
+	await verifyPat({ publisherName, pat });
 	return pat;
 }
 

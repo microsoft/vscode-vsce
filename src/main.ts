@@ -316,7 +316,7 @@ module.exports = function (argv: string[]): void {
 			'Personal Access Token (defaults to VSCE_PAT environment variable)',
 			process.env['VSCE_PAT']
 		)
-		.action((name, { pat }) => main(verifyPat(pat, name)));
+		.action((publisherName, { pat }) => main(verifyPat({ publisherName, pat })));
 
 	program
 		.command('show <extensionid>')
