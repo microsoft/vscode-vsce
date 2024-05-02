@@ -18,7 +18,12 @@ function createPatcher(translations: ITranslations): <T>(value: T) => T {
 			return value;
 		}
 
-		return ((translations[match[1]] as unknown) ?? value) as T;
+		const translation = translations[match[1]] as unknown;
+		if (translation === undefined) {
+			throw new Error(`No translation found for ${value}`);
+		}
+
+		return translation as T;
 	};
 }
 
