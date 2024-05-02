@@ -422,12 +422,10 @@ function sanitizeCommitMessage(message?: string): string | undefined {
 		return undefined;
 	}
 
+	// Remove any unsafe characters found by the unsafeRegex
 	// Check for characters that might escape quotes or introduce shell commands.
 	// Don't allow: ', ", `, $, \ (except for \n which is allowed)
-	const unsafeRegex = /(?<!\\)\\(?!n)|['"`$]/g;
-
-	// Remove any unsafe characters found by the unsafeRegex
-	const sanitizedMessage = message.replace(unsafeRegex, '');
+	const sanitizedMessage = message.replace(/(?<!\\)\\(?!n)|['"`$]/g, '');
 
 	if (sanitizedMessage.length === 0) {
 		return undefined;
