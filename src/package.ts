@@ -444,7 +444,7 @@ export function sanitizeCommitMessage(message: string): string | undefined {
 		return undefined;
 	}
 
-	return sanitizedMessage;
+	return `"${sanitizedMessage}"`;
 }
 
 export const Targets = new Set([
