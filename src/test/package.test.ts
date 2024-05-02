@@ -13,7 +13,7 @@ import {
 	ManifestProcessor,
 	versionBump,
 	VSIX,
-	LicenseProcessor,
+	LicenseProcessor
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
@@ -25,6 +25,7 @@ import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
+import { quote } from 'shell-quote';
 
 // don't warn in tests
 console.warn = () => null;
@@ -3007,7 +3008,7 @@ describe('version', function () {
 		const commitMessage = 'test commit message';
 		await versionBump({ cwd, version: '1.1.1', commitMessage });
 
-		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${commitMessage}\n\n`);
+		assert.deepStrictEqual(git(['show', '-s', '--format=%B', 'HEAD']).stdout, `${quote([commitMessage])}\n\n`);
 	});
 
 	it('should not create git tag and commit', async () => {

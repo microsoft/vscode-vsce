@@ -24,7 +24,6 @@ import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
-import { quote } from 'shell-quote';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -400,9 +399,11 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	const args = ['version', options.version];
 
 	if (options.commitMessage) {
-		// Validate commit message due to possible shell injection on windows
-		const validatedCommitMessage = quote([options.commitMessage]);
-		args.push('-m', validatedCommitMessage);
+		// Sanitize commit message due to possible shell injection on windows
+		const sanitizedCommitMessage = sanitizeCommitMessage(options.commitMessage);
+		if (sanitizedCommitMessage) {
+			args.push('-m', sanitizedCommitMessage);
+		}
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
@@ -415,6 +416,35 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 		process.stdout.write(stdout);
 		process.stderr.write(stderr);
 	}
+}
+
+export function sanitizeCommitMessage(message: string): string | undefined {
+	// Allow alphanumeric, space, common punctuation, newline characters.
+	// Specifically check for characters that might escape quotes or introduce shell commands.
+	// Newlines are allowed, but backslashes (other than for newlines), backticks, and dollar signs are still checked.
+	const unsafeRegex = /(?<!\\)\\(?!n)|['"`$]/g;
+
+	// Replace any unsafe characters found by the unsafeRegex
+	const sanitizedMessage = message.replace(unsafeRegex, '');
+
+	// Additional check to make sure nothing potentially dangerous is still in the string
+	if ([`'`, `"`, '`', '$'].some(char => sanitizedMessage.includes(char))) {
+		throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
+	}
+
+	// Make sure all backslashes are followed by 'n' to prevent shell injection
+	sanitizedMessage.split('').reduce((positions: number[], char: string, index: number) => {
+		if (char === '\\' && sanitizedMessage[index + 1] !== 'n') {
+			throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
+		}
+		return positions;
+	}, []);
+
+	if (sanitizedMessage.length === 0) {
+		return undefined;
+	}
+
+	return sanitizedMessage;
 }
 
 export const Targets = new Set([
