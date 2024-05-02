@@ -423,28 +423,17 @@ function sanitizeCommitMessage(message?: string): string | undefined {
 	}
 
 	// Check for characters that might escape quotes or introduce shell commands.
-	// Don't allow: ', ", `, $, \ (except for \n)
+	// Don't allow: ', ", `, $, \ (except for \n which is allowed)
 	const unsafeRegex = /(?<!\\)\\(?!n)|['"`$]/g;
 
 	// Remove any unsafe characters found by the unsafeRegex
 	const sanitizedMessage = message.replace(unsafeRegex, '');
 
-	// Additional check to make sure nothing potentially dangerous is still in the string
-	if ([`'`, `"`, '`', '$'].some(char => sanitizedMessage.includes(char))) {
-		throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
-	}
-
-	for (let index = 0; index < sanitizedMessage.length; index++) {
-		const char = sanitizedMessage[index];
-		if (char === '\\' && sanitizedMessage[index + 1] !== 'n') {
-			throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
-		}
-	}
-
 	if (sanitizedMessage.length === 0) {
 		return undefined;
 	}
 
+	// Add quotes as commit message is passed as a single argument to the shell
 	return `"${sanitizedMessage}"`;
 }
 
