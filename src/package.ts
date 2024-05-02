@@ -422,12 +422,11 @@ function sanitizeCommitMessage(message?: string): string | undefined {
 		return undefined;
 	}
 
-	// Allow alphanumeric, space, common punctuation, newline characters.
-	// Specifically check for characters that might escape quotes or introduce shell commands.
-	// Newlines are allowed, but backslashes (other than for newlines), backticks, and dollar signs are still checked.
+	// Check for characters that might escape quotes or introduce shell commands.
+	// Don't allow: ', ", `, $, \ (except for \n)
 	const unsafeRegex = /(?<!\\)\\(?!n)|['"`$]/g;
 
-	// Replace any unsafe characters found by the unsafeRegex
+	// Remove any unsafe characters found by the unsafeRegex
 	const sanitizedMessage = message.replace(unsafeRegex, '');
 
 	// Additional check to make sure nothing potentially dangerous is still in the string
@@ -435,7 +434,6 @@ function sanitizeCommitMessage(message?: string): string | undefined {
 		throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
 	}
 
-	// Make sure all backslashes are followed by 'n' to prevent shell injection
 	for (let index = 0; index < sanitizedMessage.length; index++) {
 		const char = sanitizedMessage[index];
 		if (char === '\\' && sanitizedMessage[index + 1] !== 'n') {
