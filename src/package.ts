@@ -24,6 +24,7 @@ import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
+import { quote } from 'shell-quote';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -399,15 +400,17 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	const args = ['version', options.version];
 
 	if (options.commitMessage) {
-		args.push('-m', options.commitMessage);
+		// Validate commit message due to possible shell injection on windows
+		const validatedCommitMessage = quote([options.commitMessage]);
+		args.push('-m', validatedCommitMessage);
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
 		args.push('--no-git-tag-version');
 	}
 
-	const { stdout, stderr } = await promisify(cp.execFile)(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd });
-
+	const isWindows = process.platform === 'win32';
+	const { stdout, stderr } = await promisify(cp.execFile)(isWindows ? 'npm.cmd' : 'npm', args, { cwd, shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */ });
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
 		process.stderr.write(stderr);
