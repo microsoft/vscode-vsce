@@ -13,7 +13,7 @@ import {
 	ManifestProcessor,
 	versionBump,
 	VSIX,
-	LicenseProcessor
+	LicenseProcessor,
 } from '../package';
 import { Manifest } from '../manifest';
 import * as path from 'path';
