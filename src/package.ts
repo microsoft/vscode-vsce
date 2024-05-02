@@ -418,7 +418,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	}
 }
 
-export function sanitizeCommitMessage(message: string): string | undefined {
+function sanitizeCommitMessage(message: string): string | undefined {
 	// Allow alphanumeric, space, common punctuation, newline characters.
 	// Specifically check for characters that might escape quotes or introduce shell commands.
 	// Newlines are allowed, but backslashes (other than for newlines), backticks, and dollar signs are still checked.
@@ -433,12 +433,12 @@ export function sanitizeCommitMessage(message: string): string | undefined {
 	}
 
 	// Make sure all backslashes are followed by 'n' to prevent shell injection
-	sanitizedMessage.split('').reduce((positions: number[], char: string, index: number) => {
+	for (let index = 0; index < sanitizedMessage.length; index++) {
+		const char = sanitizedMessage[index];
 		if (char === '\\' && sanitizedMessage[index + 1] !== 'n') {
 			throw new Error('Commit message contains potentially dangerous characters after initial sanitization.');
 		}
-		return positions;
-	}, []);
+	}
 
 	if (sanitizedMessage.length === 0) {
 		return undefined;
