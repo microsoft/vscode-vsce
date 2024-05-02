@@ -395,22 +395,21 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
+
 	// call `npm version` to do our dirty work
 	const args = ['version', options.version];
 
-	if (options.commitMessage) {
-		// Sanitize commit message due to possible shell injection on windows
-		const sanitizedCommitMessage = sanitizeCommitMessage(options.commitMessage);
-		if (sanitizedCommitMessage) {
-			args.push('-m', sanitizedCommitMessage);
-		}
+	const isWindows = process.platform === 'win32';
+
+	const commitMessage = isWindows ? sanitizeCommitMessage(options.commitMessage) : options.commitMessage;
+	if (commitMessage) {
+		args.push('-m', commitMessage);
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
 		args.push('--no-git-tag-version');
 	}
 
-	const isWindows = process.platform === 'win32';
 	const { stdout, stderr } = await promisify(cp.execFile)(isWindows ? 'npm.cmd' : 'npm', args, { cwd, shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */ });
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
@@ -418,7 +417,11 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 	}
 }
 
-function sanitizeCommitMessage(message: string): string | undefined {
+function sanitizeCommitMessage(message?: string): string | undefined {
+	if (!message) {
+		return undefined;
+	}
+
 	// Allow alphanumeric, space, common punctuation, newline characters.
 	// Specifically check for characters that might escape quotes or introduce shell commands.
 	// Newlines are allowed, but backslashes (other than for newlines), backticks, and dollar signs are still checked.
