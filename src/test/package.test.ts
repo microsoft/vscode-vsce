@@ -2940,7 +2940,7 @@ describe('version', function () {
 	const fixtureFolder = fixture('vsixmanifest');
 	let cwd: string;
 
-	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8' });
+	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8', shell: true });
 
 	beforeEach(() => {
 		dir = tmp.dirSync({ unsafeCleanup: true });
