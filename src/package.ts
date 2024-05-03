@@ -395,23 +395,44 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
+
 	// call `npm version` to do our dirty work
 	const args = ['version', options.version];
 
-	if (options.commitMessage) {
-		args.push('-m', options.commitMessage);
+	const isWindows = process.platform === 'win32';
+
+	const commitMessage = isWindows ? sanitizeCommitMessage(options.commitMessage) : options.commitMessage;
+	if (commitMessage) {
+		args.push('-m', commitMessage);
 	}
 
 	if (!(options.gitTagVersion ?? true)) {
 		args.push('--no-git-tag-version');
 	}
 
-	const { stdout, stderr } = await promisify(cp.execFile)(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd });
-
+	const { stdout, stderr } = await promisify(cp.execFile)(isWindows ? 'npm.cmd' : 'npm', args, { cwd, shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */ });
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
 		process.stderr.write(stderr);
 	}
+}
+
+function sanitizeCommitMessage(message?: string): string | undefined {
+	if (!message) {
+		return undefined;
+	}
+
+	// Remove any unsafe characters found by the unsafeRegex
+	// Check for characters that might escape quotes or introduce shell commands.
+	// Don't allow: ', ", `, $, \ (except for \n which is allowed)
+	const sanitizedMessage = message.replace(/(?<!\\)\\(?!n)|['"`$]/g, '');
+
+	if (sanitizedMessage.length === 0) {
+		return undefined;
+	}
+
+	// Add quotes as commit message is passed as a single argument to the shell
+	return `"${sanitizedMessage}"`;
 }
 
 export const Targets = new Set([
