@@ -904,7 +904,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 	// GitHub heuristics
 	private guessBaseUrls(
 		githostBranch: string | undefined
-	): { content: string; images: string; repository: string } | undefined {
+	): { content: string; images: string; repository: string; directory: string } | undefined {
 		let repository = null;
 
 		if (typeof this.manifest.repository === 'string') {
@@ -935,12 +935,14 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 				content: `https://github.com/${project}/blob/${branchName}`,
 				images: `https://github.com/${project}/raw/${branchName}`,
 				repository: `https://github.com/${project}`,
+				directory: `https://github.com/${project}/tree/${branchName}`
 			};
 		} else if (/^gitlab/.test(match.groups.domain)) {
 			return {
 				content: `https://gitlab.com/${project}/-/blob/${branchName}`,
 				images: `https://gitlab.com/${project}/-/raw/${branchName}`,
 				repository: `https://gitlab.com/${project}`,
+				directory: `https://gitlab.com/${project}/-/tree/${branchName}`
 			};
 		}
 
