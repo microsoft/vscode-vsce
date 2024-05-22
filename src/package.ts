@@ -1395,8 +1395,12 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 
 	const manifestNLS = fs.promises
 		.readFile(manifestNLSPath, 'utf8')
-		.catch<string>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve('{}')))
-		.then<ITranslations>(raw => {
+		.catch<string | undefined>(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(undefined)))
+		.then<ITranslations | undefined>(raw => {
+			if (!raw) {
+				return Promise.resolve(undefined);
+			}
+
 			try {
 				return Promise.resolve(jsonc.parse(raw));
 			} catch (e) {
@@ -1406,6 +1410,9 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 		});
 
 	return Promise.all([manifest, manifestNLS]).then(([manifest, translations]) => {
+		if (!translations) {
+			return manifest;
+		}
 		return patchNLS(manifest, translations);
 	});
 }
