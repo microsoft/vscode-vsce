@@ -1843,24 +1843,18 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	return { manifest, packagePath, files };
 }
 
-export async function signPackage(packagePath: string, signScript: string): Promise<string> {
-	const manifestPath = await generateManifest(packagePath);
-	await new Promise<void>((c, e) => {
-		const proc = cp.execFile(signScript, [manifestPath], {}, (error, _stdout, stderr) => {
-			if (error) {
-				return e(error);
-			}
-			if (stderr) {
-				return e();
-			}
-			return c();
-		});
-		proc.stdout?.on('data', (data) => {
-			console.log(data.toString('utf8'));
-		});
-	});
-	const signatureFile = path.join(path.dirname(packagePath), '.signature.p7s');
-	return zip(manifestPath, signatureFile, path.basename(packagePath, '.vsix') + '.signature.zip');
+export async function signPackage(packageFile: string, signScript: string): Promise<string> {
+	const packageFolder = path.dirname(packageFile);
+	const packageName = path.basename(packageFile, '.vsix');
+	const manifestFile = path.join(packageFolder, `${packageName}.signature.manifest`);
+	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`);
+	const signatureZip = path.join(packageFolder, `${packageName}.signature.zip`);
+
+	await generateManifest(packageFile, manifestFile);
+	const { stdout } = await promisify(cp.execFile)(signScript, [manifestFile,  signatureFile]);
+	console.log(stdout);
+
+	return zip(manifestFile, signatureFile, signatureZip);
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
