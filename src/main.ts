@@ -117,6 +117,7 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--skip-license', 'Allow packaging without license file')
+		.option('--sign', 'Script to sign the VSIX package. VSIX manifest will be passed as an argument.')
 		.action(
 			(
 				version,
@@ -143,6 +144,7 @@ module.exports = function (argv: string[]): void {
 					allowStarActivation,
 					allowMissingRepository,
 					skipLicense,
+					sign,
 				}
 			) =>
 				main(
@@ -170,6 +172,7 @@ module.exports = function (argv: string[]): void {
 						allowStarActivation,
 						allowMissingRepository,
 						skipLicense,
+						sign,
 					})
 				)
 		);
@@ -195,6 +198,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
 		.option('--sigzipPath <paths...>', 'Signature archives to publish alongside the VSIX packages.')
+		.option('--sign', 'Script to sign the VSIX package. VSIX manifest will be passed as an argument. This will be ignored if --sigzipPath is provided.')
 		.option(
 			'--githubBranch <branch>',
 			'The GitHub branch used to infer relative links in README.md. Can be overridden by --baseContentUrl and --baseImagesUrl.'
@@ -249,6 +253,7 @@ module.exports = function (argv: string[]): void {
 					allowMissingRepository,
 					skipDuplicate,
 					skipLicense,
+					sign,
 				}
 			) =>
 				main(
@@ -280,6 +285,7 @@ module.exports = function (argv: string[]): void {
 						allowMissingRepository,
 						skipDuplicate,
 						skipLicense,
+						sign
 					})
 				)
 		);
