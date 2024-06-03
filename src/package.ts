@@ -1860,7 +1860,7 @@ export async function signPackage(packagePath: string, signScript: string): Prom
 		});
 	});
 	const signatureFile = path.join(path.dirname(packagePath), '.signature.p7s');
-	return zip(manifestPath, signatureFile);
+	return zip(manifestPath, signatureFile, path.basename(packagePath, '.vsix') + '.signature.zip');
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
