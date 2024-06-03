@@ -1843,7 +1843,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	return { manifest, packagePath, files };
 }
 
-export async function signPackage(packageFile: string, signScript: string): Promise<string> {
+export async function signPackage(packageFile: string, signTool: string): Promise<string> {
 	const packageFolder = path.dirname(packageFile);
 	const packageName = path.basename(packageFile, '.vsix');
 	const manifestFile = path.join(packageFolder, `${packageName}.signature.manifest`);
@@ -1854,7 +1854,7 @@ export async function signPackage(packageFile: string, signScript: string): Prom
 	await generateManifest(packageFile, manifestFile);
 
 	// Sign the manifest file to generate the signature file
-	cp.spawnSync(signScript, [manifestFile,  signatureFile], { stdio: 'inherit' });
+	cp.execSync(`${signTool} ${manifestFile} ${signatureFile}`, { stdio: 'inherit' });
 
 	// Create a signature zip file containing the manifest and signature file
 	return zip(manifestFile, signatureFile, signatureZip);
