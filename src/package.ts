@@ -1855,7 +1855,7 @@ export async function signPackage(packagePath: string, signScript: string): Prom
 			}
 			return c();
 		});
-		proc.stdout!.on('data', (data) => {
+		proc.stdout?.on('data', (data) => {
 			console.log(data.toString('utf8'));
 		});
 	});
