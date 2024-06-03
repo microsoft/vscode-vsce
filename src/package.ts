@@ -153,7 +153,7 @@ export interface IPackageOptions {
 	readonly allowMissingRepository?: boolean;
 	readonly skipLicense?: boolean;
 
-	readonly sign?: string;
+	readonly signTool?: string;
 }
 
 export interface IProcessor {
@@ -1867,8 +1867,8 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 
 	const { packagePath, files } = await pack(options);
 
-	if (options.sign) {
-		await signPackage(packagePath, options.sign);
+	if (options.signTool) {
+		await signPackage(packagePath, options.signTool);
 	}
 
 	const stats = await fs.promises.stat(packagePath);

@@ -76,7 +76,7 @@ export interface IPublishOptions {
 	readonly skipLicense?: boolean;
 
 	readonly sigzipPath?: string[];
-	readonly sign?: string;
+	readonly signTool?: string;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -119,8 +119,8 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			validateMarketplaceRequirements(vsix.manifest, options);
 
 			let sigzipPath = options.sigzipPath?.[index];
-			if (!sigzipPath && options.sign) {
-				sigzipPath = await signPackage(packagePath, options.sign);
+			if (!sigzipPath && options.signTool) {
+				sigzipPath = await signPackage(packagePath, options.signTool);
 			}
 
 
@@ -141,13 +141,13 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			for (const target of options.targets) {
 				const packagePath = await tmpName();
 				const packageResult = await pack({ ...options, target, packagePath });
-				const sigzipPath = options.sign ? await signPackage(packagePath, options.sign) : undefined;
+				const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
 				await _publish(packagePath, sigzipPath, packageResult.manifest, { ...options, target });
 			}
 		} else {
 			const packagePath = await tmpName();
 			const packageResult = await pack({ ...options, packagePath });
-			const sigzipPath = options.sign ? await signPackage(packagePath, options.sign) : undefined;
+			const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
 			await _publish(packagePath, sigzipPath, packageResult.manifest, options);
 		}
 	}
