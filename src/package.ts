@@ -1850,10 +1850,13 @@ export async function signPackage(packageFile: string, signScript: string): Prom
 	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`);
 	const signatureZip = path.join(packageFolder, `${packageName}.signature.zip`);
 
+	// Generate the signature manifest file
 	await generateManifest(packageFile, manifestFile);
-	const { stdout } = await promisify(cp.execFile)(signScript, [manifestFile,  signatureFile]);
-	console.log(stdout);
 
+	// Sign the manifest file to generate the signature file
+	cp.spawnSync(signScript, [manifestFile,  signatureFile], { stdio: 'inherit' });
+
+	// Create a signature zip file containing the manifest and signature file
 	return zip(manifestFile, signatureFile, signatureZip);
 }
 
