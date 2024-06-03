@@ -117,7 +117,7 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--skip-license', 'Allow packaging without license file')
-		.option('--sign', 'Script to sign the VSIX package. VSIX manifest will be passed as an argument.')
+		.option('--sign', 'Script to sign the VSIX package. VSIX manifest will be passed as an argument. Generates <package-name>.signature.zip alongside the VSIX package.')
 		.action(
 			(
 				version,
