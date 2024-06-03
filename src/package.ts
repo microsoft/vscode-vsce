@@ -24,6 +24,7 @@ import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
+import { generateManifest, zip } from '@vscode/vsce-sign';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -151,6 +152,8 @@ export interface IPackageOptions {
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly skipLicense?: boolean;
+
+	readonly signTool?: string;
 }
 
 export interface IProcessor {
@@ -1840,6 +1843,23 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	return { manifest, packagePath, files };
 }
 
+export async function signPackage(packageFile: string, signScript: string): Promise<string> {
+	const packageFolder = path.dirname(packageFile);
+	const packageName = path.basename(packageFile, '.vsix');
+	const manifestFile = path.join(packageFolder, `${packageName}.signature.manifest`);
+	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`);
+	const signatureZip = path.join(packageFolder, `${packageName}.signature.zip`);
+
+	// Generate the signature manifest file
+	await generateManifest(packageFile, manifestFile);
+
+	// Sign the manifest file to generate the signature file
+	cp.spawnSync(signScript, [manifestFile,  signatureFile], { stdio: 'inherit' });
+
+	// Create a signature zip file containing the manifest and signature file
+	return zip(manifestFile, signatureFile, signatureZip);
+}
+
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
@@ -1849,6 +1869,11 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
+
+	if (options.signTool) {
+		await signPackage(packagePath, options.signTool);
+	}
+
 	const stats = await fs.promises.stat(packagePath);
 
 	let size = 0;
