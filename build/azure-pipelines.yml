@@ -20,6 +20,8 @@ parameters:
     type: string
     default: 'none'
 
+name: "$(Date:yyyyMMdd).$(Rev:r)${{ replace(format(' (🚀 {0})', parameters.nextVersion), ' (🚀 none)', '') }}"
+
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
   parameters:
