@@ -1854,7 +1854,7 @@ export async function signPackage(packageFile: string, signTool: string): Promis
 	await generateManifest(packageFile, manifestFile);
 
 	// Sign the manifest file to generate the signature file
-	cp.execSync(`${signTool} ${manifestFile} ${signatureFile}`, { stdio: 'inherit' });
+	cp.execSync(`${signTool} "${manifestFile}" "${signatureFile}"`, { stdio: 'inherit' });
 
 	// Create a signature zip file containing the manifest and signature file
 	return zip(manifestFile, signatureFile, signatureZip);
