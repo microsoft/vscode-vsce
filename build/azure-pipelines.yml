@@ -20,6 +20,11 @@ parameters:
     type: string
     default: 'none'
 
+${{ if eq(parameters.nextVersion, 'none') }}:
+  name: "$(Date:yyyyMMdd).$(Rev:r)"
+${{ else }}:
+  name: "$(Date:yyyyMMdd).$(Rev:r) (🚀 ${{ parameters.nextVersion }})"
+
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
   parameters:
