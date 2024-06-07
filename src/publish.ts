@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { promisify } from 'util';
 import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { pack, readManifest, versionBump, prepublish } from './package';
+import { pack, readManifest, versionBump, prepublish, signPackage, createSignatureArchive } from './package';
 import * as tmp from 'tmp';
 import { IVerifyPatOptions, getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest, getAzureCredentialAccessToken } from './util';
@@ -76,6 +76,9 @@ export interface IPublishOptions {
 	readonly skipLicense?: boolean;
 
 	readonly sigzipPath?: string[];
+	readonly manifestPath?: string[];
+	readonly signaturePath?: string[];
+	readonly signTool?: string;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
@@ -86,6 +89,12 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			throw new Error(
 				`Both options not supported simultaneously: 'packagePath' and 'target'. Use 'vsce package --target <target>' to first create a platform specific package, then use 'vsce publish --packagePath <path>' to publish it.`
 			);
+		}
+
+		if (options.manifestPath || options.signaturePath) {
+			if (options.packagePath.length !== options.manifestPath?.length || options.packagePath.length !== options.signaturePath?.length) {
+				throw new Error(`Either all packages must be signed or none of them.`);
+			}
 		}
 
 		for (let index = 0; index < options.packagePath.length; index++) {
@@ -117,7 +126,20 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 
 			validateMarketplaceRequirements(vsix.manifest, options);
 
-			await _publish(packagePath, options.sigzipPath?.[index], vsix.manifest, { ...options, target });
+			let sigzipPath: string | undefined;
+			if (options.manifestPath?.[index] && options.signaturePath?.[index]) {
+				sigzipPath = await createSignatureArchive(options.manifestPath[index], options.signaturePath[index]);
+			}
+
+			if (!sigzipPath) {
+				sigzipPath = options.sigzipPath?.[index];
+			}
+
+			if (!sigzipPath && options.signTool) {
+				sigzipPath = await signPackage(packagePath, options.signTool);
+			}
+
+			await _publish(packagePath, sigzipPath, vsix.manifest, { ...options, target });
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
@@ -134,12 +156,14 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			for (const target of options.targets) {
 				const packagePath = await tmpName();
 				const packageResult = await pack({ ...options, target, packagePath });
-				await _publish(packagePath, undefined, packageResult.manifest, { ...options, target });
+				const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
+				await _publish(packagePath, sigzipPath, packageResult.manifest, { ...options, target });
 			}
 		} else {
 			const packagePath = await tmpName();
 			const packageResult = await pack({ ...options, packagePath });
-			await _publish(packagePath, undefined, packageResult.manifest, options);
+			const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
+			await _publish(packagePath, sigzipPath, packageResult.manifest, options);
 		}
 	}
 }

@@ -24,6 +24,7 @@ import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
+import * as vsceSign from '@vscode/vsce-sign';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -151,6 +152,8 @@ export interface IPackageOptions {
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly skipLicense?: boolean;
+
+	readonly signTool?: string;
 }
 
 export interface IProcessor {
@@ -1840,6 +1843,36 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	return { manifest, packagePath, files };
 }
 
+export async function signPackage(packageFile: string, signTool: string): Promise<string> {
+	const packageFolder = path.dirname(packageFile);
+	const packageName = path.basename(packageFile, '.vsix');
+	const manifestFile = path.join(packageFolder, `${packageName}.signature.manifest`);
+	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`);
+	const signatureZip = path.join(packageFolder, `${packageName}.signature.zip`);
+
+	await generateManifest(packageFile, manifestFile);
+
+	// Sign the manifest file to generate the signature file
+	cp.execSync(`${signTool} "${manifestFile}" "${signatureFile}"`, { stdio: 'inherit' });
+
+	return createSignatureArchive(manifestFile, signatureFile, signatureZip);
+}
+
+// Generate the signature manifest file
+export function generateManifest(packageFile: string, outputFile?: string): Promise<string> {
+	if (!outputFile) {
+		const packageFolder = path.dirname(packageFile);
+		const packageName = path.basename(packageFile, '.vsix');
+		outputFile = path.join(packageFolder, `${packageName}.manifest`);
+	}
+	return vsceSign.generateManifest(packageFile, outputFile);
+}
+
+// Create a signature zip file containing the manifest and signature file
+export async function createSignatureArchive(manifestFile: string, signatureFile: string, outputFile?: string): Promise<string> {
+	return vsceSign.zip(manifestFile, signatureFile, outputFile)
+}
+
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
@@ -1849,6 +1882,11 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
+
+	if (options.signTool) {
+		await signPackage(packagePath, options.signTool);
+	}
+
 	const stats = await fs.promises.stat(packagePath);
 
 	let size = 0;
