@@ -1,6 +1,6 @@
 import program from 'commander';
 import leven from 'leven';
-import { packageCommand, ls, Targets } from './package';
+import { packageCommand, ls, Targets, generateManifest } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
@@ -197,6 +197,8 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--no-update-package-json', 'Do not update `package.json`. Valid only when [version] is provided.')
 		.option('-i, --packagePath <paths...>', 'Publish the provided VSIX packages.')
+		.option('--manifestPath <paths...>', 'Manifest files to publish alongside the VSIX packages.')
+		.option('--signaturePath <paths...>', 'Signature files to publish alongside the VSIX packages.')
 		.option('--sigzipPath <paths...>', 'Signature archives to publish alongside the VSIX packages.')
 		.option('--sign-tool <path>', 'Path to the VSIX signing tool. Will be invoked with two arguments: `SIGNTOOL <path/to/extension.signature.manifest> <path/to/extension.signature.p7s>`. This will be ignored if --sigzipPath is provided.')
 		.option(
@@ -237,6 +239,8 @@ module.exports = function (argv: string[]): void {
 					gitTagVersion,
 					updatePackageJson,
 					packagePath,
+					manifestPath,
+					signaturePath,
 					sigzipPath,
 					githubBranch,
 					gitlabBranch,
@@ -269,6 +273,8 @@ module.exports = function (argv: string[]): void {
 						gitTagVersion,
 						updatePackageJson,
 						packagePath,
+						manifestPath,
+						signaturePath,
 						sigzipPath,
 						githubBranch,
 						gitlabBranch,
@@ -297,6 +303,19 @@ module.exports = function (argv: string[]): void {
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
 		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force })));
+
+	program
+		.command('generate-manifest')
+		.description('Generates the extension manifest from the provided VSIX package.')
+		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
+		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
+		.action((
+			packagePath,
+			out
+		) =>
+			main(
+				generateManifest(packagePath, out)
+			));
 
 	program
 		.command('ls-publishers')
