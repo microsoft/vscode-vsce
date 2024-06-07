@@ -1860,6 +1860,11 @@ export async function signPackage(packageFile: string, signTool: string): Promis
 
 // Generate the signature manifest file
 export function generateManifest(packageFile: string, outputFile?: string): Promise<string> {
+	if (!outputFile) {
+		const packageFolder = path.dirname(packageFile);
+		const packageName = path.basename(packageFile, '.vsix');
+		outputFile = path.join(packageFolder, `${packageName}.manifest`);
+	}
 	return vsceSign.generateManifest(packageFile, outputFile);
 }
 

@@ -128,7 +128,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 
 			let sigzipPath: string | undefined;
 			if (options.manifestPath?.[index] && options.signaturePath?.[index]) {
-				sigzipPath = await createSignatureArchive(options.manifestPath[index], options.signaturePath[index])
+				sigzipPath = await createSignatureArchive(options.manifestPath[index], options.signaturePath[index]);
 			}
 
 			if (!sigzipPath) {
