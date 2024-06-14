@@ -309,13 +309,7 @@ module.exports = function (argv: string[]): void {
 		.description('Generates the extension manifest from the provided VSIX package.')
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
-		.action((
-			packagePath,
-			out
-		) =>
-			main(
-				generateManifest(packagePath, out)
-			));
+		.action(({ packagePath, out }) => main(generateManifest(packagePath, out)));
 
 	program
 		.command('ls-publishers')
