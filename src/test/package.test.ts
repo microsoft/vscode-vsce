@@ -1912,6 +1912,32 @@ describe('toVsixManifest', () => {
 		const xmlManifest = await parseXmlManifest(raw);
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Services.Content.Pricing', 'Trial');
 	});
+
+	it('should expose enabledApiProposals as properties', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			enabledApiProposals: [
+				'foo',
+				'bar@2'
+			],
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => {
+				const properties = result.PackageManifest.Metadata[0].Properties[0].Property;
+				const enabledApiProposalsProp = properties.filter(p => p.$.Id === 'Microsoft.VisualStudio.Code.EnabledApiProposals');
+				assert.strictEqual(enabledApiProposalsProp.length, 1);
+
+				const enabledApiProposals = enabledApiProposalsProp[0].$.Value.split(',');
+				assert.strictEqual(enabledApiProposals.length, 2);
+				assert.strictEqual(enabledApiProposals[0], 'foo');
+				assert.strictEqual(enabledApiProposals[1], 'bar@2');
+			});
+	});
 });
 
 describe('qna', () => {
