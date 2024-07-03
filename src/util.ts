@@ -7,7 +7,6 @@ import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { Manifest } from './manifest';
 import { EOL } from 'os';
-import { DefaultAzureCredential } from '@azure/identity';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -49,16 +48,6 @@ export async function getSecurityRolesAPI(pat: string): Promise<ISecurityRolesAp
 
 export function getPublicGalleryAPI() {
 	return new PublicGalleryAPI(marketplaceUrl, '3.0-preview.1');
-}
-
-export async function getAzureCredentialAccessToken(): Promise<string> {
-	try {
-		const credential = new DefaultAzureCredential();
-		const token = await credential.getToken('499b84ac-1321-427f-aa17-267ca6975798/.default');
-		return token.token;
-	} catch (error) {
-		throw new Error('Can not acquire a Microsoft Entra ID access token. Additional information:\n\n' + error)
-	}
 }
 
 export function normalize(path: string): string {

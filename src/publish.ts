@@ -5,7 +5,7 @@ import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/i
 import { pack, readManifest, versionBump, prepublish, signPackage, createSignatureArchive } from './package';
 import * as tmp from 'tmp';
 import { IVerifyPatOptions, getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest, getAzureCredentialAccessToken } from './util';
+import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
 import { Manifest } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
@@ -13,6 +13,7 @@ import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
+import { getAzureCredentialAccessToken } from './auth';
 
 const tmpName = promisify(tmp.tmpName);
 
