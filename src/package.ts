@@ -14,6 +14,7 @@ import * as url from 'url';
 import mime from 'mime';
 import * as semver from 'semver';
 import urljoin from 'url-join';
+import chalk from 'chalk';
 import {
 	validateExtensionName,
 	validateVersion,
@@ -573,21 +574,15 @@ export class ManifestProcessor extends BaseProcessor {
 
 	async onEnd(): Promise<void> {
 		if (typeof this.manifest.extensionKind === 'string') {
-			util.log.warn(
-				`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://aka.ms/vscode/api/incorrect-execution-location`
-			);
+			util.log.warn(`The 'extensionKind' property should be of type 'string[]'. Learn more at: https://aka.ms/vscode/api/incorrect-execution-location`);
 		}
 
 		if (this.manifest.publisher === 'vscode-samples') {
-			throw new Error(
-				"It's not allowed to use the 'vscode-samples' publisher. Learn more at: https://code.visualstudio.com/api/working-with-extensions/publishing-extension."
-			);
+			throw new Error("It's not allowed to use the 'vscode-samples' publisher. Learn more at: https://code.visualstudio.com/api/working-with-extensions/publishing-extension.");
 		}
 
 		if (!this.options.allowMissingRepository && !this.manifest.repository) {
-			util.log.warn(
-				`A 'repository' field is missing from the 'package.json' manifest file.\nUse --allow-missing-repository to bypass.`
-			);
+			util.log.warn(`A 'repository' field is missing from the 'package.json' manifest file.\nUse --allow-missing-repository to bypass.`);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -595,9 +590,11 @@ export class ManifestProcessor extends BaseProcessor {
 		}
 
 		if (!this.options.allowStarActivation && this.manifest.activationEvents?.some(e => e === '*')) {
-			util.log.warn(
-				`Using '*' activation is usually a bad idea as it impacts performance.\nMore info: https://code.visualstudio.com/api/references/activation-events#Start-up\nUse --allow-star-activation to bypass.`
-			);
+			let message = '';
+			message += `Using '*' activation is usually a bad idea as it impacts performance.\n`;
+			message += `More info: https://code.visualstudio.com/api/references/activation-events#Start-up\n`;
+			message += `Use --allow-star-activation to bypass.`;
+			util.log.warn(message);
 
 			if (!/^y$/i.test(await util.read('Do you want to continue? [y/N] '))) {
 				throw new Error('Aborted');
@@ -1828,13 +1825,8 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
 	const files = await collect(manifest, options);
-	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 
-	if (files.length > 5000 || jsFiles.length > 100) {
-		console.log(
-			`This extension consists of ${files.length} files, out of which ${jsFiles.length} are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension . You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore`
-		);
-	}
+	printPackagedFiles(files, cwd, manifest, options);
 
 	if (options.version && !(options.updatePackageJson ?? true)) {
 		manifest.version = options.version;
@@ -1938,4 +1930,45 @@ export async function ls(options: IListFilesOptions = {}): Promise<void> {
 	for (const file of files) {
 		console.log(`${file}`);
 	}
+}
+
+/**
+ * Prints the packaged files of an extension.
+ */
+export function printPackagedFiles(files: IFile[], cwd: string, manifest: Manifest, options: IPackageOptions): void {
+	// Warn if the extension contains a lot of files
+	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
+	if (files.length > 5000 || jsFiles.length > 100) {
+		let message = '\n';
+		message += `This extension consists of ${chalk.bold(String(files.length))} files, out of which ${chalk.bold(String(jsFiles.length))} are JavaScript files. `;
+		message += `For performance reasons, you should bundle your extension: ${chalk.underline('https://aka.ms/vscode-bundle-extension')}. `;
+		message += `You should also exclude unnecessary files by adding them to your .vscodeignore: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}.\n`;
+		console.log(message);
+	}
+
+	// Warn if the extension does not have a .vscodeignore file or a files property in package.json
+	if (!options.ignoreFile && !manifest.files) {
+		const hasDeaultIgnore = fs.existsSync(path.join(cwd, '.vscodeignore'));
+		if (!hasDeaultIgnore) {
+			let message = '';
+			message += `Neither a ${chalk.bold('.vscodeignore')} file nor a ${chalk.bold('"files"')} property in package.json was found. `;
+			message += `To ensure only necessary files are included in your extension package, `;
+			message += `add a .vscodeignore file or specify the "files" property in package.json. More info: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}`;
+			util.log.warn(message);
+		}
+	}
+
+	// Print the files included in the package
+	const printableFileStructure = util.generateFileStructureTree(getDefaultPackageName(manifest, options), files.map(f => f.path), 35);
+
+	let message = '';
+	message += chalk.bold.blue(`Files included in the VSIX:\n`);
+	message += printableFileStructure.join('\n');
+
+	if (files.length + 1 > printableFileStructure.length) {
+		// If not all files have been printed, mention how all files can be printed
+		message += `\n\n=> Run ${chalk.bold('vsce ls')} to see a list of all included files.\n`;
+	}
+
+	util.log.info(message);
 }
