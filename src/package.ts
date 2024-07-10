@@ -20,6 +20,7 @@ import {
 	validateVersion,
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
+	validatePublisher,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
@@ -1247,6 +1248,7 @@ export class ValidationProcessor extends BaseProcessor {
 
 export function validateManifest(manifest: Manifest): Manifest {
 	validateExtensionName(manifest.name);
+	validatePublisher(manifest.publisher);
 
 	if (!manifest.version) {
 		throw new Error('Manifest missing field: version');

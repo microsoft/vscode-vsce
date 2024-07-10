@@ -12,7 +12,7 @@ export function validatePublisher(publisher: string): void {
 
 	if (!nameRegex.test(publisher)) {
 		throw new Error(
-			`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name.  Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
+			`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
 		);
 	}
 }
