@@ -183,3 +183,89 @@ export function patchOptionsWithManifest(options: any, manifest: Manifest): void
 		}
 	}
 }
+
+export function generateFileStructureTree(rootFolder: string, filePaths: string[], maxPrint: number = Number.MAX_VALUE): string[] {
+	const folderTree: any = {};
+	const depthCounts: number[] = [];
+
+	// Build a tree structure from the file paths
+	filePaths.forEach(filePath => {
+		const parts = filePath.split('/');
+		let currentLevel = folderTree;
+
+		parts.forEach((part, depth) => {
+			if (!currentLevel[part]) {
+				currentLevel[part] = depth === parts.length - 1 ? null : {};
+				if (depthCounts.length <= depth) {
+					depthCounts.push(0);
+				}
+				depthCounts[depth]++;
+			}
+			currentLevel = currentLevel[part];
+		});
+	});
+
+	// Get max depth
+	let currentDepth = 0;
+	let countUpToCurrentDepth = depthCounts[0];
+	for (let i = 1; i < depthCounts.length; i++) {
+		if (countUpToCurrentDepth + depthCounts[i] > maxPrint) {
+			break;
+		}
+		currentDepth++;
+		countUpToCurrentDepth += depthCounts[i];
+	}
+
+	const maxDepth = currentDepth;
+	let message: string[] = [];
+
+	// Helper function to print the tree
+	const printTree = (tree: any, depth: number, prefix: string) => {
+		// Print all files before folders
+		const sortedFolderKeys = Object.keys(tree).filter(key => tree[key] !== null).sort();
+		const sortedFileKeys = Object.keys(tree).filter(key => tree[key] === null).sort();
+		const sortedKeys = [...sortedFileKeys, ...sortedFolderKeys];
+
+		for (let i = 0; i < sortedKeys.length; i++) {
+
+			const key = sortedKeys[i];
+			const isLast = i === sortedKeys.length - 1;
+			const localPrefix = prefix + (isLast ? '└─ ' : '├─ ');
+			const childPrefix = prefix + (isLast ? '   ' : '│  ');
+
+			if (tree[key] === null) {
+				// It's a file
+				message.push(localPrefix + key);
+			} else {
+				// It's a folder
+				if (depth < maxDepth) {
+					// maxdepth is not reached, print the folder and its children
+					message.push(localPrefix + chalk.bold(`${key}/`));
+					printTree(tree[key], depth + 1, childPrefix);
+				} else {
+					// max depth is reached, print the folder but not its children
+					const filesCount = countFiles(tree[key]);
+					message.push(localPrefix + chalk.bold(`${key}/`) + chalk.green(` (${filesCount} ${filesCount === 1 ? 'file' : 'files'})`));
+				}
+			}
+		}
+	};
+
+	// Helper function to count the number of files in a tree
+	const countFiles = (tree: any): number => {
+		let filesCount = 0;
+		for (const key in tree) {
+			if (tree[key] === null) {
+				filesCount++;
+			} else {
+				filesCount += countFiles(tree[key]);
+			}
+		}
+		return filesCount;
+	};
+
+	message.push(chalk.bold(rootFolder));
+	printTree(folderTree, 0, '');
+
+	return message;
+}

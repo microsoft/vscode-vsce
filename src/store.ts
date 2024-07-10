@@ -169,9 +169,7 @@ async function openDefaultStore(): Promise<IStore> {
 		}
 
 		await fileStore.deleteStore();
-		log.info(
-			`Migrated ${fileStore.size} publishers to system credential manager. Deleted local store '${fileStore.path}'.`
-		);
+		log.info(`Migrated ${fileStore.size} publishers to system credential manager. Deleted local store '${fileStore.path}'.`);
 	}
 
 	return keytarStore;
