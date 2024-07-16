@@ -1,4 +1,5 @@
 import { promisify } from 'util';
+import * as fs from 'fs';
 import _read from 'read';
 import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
@@ -184,88 +185,183 @@ export function patchOptionsWithManifest(options: any, manifest: Manifest): void
 	}
 }
 
-export function generateFileStructureTree(rootFolder: string, filePaths: string[], maxPrint: number = Number.MAX_VALUE): string[] {
+export function bytesToString(bytes: number): string {
+	let size = 0;
+	let unit = '';
+
+	if (bytes > 1048576) {
+		size = Math.round(bytes / 10485.76) / 100;
+		unit = 'MB';
+	} else {
+		size = Math.round(bytes / 10.24) / 100;
+		unit = 'KB';
+	}
+	return `${size} ${unit}`;
+}
+
+const FOLDER_SIZE_KEY = "/__FOlDER_SIZE__\\";
+const FOLDER_FILES_TOTAL_KEY = "/__FOLDER_CHILDREN__\\";
+const FILE_SIZE_WARNING_THRESHOLD = 0.85;
+const FILE_SIZE_LARGE_THRESHOLD = 0.2;
+
+export async function generateFileStructureTree(rootFolder: string, filePaths: { origin: string, tree: string }[], printLinesLimit: number = Number.MAX_VALUE): Promise<string[]> {
 	const folderTree: any = {};
 	const depthCounts: number[] = [];
 
 	// Build a tree structure from the file paths
-	filePaths.forEach(filePath => {
-		const parts = filePath.split('/');
+	// Store the file size in the leaf node and the folder size in the folder node
+	// Store the number of children in the folder node
+	for (const filePath of filePaths) {
+		const parts = filePath.tree.split('/');
 		let currentLevel = folderTree;
 
 		parts.forEach((part, depth) => {
+			const isFile = depth === parts.length - 1;
+
+			// Create the node if it doesn't exist
 			if (!currentLevel[part]) {
-				currentLevel[part] = depth === parts.length - 1 ? null : {};
+				if (isFile) {
+					// The file size is stored in the leaf node, 
+					currentLevel[part] = 0;
+				} else {
+					// The folder size is stored in the folder node
+					currentLevel[part] = {};
+					currentLevel[part][FOLDER_SIZE_KEY] = 0;
+					currentLevel[part][FOLDER_FILES_TOTAL_KEY] = 0;
+				}
+
+				// Count the number of items at each depth
 				if (depthCounts.length <= depth) {
 					depthCounts.push(0);
 				}
 				depthCounts[depth]++;
 			}
-			currentLevel = currentLevel[part];
-		});
-	});
 
-	// Get max depth
+			currentLevel = currentLevel[part];
+
+			// Count the total number of children in the nested folders
+			if (!isFile) {
+				currentLevel[FOLDER_FILES_TOTAL_KEY]++;
+			}
+		});
+	};
+
+	// Get max depth depending on the maximum number of lines allowed to print
 	let currentDepth = 0;
-	let countUpToCurrentDepth = depthCounts[0];
+	let countUpToCurrentDepth = depthCounts[0] + 1 /* root folder */;
 	for (let i = 1; i < depthCounts.length; i++) {
-		if (countUpToCurrentDepth + depthCounts[i] > maxPrint) {
+		if (countUpToCurrentDepth + depthCounts[i] > printLinesLimit) {
 			break;
 		}
 		currentDepth++;
 		countUpToCurrentDepth += depthCounts[i];
 	}
-
 	const maxDepth = currentDepth;
-	let message: string[] = [];
 
-	// Helper function to print the tree
-	const printTree = (tree: any, depth: number, prefix: string) => {
+	// Get all file sizes
+	const fileSizes: [number, string][] = await Promise.all(filePaths.map(async (filePath) => {
+		try {
+			const stats = await fs.promises.stat(filePath.origin);
+			return [stats.size, filePath.tree];
+		} catch (error) {
+			return [0, filePath.origin];
+		}
+	}));
+
+	// Store all file sizes in the tree
+	let totalFileSizes = 0;
+	fileSizes.forEach(([size, filePath]) => {
+		totalFileSizes += size;
+
+		const parts = filePath.split('/');
+		let currentLevel = folderTree;
+		parts.forEach(part => {
+			if (typeof currentLevel[part] === 'number') {
+				currentLevel[part] = size;
+			} else if (currentLevel[part]) {
+				currentLevel[part][FOLDER_SIZE_KEY] += size;
+			}
+			currentLevel = currentLevel[part];
+		});
+	});
+
+	let output: string[] = [];
+	output.push(chalk.bold(rootFolder));
+	output.push(...createTreeOutput(folderTree, maxDepth, totalFileSizes));
+
+	for (const [size, filePath] of fileSizes) {
+		if (size > FILE_SIZE_WARNING_THRESHOLD * totalFileSizes) {
+			output.push(`\nThe file ${filePath} is ${chalk.red('large')} (${bytesToString(size)})`);
+			break;
+		}
+	}
+
+	return output;
+}
+
+function createTreeOutput(fileSystem: any, maxDepth: number, totalFileSizes: number): string[] {
+
+	const getColorFromSize = (size: number) => {
+		if (size > FILE_SIZE_WARNING_THRESHOLD * totalFileSizes) {
+			return chalk.red;
+		} else if (size > FILE_SIZE_LARGE_THRESHOLD * totalFileSizes) {
+			return chalk.yellow;
+		} else {
+			return chalk.grey;
+		}
+	};
+
+	const createFileOutput = (prefix: string, fileName: string, fileSize: number) => {
+		let fileSizeColored = '';
+		if (fileSize > 0) {
+			const fileSizeString = `[${bytesToString(fileSize)}]`;
+			fileSizeColored = getColorFromSize(fileSize)(fileSizeString);
+		}
+		return `${prefix}${fileName} ${fileSizeColored}`;
+	}
+
+	const createFolderOutput = (prefix: string, filesCount: number, folderSize: number, folderName: string, depth: number) => {
+		if (depth < maxDepth) {
+			// Max depth is not reached, print only the folder
+			// as children will be printed
+			return prefix + chalk.bold(`${folderName}/`);
+		}
+
+		// Max depth is reached, print the folder name and additional metadata
+		// as children will not be printed
+		const folderSizeString = bytesToString(folderSize);
+		const folder = chalk.bold(`${folderName}/`);
+		const numFilesString = chalk.green(`(${filesCount} ${filesCount === 1 ? 'file' : 'files'})`);
+		const folderSizeColored = getColorFromSize(folderSize)(`[${folderSizeString}]`);
+		return `${prefix}${folder} ${numFilesString} ${folderSizeColored}`;
+	}
+
+	const createTreeLayerOutput = (tree: any, depth: number, prefix: string, path: string) => {
 		// Print all files before folders
-		const sortedFolderKeys = Object.keys(tree).filter(key => tree[key] !== null).sort();
-		const sortedFileKeys = Object.keys(tree).filter(key => tree[key] === null).sort();
-		const sortedKeys = [...sortedFileKeys, ...sortedFolderKeys];
+		const sortedFolderKeys = Object.keys(tree).filter(key => typeof tree[key] !== 'number').sort();
+		const sortedFileKeys = Object.keys(tree).filter(key => typeof tree[key] === 'number').sort();
+		const sortedKeys = [...sortedFileKeys, ...sortedFolderKeys].filter(key => key !== FOLDER_SIZE_KEY && key !== FOLDER_FILES_TOTAL_KEY);
 
+		const output: string[] = [];
 		for (let i = 0; i < sortedKeys.length; i++) {
-
 			const key = sortedKeys[i];
 			const isLast = i === sortedKeys.length - 1;
 			const localPrefix = prefix + (isLast ? '└─ ' : '├─ ');
 			const childPrefix = prefix + (isLast ? '   ' : '│  ');
 
-			if (tree[key] === null) {
+			if (typeof tree[key] === 'number') {
 				// It's a file
-				message.push(localPrefix + key);
+				output.push(createFileOutput(localPrefix, key, tree[key]));
 			} else {
 				// It's a folder
+				output.push(createFolderOutput(localPrefix, tree[key][FOLDER_FILES_TOTAL_KEY], tree[key][FOLDER_SIZE_KEY], key, depth));
 				if (depth < maxDepth) {
-					// maxdepth is not reached, print the folder and its children
-					message.push(localPrefix + chalk.bold(`${key}/`));
-					printTree(tree[key], depth + 1, childPrefix);
-				} else {
-					// max depth is reached, print the folder but not its children
-					const filesCount = countFiles(tree[key]);
-					message.push(localPrefix + chalk.bold(`${key}/`) + chalk.green(` (${filesCount} ${filesCount === 1 ? 'file' : 'files'})`));
+					output.push(...createTreeLayerOutput(tree[key], depth + 1, childPrefix, path + key + '/'));
 				}
 			}
 		}
+		return output;
 	};
 
-	// Helper function to count the number of files in a tree
-	const countFiles = (tree: any): number => {
-		let filesCount = 0;
-		for (const key in tree) {
-			if (tree[key] === null) {
-				filesCount++;
-			} else {
-				filesCount += countFiles(tree[key]);
-			}
-		}
-		return filesCount;
-	};
-
-	message.push(chalk.bold(rootFolder));
-	printTree(folderTree, 0, '');
-
-	return message;
+	return createTreeLayerOutput(fileSystem, 0, '', '');
 }

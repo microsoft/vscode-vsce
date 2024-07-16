@@ -1828,7 +1828,7 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 	const manifest = await readManifest(cwd);
 	const files = await collect(manifest, options);
 
-	printPackagedFiles(files, cwd, manifest, options);
+	await printPackagedFiles(files, cwd, manifest, options);
 
 	if (options.version && !(options.updatePackageJson ?? true)) {
 		manifest.version = options.version;
@@ -1885,23 +1885,13 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	}
 
 	const stats = await fs.promises.stat(packagePath);
-
-	let size = 0;
-	let unit = '';
-
-	if (stats.size > 1048576) {
-		size = Math.round(stats.size / 10485.76) / 100;
-		unit = 'MB';
-	} else {
-		size = Math.round(stats.size / 10.24) / 100;
-		unit = 'KB';
-	}
-
-	util.log.done(`Packaged: ${packagePath} (${files.length} files, ${size}${unit})`);
+	const packageSize = util.bytesToString(stats.size);
+	util.log.done(`Packaged: ${packagePath} ` + chalk.bold(`(${files.length} files, ${packageSize})`));
 }
 
 export interface IListFilesOptions {
 	readonly cwd?: string;
+	readonly manifest?: Manifest;
 	readonly useYarn?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
@@ -1914,7 +1904,7 @@ export interface IListFilesOptions {
  */
 export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
 	const cwd = options.cwd ?? process.cwd();
-	const manifest = await readManifest(cwd);
+	const manifest = options.manifest ?? await readManifest(cwd);
 
 	if (options.prepublish) {
 		await prepublish(cwd, manifest, options.useYarn);
@@ -1923,29 +1913,46 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files);
 }
 
-/**
- * Lists the files included in the extension's package. Runs prepublish.
- */
-export async function ls(options: IListFilesOptions = {}): Promise<void> {
-	const files = await listFiles({ ...options, prepublish: true });
+interface ILSOptions {
+	readonly tree?: boolean;
+	readonly useYarn?: boolean;
+	readonly packagedDependencies?: string[];
+	readonly ignoreFile?: string;
+	readonly dependencies?: boolean;
+}
 
-	for (const file of files) {
-		console.log(`${file}`);
+/**
+ * Lists the files included in the extension's package.
+ */
+export async function ls(options: ILSOptions = {}): Promise<void> {
+	const cwd = process.cwd();
+	const manifest = await readManifest(cwd);
+
+	const files = await listFiles({ ...options, cwd, manifest });
+
+	if (options.tree) {
+		const printableFileStructure = await util.generateFileStructureTree(
+			getDefaultPackageName(manifest, options),
+			files.map(f => ({ origin: f, tree: f }))
+		);
+		console.log(printableFileStructure.join('\n'));
+	} else {
+		console.log(files.join('\n'));
 	}
 }
 
 /**
  * Prints the packaged files of an extension.
  */
-export function printPackagedFiles(files: IFile[], cwd: string, manifest: Manifest, options: IPackageOptions): void {
+export async function printPackagedFiles(files: IFile[], cwd: string, manifest: Manifest, options: IPackageOptions): Promise<void> {
 	// Warn if the extension contains a lot of files
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 	if (files.length > 5000 || jsFiles.length > 100) {
-		let message = '\n';
+		let message = '';
 		message += `This extension consists of ${chalk.bold(String(files.length))} files, out of which ${chalk.bold(String(jsFiles.length))} are JavaScript files. `;
 		message += `For performance reasons, you should bundle your extension: ${chalk.underline('https://aka.ms/vscode-bundle-extension')}. `;
 		message += `You should also exclude unnecessary files by adding them to your .vscodeignore: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}.\n`;
-		console.log(message);
+		util.log.warn(message);
 	}
 
 	// Warn if the extension does not have a .vscodeignore file or a files property in package.json
@@ -1954,23 +1961,33 @@ export function printPackagedFiles(files: IFile[], cwd: string, manifest: Manife
 		if (!hasDeaultIgnore) {
 			let message = '';
 			message += `Neither a ${chalk.bold('.vscodeignore')} file nor a ${chalk.bold('"files"')} property in package.json was found. `;
-			message += `To ensure only necessary files are included in your extension package, `;
-			message += `add a .vscodeignore file or specify the "files" property in package.json. More info: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}`;
+			message += `To ensure only necessary files are included in your extension, `;
+			message += `add a .vscodeignore file or specify the "files" property in package.json. More info: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}\n`;
 			util.log.warn(message);
 		}
 	}
 
 	// Print the files included in the package
-	const printableFileStructure = util.generateFileStructureTree(getDefaultPackageName(manifest, options), files.map(f => f.path), 35);
+	const printableFileStructure = await util.generateFileStructureTree(
+		getDefaultPackageName(manifest, options),
+		files.map(f => ({
+			// File path relative to the extension root
+			origin: f.path.startsWith('extension/') ? f.path.substring(10) : f.path,
+			// File path in the VSIX
+			tree: f.path
+		})),
+		35 // Print up to 35 files/folders
+	);
 
 	let message = '';
 	message += chalk.bold.blue(`Files included in the VSIX:\n`);
 	message += printableFileStructure.join('\n');
 
+	// If not all files have been printed, mention how all files can be printed
 	if (files.length + 1 > printableFileStructure.length) {
-		// If not all files have been printed, mention how all files can be printed
-		message += `\n\n=> Run ${chalk.bold('vsce ls')} to see a list of all included files.\n`;
+		message += `\n\n=> Run ${chalk.bold('vsce ls --tree')} to see all included files.`;
 	}
 
+	message += '\n';
 	util.log.info(message);
 }

@@ -61,6 +61,7 @@ module.exports = function (argv: string[]): void {
 	program
 		.command('ls')
 		.description('Lists all the files that will be published/packaged')
+		.option('--tree', 'Prints the files in a tree format', false)
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option<string[]>(
@@ -73,8 +74,8 @@ module.exports = function (argv: string[]): void {
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
-		.action(({ yarn, packagedDependencies, ignoreFile, dependencies }) =>
-			main(ls({ useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
+		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies }) =>
+			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
 		);
 
 	program
