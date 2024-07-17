@@ -733,12 +733,14 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 	private gitHubIssueLinking: boolean;
 	private gitLabIssueLinking: boolean;
 
+	protected filesProcessed: number = 0;
+
 	constructor(
 		manifest: Manifest,
 		private name: string,
 		filePath: string,
 		private assetType: string,
-		options: IPackageOptions = {}
+		protected options: IPackageOptions = {}
 	) {
 		super(manifest);
 
@@ -761,6 +763,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		if (!this.regexp.test(filePath)) {
 			return Promise.resolve(file);
 		}
+		this.filesProcessed++;
 
 		this.assets.push({ type: this.assetType, path: filePath });
 
@@ -962,6 +965,13 @@ export class ReadmeProcessor extends MarkdownProcessor {
 			options
 		);
 	}
+
+	override async onEnd(): Promise<void> {
+		if (this.options.readmePath && this.filesProcessed === 0) {
+			util.log.error(`The provided readme file (${this.options.readmePath}) could not be found.`);
+			process.exit(1);
+		}
+	}
 }
 
 export class ChangelogProcessor extends MarkdownProcessor {
@@ -973,6 +983,13 @@ export class ChangelogProcessor extends MarkdownProcessor {
 			'Microsoft.VisualStudio.Services.Content.Changelog',
 			options
 		);
+	}
+
+	override async onEnd(): Promise<void> {
+		if (this.options.changelogPath && this.filesProcessed === 0) {
+			util.log.error(`The provided changelog file (${this.options.changelogPath}) could not be found.`);
+			process.exit(1);
+		}
 	}
 }
 
@@ -1943,7 +1960,7 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 }
 
 /**
- * Prints the packaged files of an extension.
+ * Prints the packaged files of an extension. And ensures .vscodeignore and files property in package.json are used correctly.
  */
 export async function printAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: Manifest, options: IPackageOptions): Promise<void> {
 	// Warn if the extension contains a lot of files
