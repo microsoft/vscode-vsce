@@ -115,6 +115,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--allow-unused-files-pattern', 'Allow include patterns for the files field in package.json that does not match any file')
 		.option('--skip-license', 'Allow packaging without license file')
 		.option('--sign-tool <path>', 'Path to the VSIX signing tool. Will be invoked with two arguments: `SIGNTOOL <path/to/extension.signature.manifest> <path/to/extension.signature.p7s>`.')
 		.action(
@@ -142,6 +143,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					allowUnusedFilesPattern,
 					skipLicense,
 					signTool,
 				}
@@ -170,6 +172,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						allowUnusedFilesPattern,
 						skipLicense,
 						signTool,
 					})
@@ -222,6 +225,7 @@ module.exports = function (argv: string[]): void {
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
+		.option('--allow-unused-files-pattern', 'Allow include patterns for the files field in package.json that does not match any file')
 		.option('--skip-duplicate', 'Fail silently if version already exists on the marketplace')
 		.option('--skip-license', 'Allow publishing without license file')
 		.action(
@@ -254,6 +258,7 @@ module.exports = function (argv: string[]): void {
 					preRelease,
 					allowStarActivation,
 					allowMissingRepository,
+					allowUnusedFilesPattern,
 					skipDuplicate,
 					skipLicense,
 					signTool,
@@ -288,6 +293,7 @@ module.exports = function (argv: string[]): void {
 						preRelease,
 						allowStarActivation,
 						allowMissingRepository,
+						allowUnusedFilesPattern,
 						skipDuplicate,
 						skipLicense,
 						signTool
