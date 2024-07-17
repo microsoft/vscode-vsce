@@ -199,6 +199,14 @@ export function bytesToString(bytes: number): string {
 	return `${size} ${unit}`;
 }
 
+export function filePathToVsixPath(originalFilePath: string): string {
+	return `extension/${originalFilePath}`;
+}
+
+export function vsixPathToFilePath(extensionFilePath: string): string {
+	return extensionFilePath.startsWith('extension/') ? extensionFilePath.substring('extension/'.length) : extensionFilePath;
+}
+
 const FOLDER_SIZE_KEY = "/__FOlDER_SIZE__\\";
 const FOLDER_FILES_TOTAL_KEY = "/__FOLDER_CHILDREN__\\";
 const FILE_SIZE_WARNING_THRESHOLD = 0.85;
