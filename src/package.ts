@@ -1978,15 +1978,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	// the package does not include at least one file for each include pattern
 	else if (manifest.files !== undefined && manifest.files.length > 0 && !options.allowUnusedFilesPattern) {
 		const originalFilePaths = files.map(f => util.vsixPathToFilePath(f.path));
-
-		const unusedIncludePatterns = [];
-		for (const includePattern of manifest.files) {
-			const hasMatchingFile = originalFilePaths.some(file => minimatch(file, includePattern, MinimatchOptions));
-			if (!hasMatchingFile) {
-				unusedIncludePatterns.push(includePattern);
-			}
-		}
-
+		const unusedIncludePatterns = manifest.files.filter(includePattern => !originalFilePaths.some(filePath => minimatch(filePath, includePattern, MinimatchOptions)));
 		if (unusedIncludePatterns.length > 0) {
 			let message = '';
 			message += `The following include patterns in the ${chalk.bold('"files"')} property in package.json do not match any files packaged in the extension:\n`;
