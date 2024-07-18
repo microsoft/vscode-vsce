@@ -1848,6 +1848,35 @@ describe('toVsixManifest', () => {
 		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.PreRelease', 'true');
 	});
 
+	it('should add executes code property when main is passed', async () => {
+		const manifest = createManifest({ main: 'main.js' });
+		const files = [{ path: 'extension/main.js', contents: Buffer.from('') }];
+
+		const raw = await _toVsixManifest(manifest, files);
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.ExecutesCode', 'true');
+	});
+
+	it('should add executes code property when browser is passed', async () => {
+		const manifest = createManifest({ browser: 'browser.js' });
+		const files = [{ path: 'extension/browser.js', contents: Buffer.from('') }];
+
+		const raw = await _toVsixManifest(manifest, files);
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertProperty(xmlManifest, 'Microsoft.VisualStudio.Code.ExecutesCode', 'true');
+	});
+
+	it('should not add executes code property when neither main nor browser is passed', async () => {
+		const manifest = createManifest();
+
+		const raw = await _toVsixManifest(manifest, []);
+		const xmlManifest = await parseXmlManifest(raw);
+
+		assertMissingProperty(xmlManifest, 'Microsoft.VisualStudio.Code.ExecutesCode');
+	});
+
 	it('should add sponsor link property', () => {
 		const sponsor = { url: 'https://foo.bar' };
 		const manifest: Manifest = {
