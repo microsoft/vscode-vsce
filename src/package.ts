@@ -200,6 +200,7 @@ export interface VSIX {
 	preRelease: boolean;
 	sponsorLink: string;
 	pricing: string;
+	executesCode:boolean;
 }
 
 export class BaseProcessor implements IProcessor {
@@ -547,6 +548,7 @@ export class ManifestProcessor extends BaseProcessor {
 					: '',
 			enabledApiProposals: manifest.enabledApiProposals ? manifest.enabledApiProposals.join(',') : '',
 			preRelease: !!this.options.preRelease,
+			executesCode: !!(manifest.main ?? manifest.browser),
 			sponsorLink: manifest.sponsor?.url || '',
 		};
 
@@ -1482,6 +1484,7 @@ export async function toVsixManifest(vsix: VSIX): Promise<string> {
 				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="${escape(vsix.localizedLanguages)}" />
 				<Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="${escape(vsix.enabledApiProposals)}" />
 				${vsix.preRelease ? `<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${escape(vsix.preRelease)}" />` : ''}
+				${vsix.executesCode ? `<Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="${escape(vsix.executesCode)}" />` : ''}
 				${vsix.sponsorLink
 			? `<Property Id="Microsoft.VisualStudio.Code.SponsorLink" Value="${escape(vsix.sponsorLink)}" />`
 			: ''
