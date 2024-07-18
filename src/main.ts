@@ -74,8 +74,9 @@ module.exports = function (argv: string[]): void {
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
-		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies }) =>
-			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies }))
+		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
+		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies, readmePath }) =>
+			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath }))
 		);
 
 	program
