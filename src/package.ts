@@ -1610,8 +1610,6 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
-const notIgnored = ['!package.json', '!README.md'];
-
 async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
@@ -1647,8 +1645,12 @@ function collectFiles(
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
-	manifestFileIncludes?: string[]
+	manifestFileIncludes?: string[],
+	readmePath?: string,
 ): Promise<string[]> {
+	readmePath = readmePath ?? 'README.md';
+	const notIgnored = ['!package.json', `!${readmePath}`];
+
 	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
@@ -1756,7 +1758,7 @@ export function collect(manifest: Manifest, options: IPackageOptions = {}): Prom
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files).then(fileNames => {
+	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1915,6 +1917,7 @@ export interface IListFilesOptions {
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
 	readonly prepublish?: boolean;
+	readonly readmePath?: string;
 }
 
 /**
@@ -1928,7 +1931,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files);
+	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath);
 }
 
 interface ILSOptions {
@@ -1937,6 +1940,7 @@ interface ILSOptions {
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
+	readonly readmePath?: string;
 }
 
 /**
