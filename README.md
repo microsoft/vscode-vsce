@@ -11,7 +11,7 @@ Read the [**Documentation**](https://code.visualstudio.com/api/working-with-exte
 
 ## Requirements
 
-[Node.js](https://nodejs.org/en/) at least `18.x.x`.
+[Node.js](https://nodejs.org/en/) at least `20.x.x`.
 
 ### Linux
 
