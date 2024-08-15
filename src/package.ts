@@ -6,7 +6,7 @@ import * as yazl from 'yazl';
 import { ExtensionKind, Manifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import { glob } from 'glob';
+import glob from 'glob';
 import minimatch from 'minimatch';
 import markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
@@ -200,7 +200,7 @@ export interface VSIX {
 	preRelease: boolean;
 	sponsorLink: string;
 	pricing: string;
-	executesCode: boolean;
+	executesCode:boolean;
 }
 
 export class BaseProcessor implements IProcessor {
@@ -1620,7 +1620,7 @@ async function collectAllFiles(
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+		promisify(glob)('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 		)
 	);
