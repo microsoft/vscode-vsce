@@ -1268,7 +1268,11 @@ export class ValidationProcessor extends BaseProcessor {
 
 export function validateManifest(manifest: Manifest): Manifest {
 	validateExtensionName(manifest.name);
-	validatePublisher(manifest.publisher);
+
+	// allow users to package an extension without a publisher for testing reasons
+	if (manifest.publisher) {
+		validatePublisher(manifest.publisher);
+	}
 
 	if (!manifest.version) {
 		throw new Error('Manifest missing field: version');
@@ -1848,6 +1852,7 @@ async function getPackagePath(cwd: string, manifest: Manifest, options: IPackage
 
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
+	console.log('packaging extension from:', cwd);
 	const manifest = await readManifest(cwd);
 	const files = await collect(manifest, options);
 
@@ -1895,6 +1900,7 @@ export async function createSignatureArchive(manifestFile: string, signatureFile
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
 	const cwd = options.cwd || process.cwd();
+	console.log('packaging command extension from:', cwd);
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
