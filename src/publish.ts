@@ -6,7 +6,7 @@ import { pack, readManifest, versionBump, prepublish, signPackage, createSignatu
 import * as tmp from 'tmp';
 import { IVerifyPatOptions, getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
-import { Manifest } from './manifest';
+import { ManifestPackage, ManifestPublish } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
@@ -126,7 +126,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				}
 			}
 
-			validateMarketplaceRequirements(vsix.manifest, options);
+			const manifestValidated = validateManifestForPublishing(vsix.manifest, options);
 
 			let sigzipPath: string | undefined;
 			if (options.manifestPath?.[index] && options.signaturePath?.[index]) {
@@ -141,7 +141,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 				sigzipPath = await signPackage(packagePath, options.signTool);
 			}
 
-			await _publish(packagePath, sigzipPath, vsix.manifest, { ...options, target });
+			await _publish(packagePath, sigzipPath, manifestValidated, { ...options, target });
 		}
 	} else {
 		const cwd = options.cwd || process.cwd();
@@ -149,7 +149,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		patchOptionsWithManifest(options, manifest);
 
 		// Validate marketplace requirements before prepublish to avoid unnecessary work
-		validateMarketplaceRequirements(manifest, options);
+		validateManifestForPublishing(manifest, options);
 
 		await prepublish(cwd, manifest, options.useYarn);
 		await versionBump(options);
@@ -158,14 +158,16 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 			for (const target of options.targets) {
 				const packagePath = await tmpName();
 				const packageResult = await pack({ ...options, target, packagePath });
+				const manifestValidated = validateManifestForPublishing(packageResult.manifest, options);
 				const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
-				await _publish(packagePath, sigzipPath, packageResult.manifest, { ...options, target });
+				await _publish(packagePath, sigzipPath, manifestValidated, { ...options, target });
 			}
 		} else {
 			const packagePath = await tmpName();
 			const packageResult = await pack({ ...options, packagePath });
+			const manifestValidated = validateManifestForPublishing(packageResult.manifest, options);
 			const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
-			await _publish(packagePath, sigzipPath, packageResult.manifest, options);
+			await _publish(packagePath, sigzipPath, manifestValidated, options);
 		}
 	}
 }
@@ -180,7 +182,7 @@ export interface IInternalPublishOptions {
 	readonly skipDuplicate?: boolean;
 }
 
-async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: Manifest, options: IInternalPublishOptions) {
+async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: ManifestPublish, options: IInternalPublishOptions) {
 	const pat = await getPAT(manifest.publisher, options);
 	const api = await getGalleryAPI(pat);
 	const packageStream = fs.createReadStream(packagePath);
@@ -265,7 +267,7 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 	log.done(`Published ${description}.`);
 }
 
-async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: Manifest) {
+async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: ManifestPublish) {
 	const extensionType = 'Visual Studio Code';
 	const form = new FormData();
 	const lineBreak = '\r\n';
@@ -299,7 +301,7 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 		[publisher, name] = options.id.split('.');
 	} else {
 		const manifest = await readManifest(options.cwd);
-		publisher = manifest.publisher;
+		publisher = validatePublisher(manifest.publisher);
 		name = manifest.name;
 	}
 
@@ -320,9 +322,7 @@ export async function unpublish(options: IUnpublishOptions = {}): Promise<any> {
 	log.done(`Deleted extension: ${fullName}!`);
 }
 
-function validateMarketplaceRequirements(manifest: Manifest, options: IInternalPublishOptions) {
-	validatePublisher(manifest.publisher);
-
+function validateManifestForPublishing(manifest: ManifestPackage, options: IInternalPublishOptions): ManifestPublish {
 	if (manifest.enableProposedApi && !options.allowAllProposedApis && !options.noVerify) {
 		throw new Error(
 			"Extensions using proposed API (enableProposedApi: true) can't be published to the Marketplace. Use --allow-all-proposed-apis to bypass. https://code.visualstudio.com/api/advanced-topics/using-proposed-api"
@@ -338,6 +338,8 @@ function validateMarketplaceRequirements(manifest: Manifest, options: IInternalP
 	if (semver.prerelease(manifest.version)) {
 		throw new Error(`The VS Marketplace doesn't support prerelease versions: '${manifest.version}'. Checkout our pre-release versioning recommendation here: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions`);
 	}
+
+	return { ...manifest, publisher: validatePublisher(manifest.publisher) };
 }
 
 export async function getPAT(publisher: string, options: IPublishOptions | IUnpublishOptions | IVerifyPatOptions): Promise<string> {

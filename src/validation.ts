@@ -3,7 +3,7 @@ import parseSemver from 'parse-semver';
 
 const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
-export function validatePublisher(publisher: string): void {
+export function validatePublisher(publisher: string | undefined): string {
 	if (!publisher) {
 		throw new Error(
 			`Missing publisher name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
@@ -15,9 +15,11 @@ export function validatePublisher(publisher: string): void {
 			`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
 		);
 	}
+
+	return publisher;
 }
 
-export function validateExtensionName(name: string): void {
+export function validateExtensionName(name: string | undefined): string {
 	if (!name) {
 		throw new Error(`Missing extension name`);
 	}
@@ -25,9 +27,11 @@ export function validateExtensionName(name: string): void {
 	if (!nameRegex.test(name)) {
 		throw new Error(`Invalid extension name '${name}'`);
 	}
+
+	return name;
 }
 
-export function validateVersion(version: string): void {
+export function validateVersion(version: string | undefined): string {
 	if (!version) {
 		throw new Error(`Missing extension version`);
 	}
@@ -35,9 +39,11 @@ export function validateVersion(version: string): void {
 	if (!semver.valid(version)) {
 		throw new Error(`Invalid extension version '${version}'`);
 	}
+
+	return version;
 }
 
-export function validateEngineCompatibility(version: string): void {
+export function validateEngineCompatibility(version: string | undefined): string {
 	if (!version) {
 		throw new Error(`Missing vscode engine compatibility version`);
 	}
@@ -45,6 +51,8 @@ export function validateEngineCompatibility(version: string): void {
 	if (!/^\*$|^(\^|>=)?((\d+)|x)\.((\d+)|x)\.((\d+)|x)(\-.*)?$/.test(version)) {
 		throw new Error(`Invalid vscode engine compatibility version '${version}'`);
 	}
+
+	return version;
 }
 
 /**

@@ -8,14 +8,14 @@ import {
 	createDefaultProcessors,
 	toVsixManifest,
 	IFile,
-	validateManifest,
+	validateManifestForPackaging,
 	IPackageOptions,
 	ManifestProcessor,
 	versionBump,
 	VSIX,
 	LicenseProcessor,
 } from '../package';
-import { Manifest } from '../manifest';
+import { ManifestPackage } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as assert from 'assert';
@@ -48,7 +48,7 @@ async function throws(fn: () => Promise<any>): Promise<void> {
 
 const fixture = (name: string) => path.join(path.dirname(path.dirname(__dirname)), 'src', 'test', 'fixtures', name);
 
-function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOptions = {}): Promise<string> {
+function _toVsixManifest(manifest: ManifestPackage, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
 		const assets = flatten(processors.map(p => p.assets));
@@ -59,7 +59,7 @@ function _toVsixManifest(manifest: Manifest, files: IFile[], options: IPackageOp
 	});
 }
 
-async function toXMLManifest(manifest: Manifest, files: IFile[] = []): Promise<XMLManifest> {
+async function toXMLManifest(manifest: ManifestPackage, files: IFile[] = []): Promise<XMLManifest> {
 	const raw = await _toVsixManifest(manifest, files);
 	return parseXmlManifest(raw);
 }
@@ -77,7 +77,7 @@ function assertMissingProperty(manifest: XMLManifest, name: string): void {
 	assert.strictEqual(property.length, 0, `Property '${name}' should not exist`);
 }
 
-function createManifest(extra: Partial<Manifest> = {}): Manifest {
+function createManifest(extra: Partial<ManifestPackage> = {}): ManifestPackage {
 	return {
 		name: 'test',
 		publisher: 'mocha',
@@ -287,46 +287,47 @@ describe('readManifest', () => {
 
 describe('validateManifest', () => {
 	it('should catch missing fields', () => {
-		assert.ok(validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
+		assert.ok(validateManifestForPackaging({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
+			validateManifestForPackaging({ publisher: 'demo', name: null!, version: '1.0.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: null!, engines: { vscode: '0.10.1' } });
+			validateManifestForPackaging({ publisher: 'demo', name: 'demo', version: null!, engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } });
+			validateManifestForPackaging({ publisher: 'demo', name: 'demo', version: '1.0', engines: { vscode: '0.10.1' } });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null! });
+			validateManifestForPackaging({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: null! });
 		});
 		assert.throws(() => {
-			validateManifest({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } as any });
+			validateManifestForPackaging({ publisher: 'demo', name: 'demo', version: '1.0.0', engines: { vscode: null } as any });
 		});
 		validatePublisher('demo');
-		assert.throws(() => validatePublisher(undefined!));
+		assert.throws(() => validatePublisher(undefined));
+		assert.ok(validateManifestForPackaging({ publisher: undefined, name: 'demo', version: '1.0.0', engines: { vscode: '0.10.1' } }));
 	});
 
 	it('should prevent SVG icons', () => {
-		assert.ok(validateManifest(createManifest({ icon: 'icon.png' })));
+		assert.ok(validateManifestForPackaging(createManifest({ icon: 'icon.png' })));
 		assert.throws(() => {
-			validateManifest(createManifest({ icon: 'icon.svg' }));
+			validateManifestForPackaging(createManifest({ icon: 'icon.svg' }));
 		});
 	});
 
 	it('should prevent badges from non HTTPS sources', () => {
 		assert.throws(() => {
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({ badges: [{ url: 'relative.png', href: 'http://badgeurl', description: 'this is a badge' }] })
 			);
 		});
 		assert.throws(() => {
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({ badges: [{ url: 'relative.svg', href: 'http://badgeurl', description: 'this is a badge' }] })
 			);
 		});
 		assert.throws(() => {
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					badges: [{ url: 'http://badgeurl.png', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
@@ -336,7 +337,7 @@ describe('validateManifest', () => {
 
 	it('should allow non SVG badges', () => {
 		assert.ok(
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					badges: [{ url: 'https://host/badge.png', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
@@ -346,7 +347,7 @@ describe('validateManifest', () => {
 
 	it('should allow SVG badges from trusted sources', () => {
 		assert.ok(
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
@@ -357,7 +358,7 @@ describe('validateManifest', () => {
 	it('should prevent SVG badges from non trusted sources', () => {
 		assert.throws(() => {
 			assert.ok(
-				validateManifest(
+				validateManifestForPackaging(
 					createManifest({
 						badges: [{ url: 'https://github.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
 					})
@@ -366,7 +367,7 @@ describe('validateManifest', () => {
 		});
 		assert.throws(() => {
 			assert.ok(
-				validateManifest(
+				validateManifestForPackaging(
 					createManifest({
 						badges: [
 							{
@@ -382,46 +383,46 @@ describe('validateManifest', () => {
 	});
 
 	it('should validate activationEvents against main and browser', () => {
-		assert.throws(() => validateManifest(createManifest({ activationEvents: ['any'] })));
-		assert.throws(() => validateManifest(createManifest({ main: 'main.js' })));
-		assert.throws(() => validateManifest(createManifest({ browser: 'browser.js' })));
-		assert.throws(() => validateManifest(createManifest({ main: 'main.js', browser: 'browser.js' })));
-		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js' }));
-		validateManifest(createManifest({ activationEvents: ['any'], browser: 'browser.js' }));
-		validateManifest(createManifest({ activationEvents: ['any'], main: 'main.js', browser: 'browser.js' }));
+		assert.throws(() => validateManifestForPackaging(createManifest({ activationEvents: ['any'] })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ main: 'main.js' })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ browser: 'browser.js' })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ main: 'main.js', browser: 'browser.js' })));
+		validateManifestForPackaging(createManifest({ activationEvents: ['any'], main: 'main.js' }));
+		validateManifestForPackaging(createManifest({ activationEvents: ['any'], browser: 'browser.js' }));
+		validateManifestForPackaging(createManifest({ activationEvents: ['any'], main: 'main.js', browser: 'browser.js' }));
 	});
 
 	it('should validate extensionKind', () => {
-		assert.throws(() => validateManifest(createManifest({ extensionKind: ['web'] })));
-		assert.throws(() => validateManifest(createManifest({ extensionKind: 'web' })));
-		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'ui', 'web'] })));
-		assert.throws(() => validateManifest(createManifest({ extensionKind: ['workspace', 'web'] })));
-		assert.throws(() => validateManifest(createManifest({ extensionKind: ['ui', 'web'] })));
-		assert.throws(() => validateManifest(createManifest(<any>{ extensionKind: ['any'] })));
-		validateManifest(createManifest({ extensionKind: 'ui' }));
-		validateManifest(createManifest({ extensionKind: ['ui'] }));
-		validateManifest(createManifest({ extensionKind: 'workspace' }));
-		validateManifest(createManifest({ extensionKind: ['workspace'] }));
-		validateManifest(createManifest({ extensionKind: ['ui', 'workspace'] }));
-		validateManifest(createManifest({ extensionKind: ['workspace', 'ui'] }));
+		assert.throws(() => validateManifestForPackaging(createManifest({ extensionKind: ['web'] })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ extensionKind: 'web' })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ extensionKind: ['workspace', 'ui', 'web'] })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ extensionKind: ['workspace', 'web'] })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ extensionKind: ['ui', 'web'] })));
+		assert.throws(() => validateManifestForPackaging(createManifest(<any>{ extensionKind: ['any'] })));
+		validateManifestForPackaging(createManifest({ extensionKind: 'ui' }));
+		validateManifestForPackaging(createManifest({ extensionKind: ['ui'] }));
+		validateManifestForPackaging(createManifest({ extensionKind: 'workspace' }));
+		validateManifestForPackaging(createManifest({ extensionKind: ['workspace'] }));
+		validateManifestForPackaging(createManifest({ extensionKind: ['ui', 'workspace'] }));
+		validateManifestForPackaging(createManifest({ extensionKind: ['workspace', 'ui'] }));
 	});
 
 	it('should validate sponsor', () => {
-		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'hello' } })));
-		assert.throws(() => validateManifest(createManifest({ sponsor: { url: 'www.foo.com' } })));
-		validateManifest(createManifest({ sponsor: { url: 'https://foo.bar' } }));
-		validateManifest(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
+		assert.throws(() => validateManifestForPackaging(createManifest({ sponsor: { url: 'hello' } })));
+		assert.throws(() => validateManifestForPackaging(createManifest({ sponsor: { url: 'www.foo.com' } })));
+		validateManifestForPackaging(createManifest({ sponsor: { url: 'https://foo.bar' } }));
+		validateManifestForPackaging(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
 	});
 
 	it('should validate pricing', () => {
-		assert.throws(() => validateManifest(createManifest({ pricing: 'Paid' })));
-		validateManifest(createManifest({ pricing: 'Trial' }));
-		validateManifest(createManifest({ pricing: 'Free' }));
-		validateManifest(createManifest());
+		assert.throws(() => validateManifestForPackaging(createManifest({ pricing: 'Paid' })));
+		validateManifestForPackaging(createManifest({ pricing: 'Trial' }));
+		validateManifestForPackaging(createManifest({ pricing: 'Free' }));
+		validateManifestForPackaging(createManifest());
 	});
 
 	it('should allow implicit activation events', () => {
-		validateManifest(
+		validateManifestForPackaging(
 			createManifest({
 				engines: { vscode: '>=1.74.0' },
 				main: 'main.js',
@@ -436,7 +437,7 @@ describe('validateManifest', () => {
 			})
 		);
 
-		validateManifest(
+		validateManifestForPackaging(
 			createManifest({
 				engines: { vscode: '*' },
 				main: 'main.js',
@@ -451,7 +452,7 @@ describe('validateManifest', () => {
 			})
 		);
 
-		validateManifest(
+		validateManifestForPackaging(
 			createManifest({
 				engines: { vscode: '>=1.74.0' },
 				contributes: {
@@ -465,7 +466,7 @@ describe('validateManifest', () => {
 		);
 
 		assert.throws(() =>
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					engines: { vscode: '>=1.73.3' },
 					main: 'main.js',
@@ -474,7 +475,7 @@ describe('validateManifest', () => {
 		);
 
 		assert.throws(() =>
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					engines: { vscode: '>=1.73.3' },
 					activationEvents: ['*'],
@@ -483,7 +484,7 @@ describe('validateManifest', () => {
 		);
 
 		assert.throws(() =>
-			validateManifest(
+			validateManifestForPackaging(
 				createManifest({
 					engines: { vscode: '>=1.73.3' },
 					main: 'main.js',
@@ -1571,7 +1572,7 @@ describe('toVsixManifest', () => {
 	});
 
 	it('should not have empty keywords #114', () => {
-		const manifest: Manifest = {
+		const manifest: ManifestPackage = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
@@ -1879,7 +1880,7 @@ describe('toVsixManifest', () => {
 
 	it('should add sponsor link property', () => {
 		const sponsor = { url: 'https://foo.bar' };
-		const manifest: Manifest = {
+		const manifest: ManifestPackage = {
 			name: 'test',
 			publisher: 'mocha',
 			version: '0.0.1',
