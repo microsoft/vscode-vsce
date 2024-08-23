@@ -68,7 +68,7 @@ export interface ManifestPackage {
 	// mandatory (npm)
 	name: string;
 	version: string;
-	engines: { [name: string]: string };
+	engines: { vscode: string;[name: string]: string };
 
 	// vscode
 	publisher?: string;
@@ -129,3 +129,9 @@ export interface ManifestPackage {
 export interface ManifestPublish extends ManifestPackage {
 	publisher: string;
 }
+
+type RecursivePartial<T> = {
+	[P in keyof T]?: T[P] extends object ? RecursivePartial<T[P]> : T[P];
+};
+
+export type UnverifiedManifest = RecursivePartial<ManifestPackage>;

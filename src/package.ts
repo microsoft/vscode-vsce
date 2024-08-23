@@ -3,7 +3,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import * as cp from 'child_process';
 import * as yazl from 'yazl';
-import { ExtensionKind, ManifestPackage } from './manifest';
+import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
@@ -489,7 +489,7 @@ export class ManifestProcessor extends BaseProcessor {
 			let engineVersion: string;
 
 			try {
-				const engineSemver = parseSemver(`vscode@${manifest.engines['vscode']}`);
+				const engineSemver = parseSemver(`vscode@${manifest.engines.vscode}`);
 				engineVersion = engineSemver.version;
 			} catch (err) {
 				throw new Error('Failed to parse semver of engines.vscode');
@@ -498,7 +498,7 @@ export class ManifestProcessor extends BaseProcessor {
 			if (target) {
 				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61', { includePrerelease: true })) {
 					throw new Error(
-						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
+						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines.vscode}'.`
 					);
 				}
 				if (!Targets.has(target)) {
@@ -509,7 +509,7 @@ export class ManifestProcessor extends BaseProcessor {
 			if (preRelease) {
 				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63', { includePrerelease: true })) {
 					throw new Error(
-						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines['vscode']}'.`
+						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines.vscode}'.`
 					);
 				}
 			}
@@ -522,7 +522,7 @@ export class ManifestProcessor extends BaseProcessor {
 			version: options.version && !(options.updatePackageJson ?? true) ? options.version : manifest.version,
 			publisher: manifest.publisher,
 			target,
-			engine: manifest.engines['vscode'],
+			engine: manifest.engines.vscode,
 			description: manifest.description ?? '',
 			pricing: manifest.pricing ?? 'Free',
 			categories: (manifest.categories ?? []).join(','),
@@ -1266,19 +1266,17 @@ export class ValidationProcessor extends BaseProcessor {
 	}
 }
 
-export function validateManifestForPackaging(manifest: Partial<ManifestPackage>): ManifestPackage {
+export function validateManifestForPackaging(manifest: UnverifiedManifest): ManifestPackage {
 
 	if (!manifest.engines) {
 		throw new Error('Manifest missing field: engines');
 	}
-	manifest.engines['vscode'] = validateEngineCompatibility(manifest.engines['vscode']);
-	manifest.name = validateExtensionName(manifest.name);
-	manifest.version = validateVersion(manifest.version);
-
+	const engines = { ...manifest.engines, vscode: validateEngineCompatibility(manifest.engines.vscode) };
+	const name = validateExtensionName(manifest.name);
+	const version = validateVersion(manifest.version);
 	// allow users to package an extension without a publisher for testing reasons
-	if (manifest.publisher) {
-		manifest.publisher = validatePublisher(manifest.publisher);
-	}
+	const publisher = manifest.publisher ? validatePublisher(manifest.publisher) : undefined;
+
 
 	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
 		throw new Error('Pricing can only be "Free" or "Trial"');
@@ -1298,7 +1296,7 @@ export function validateManifestForPackaging(manifest: Partial<ManifestPackage>)
 
 	let parsedEngineVersion: string;
 	try {
-		const engineSemver = parseSemver(`vscode@${manifest.engines['vscode']}`);
+		const engineSemver = parseSemver(`vscode@${engines.vscode}`);
 		parsedEngineVersion = engineSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode');
@@ -1306,7 +1304,7 @@ export function validateManifestForPackaging(manifest: Partial<ManifestPackage>)
 
 	if (
 		hasActivationEvents ||
-		((manifest.engines['vscode'] === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
+		((engines.vscode === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
 			hasImplicitActivationEvents)
 	) {
 		if (!hasMain && !hasBrowser && (hasActivationEvents || !hasImplicitLanguageActivationEvents)) {
@@ -1321,7 +1319,7 @@ export function validateManifestForPackaging(manifest: Partial<ManifestPackage>)
 	}
 
 	if (manifest.devDependencies && manifest.devDependencies['@types/vscode']) {
-		validateVSCodeTypesCompatibility(manifest.engines['vscode'], manifest.devDependencies['@types/vscode']);
+		validateVSCodeTypesCompatibility(engines.vscode, manifest.devDependencies['@types/vscode']);
 	}
 
 	if (/\.svg$/i.test(manifest.icon || '')) {
@@ -1388,10 +1386,10 @@ export function validateManifestForPackaging(manifest: Partial<ManifestPackage>)
 
 	return {
 		...manifest,
-		name: manifest.name,
-		version: manifest.version,
-		engines: manifest.engines,
-		publisher: manifest.publisher,
+		name,
+		version,
+		engines,
+		publisher,
 	};
 }
 
@@ -1402,7 +1400,7 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<ManifestP
 	const manifest = fs.promises
 		.readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
-		.then<ManifestPackage>(manifestStr => {
+		.then<UnverifiedManifest>(manifestStr => {
 			try {
 				return Promise.resolve(JSON.parse(manifestStr));
 			} catch (e) {

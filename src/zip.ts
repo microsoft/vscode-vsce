@@ -1,5 +1,5 @@
 import { Entry, open, ZipFile } from 'yauzl';
-import { ManifestPackage } from './manifest';
+import { ManifestPackage, UnverifiedManifest } from './manifest';
 import { parseXmlManifest, XMLManifest } from './xml';
 import { Readable } from 'stream';
 import { filePathToVsixPath } from './util';
@@ -61,7 +61,7 @@ export async function readVSIXPackage(packagePath: string): Promise<{ manifest: 
 		throw new Error('VSIX manifest not found');
 	}
 
-	const manifest = JSON.parse(rawManifest.toString('utf8')) as Partial<ManifestPackage>;
+	const manifest = JSON.parse(rawManifest.toString('utf8')) as UnverifiedManifest;
 	let manifestValidated;
 	try {
 		manifestValidated = validateManifestForPackaging(manifest);
