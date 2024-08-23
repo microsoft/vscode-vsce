@@ -1,4 +1,4 @@
-import { Manifest } from './manifest';
+import { ManifestPackage } from './manifest';
 
 export interface ITranslations {
 	[key: string]: string;
@@ -27,7 +27,7 @@ function createPatcher(translations: ITranslations): <T>(value: T) => T {
 	};
 }
 
-export function patchNLS(manifest: Manifest, translations: ITranslations): Manifest {
+export function patchNLS(manifest: ManifestPackage, translations: ITranslations): ManifestPackage {
 	const patcher = createPatcher(translations);
 	return JSON.parse(JSON.stringify(manifest, (_, value: any) => patcher(value)));
 }

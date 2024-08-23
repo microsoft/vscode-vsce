@@ -64,14 +64,14 @@ export interface Contributions {
 
 export type ExtensionKind = 'ui' | 'workspace' | 'web';
 
-export interface Manifest {
+export interface ManifestPackage {
 	// mandatory (npm)
 	name: string;
 	version: string;
 	engines: { [name: string]: string };
 
 	// vscode
-	publisher: string;
+	publisher?: string;
 	icon?: string;
 	contributes?: Contributions;
 	activationEvents?: string[];
@@ -124,4 +124,8 @@ export interface Manifest {
 	// cpu?: string[];
 	// preferGlobal
 	// publishConfig
+}
+
+export interface ManifestPublish extends ManifestPackage {
+	publisher: string;
 }

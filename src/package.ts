@@ -3,7 +3,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import * as cp from 'child_process';
 import * as yazl from 'yazl';
-import { ExtensionKind, Manifest } from './manifest';
+import { ExtensionKind, ManifestPackage } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
@@ -57,7 +57,7 @@ export function read(file: IFile): Promise<string> {
 }
 
 export interface IPackage {
-	manifest: Manifest;
+	manifest: ManifestPackage;
 	packagePath: string;
 }
 
@@ -171,7 +171,7 @@ export interface VSIX {
 	id: string;
 	displayName: string;
 	version: string;
-	publisher: string;
+	publisher?: string;
 	target?: string;
 	engine: string;
 	description: string;
@@ -187,11 +187,11 @@ export interface VSIX {
 		homepage?: string;
 		github?: string;
 	};
-	galleryBanner: NonNullable<Manifest['galleryBanner']>;
-	badges?: Manifest['badges'];
+	galleryBanner: NonNullable<ManifestPackage['galleryBanner']>;
+	badges?: ManifestPackage['badges'];
 	githubMarkdown: boolean;
 	enableMarketplaceQnA?: boolean;
-	customerQnALink?: Manifest['qna'];
+	customerQnALink?: ManifestPackage['qna'];
 	extensionDependencies: string;
 	extensionPack: string;
 	extensionKind: string;
@@ -204,7 +204,7 @@ export interface VSIX {
 }
 
 export class BaseProcessor implements IProcessor {
-	constructor(protected manifest: Manifest) { }
+	constructor(protected manifest: ManifestPackage) { }
 	assets: IAsset[] = [];
 	tags: string[] = [];
 	vsix: VSIX = Object.create(null);
@@ -217,13 +217,13 @@ export class BaseProcessor implements IProcessor {
 }
 
 // https://github.com/npm/cli/blob/latest/lib/utils/hosted-git-info-from-manifest.js
-function getGitHost(manifest: Manifest): GitHost | undefined {
+function getGitHost(manifest: ManifestPackage): GitHost | undefined {
 	const url = getRepositoryUrl(manifest);
 	return url ? GitHost.fromUrl(url, { noGitPlus: true }) : undefined;
 }
 
 // https://github.com/npm/cli/blob/latest/lib/repo.js
-function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string | undefined {
+function getRepositoryUrl(manifest: ManifestPackage, gitHost?: GitHost | null): string | undefined {
 	if (gitHost) {
 		return gitHost.https();
 	}
@@ -246,7 +246,7 @@ function getRepositoryUrl(manifest: Manifest, gitHost?: GitHost | null): string 
 }
 
 // https://github.com/npm/cli/blob/latest/lib/bugs.js
-function getBugsUrl(manifest: Manifest, gitHost: GitHost | undefined): string | undefined {
+function getBugsUrl(manifest: ManifestPackage, gitHost: GitHost | undefined): string | undefined {
 	if (manifest.bugs) {
 		if (typeof manifest.bugs === 'string') {
 			return manifest.bugs;
@@ -267,7 +267,7 @@ function getBugsUrl(manifest: Manifest, gitHost: GitHost | undefined): string | 
 }
 
 // https://github.com/npm/cli/blob/latest/lib/docs.js
-function getHomepageUrl(manifest: Manifest, gitHost: GitHost | undefined): string | undefined {
+function getHomepageUrl(manifest: ManifestPackage, gitHost: GitHost | undefined): string | undefined {
 	if (manifest.homepage) {
 		return manifest.homepage;
 	}
@@ -457,7 +457,7 @@ export const Targets = new Set([
 ]);
 
 export class ManifestProcessor extends BaseProcessor {
-	constructor(manifest: Manifest, private readonly options: IPackageOptions = {}) {
+	constructor(manifest: ManifestPackage, private readonly options: IPackageOptions = {}) {
 		super(manifest);
 
 		const flags = ['Public'];
@@ -738,7 +738,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 	protected filesProcessed: number = 0;
 
 	constructor(
-		manifest: Manifest,
+		manifest: ManifestPackage,
 		private name: string,
 		filePath: string,
 		private assetType: string,
@@ -958,7 +958,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 }
 
 export class ReadmeProcessor extends MarkdownProcessor {
-	constructor(manifest: Manifest, options: IPackageOptions = {}) {
+	constructor(manifest: ManifestPackage, options: IPackageOptions = {}) {
 		super(
 			manifest,
 			'README.md',
@@ -977,7 +977,7 @@ export class ReadmeProcessor extends MarkdownProcessor {
 }
 
 export class ChangelogProcessor extends MarkdownProcessor {
-	constructor(manifest: Manifest, options: IPackageOptions = {}) {
+	constructor(manifest: ManifestPackage, options: IPackageOptions = {}) {
 		super(
 			manifest,
 			'CHANGELOG.md',
@@ -1000,7 +1000,7 @@ export class LicenseProcessor extends BaseProcessor {
 	private expectedLicenseName: string;
 	filter: (name: string) => boolean;
 
-	constructor(manifest: Manifest, private readonly options: IPackageOptions = {}) {
+	constructor(manifest: ManifestPackage, private readonly options: IPackageOptions = {}) {
 		super(manifest);
 
 		const match = /^SEE LICENSE IN (.*)$/.exec(manifest.license || '');
@@ -1050,7 +1050,7 @@ export class LicenseProcessor extends BaseProcessor {
 class LaunchEntryPointProcessor extends BaseProcessor {
 	private entryPoints: Set<string> = new Set<string>();
 
-	constructor(manifest: Manifest) {
+	constructor(manifest: ManifestPackage) {
 		super(manifest);
 		if (manifest.main) {
 			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
@@ -1086,7 +1086,7 @@ class IconProcessor extends BaseProcessor {
 	private icon: string | undefined;
 	private didFindIcon = false;
 
-	constructor(manifest: Manifest) {
+	constructor(manifest: ManifestPackage) {
 		super(manifest);
 
 		this.icon = manifest.icon && path.posix.normalize(util.filePathToVsixPath(manifest.icon));
@@ -1112,7 +1112,7 @@ class IconProcessor extends BaseProcessor {
 
 const ValidExtensionKinds = new Set(['ui', 'workspace']);
 
-export function isWebKind(manifest: Manifest): boolean {
+export function isWebKind(manifest: ManifestPackage): boolean {
 	const extensionKind = getExtensionKind(manifest);
 	return extensionKind.some(kind => kind === 'web');
 }
@@ -1129,7 +1129,7 @@ extensionPointExtensionKindsMap.set('markdown.markdownItPlugins', ['workspace', 
 extensionPointExtensionKindsMap.set('html.customData', ['workspace', 'web']);
 extensionPointExtensionKindsMap.set('css.customData', ['workspace', 'web']);
 
-function getExtensionKind(manifest: Manifest): ExtensionKind[] {
+function getExtensionKind(manifest: ManifestPackage): ExtensionKind[] {
 	const deduced = deduceExtensionKinds(manifest);
 
 	// check the manifest
@@ -1151,7 +1151,7 @@ function getExtensionKind(manifest: Manifest): ExtensionKind[] {
 	return deduced;
 }
 
-function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
+function deduceExtensionKinds(manifest: ManifestPackage): ExtensionKind[] {
 	// Not an UI extension if it has main
 	if (manifest.main) {
 		if (manifest.browser) {
@@ -1187,7 +1187,7 @@ function deduceExtensionKinds(manifest: Manifest): ExtensionKind[] {
 export class NLSProcessor extends BaseProcessor {
 	private translations: { [path: string]: string } = Object.create(null);
 
-	constructor(manifest: Manifest) {
+	constructor(manifest: ManifestPackage) {
 		super(manifest);
 
 		if (
@@ -1266,34 +1266,23 @@ export class ValidationProcessor extends BaseProcessor {
 	}
 }
 
-export function validateManifest(manifest: Manifest): Manifest {
-	validateExtensionName(manifest.name);
+export function validateManifestForPackaging(manifest: Partial<ManifestPackage>): ManifestPackage {
+
+	if (!manifest.engines) {
+		throw new Error('Manifest missing field: engines');
+	}
+	manifest.engines['vscode'] = validateEngineCompatibility(manifest.engines['vscode']);
+	manifest.name = validateExtensionName(manifest.name);
+	manifest.version = validateVersion(manifest.version);
 
 	// allow users to package an extension without a publisher for testing reasons
 	if (manifest.publisher) {
-		validatePublisher(manifest.publisher);
-	}
-
-	if (!manifest.version) {
-		throw new Error('Manifest missing field: version');
+		manifest.publisher = validatePublisher(manifest.publisher);
 	}
 
 	if (manifest.pricing && !['Free', 'Trial'].includes(manifest.pricing)) {
 		throw new Error('Pricing can only be "Free" or "Trial"');
 	}
-
-	validateVersion(manifest.version);
-
-	if (!manifest.engines) {
-		throw new Error('Manifest missing field: engines');
-	}
-
-	if (!manifest.engines['vscode']) {
-		throw new Error('Manifest missing field: engines.vscode');
-	}
-
-	const engineVersion = manifest.engines['vscode'];
-	validateEngineCompatibility(engineVersion);
 
 	const hasActivationEvents = !!manifest.activationEvents;
 	const hasImplicitLanguageActivationEvents = manifest.contributes?.languages;
@@ -1309,7 +1298,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	let parsedEngineVersion: string;
 	try {
-		const engineSemver = parseSemver(`vscode@${engineVersion}`);
+		const engineSemver = parseSemver(`vscode@${manifest.engines['vscode']}`);
 		parsedEngineVersion = engineSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode');
@@ -1317,7 +1306,7 @@ export function validateManifest(manifest: Manifest): Manifest {
 
 	if (
 		hasActivationEvents ||
-		((engineVersion === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
+		((manifest.engines['vscode'] === '*' || semver.satisfies(parsedEngineVersion, '>=1.74', { includePrerelease: true })) &&
 			hasImplicitActivationEvents)
 	) {
 		if (!hasMain && !hasBrowser && (hasActivationEvents || !hasImplicitLanguageActivationEvents)) {
@@ -1397,17 +1386,23 @@ export function validateManifest(manifest: Manifest): Manifest {
 		}
 	}
 
-	return manifest;
+	return {
+		...manifest,
+		name: manifest.name,
+		version: manifest.version,
+		engines: manifest.engines,
+		publisher: manifest.publisher,
+	};
 }
 
-export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest> {
+export function readManifest(cwd = process.cwd(), nls = true): Promise<ManifestPackage> {
 	const manifestPath = path.join(cwd, 'package.json');
 	const manifestNLSPath = path.join(cwd, 'package.nls.json');
 
 	const manifest = fs.promises
 		.readFile(manifestPath, 'utf8')
 		.catch(() => Promise.reject(`Extension manifest not found: ${manifestPath}`))
-		.then<Manifest>(manifestStr => {
+		.then<ManifestPackage>(manifestStr => {
 			try {
 				return Promise.resolve(JSON.parse(manifestStr));
 			} catch (e) {
@@ -1415,7 +1410,7 @@ export function readManifest(cwd = process.cwd(), nls = true): Promise<Manifest>
 				throw e;
 			}
 		})
-		.then(validateManifest);
+		.then(validateManifestForPackaging);
 
 	if (!nls) {
 		return manifest;
@@ -1745,7 +1740,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 	});
 }
 
-export function createDefaultProcessors(manifest: Manifest, options: IPackageOptions = {}): IProcessor[] {
+export function createDefaultProcessors(manifest: ManifestPackage, options: IPackageOptions = {}): IProcessor[] {
 	return [
 		new ManifestProcessor(manifest, options),
 		new TagsProcessor(manifest),
@@ -1759,7 +1754,7 @@ export function createDefaultProcessors(manifest: Manifest, options: IPackageOpt
 	];
 }
 
-export function collect(manifest: Manifest, options: IPackageOptions = {}): Promise<IFile[]> {
+export function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
@@ -1799,7 +1794,7 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 		);
 }
 
-function getDefaultPackageName(manifest: Manifest, options: IPackageOptions): string {
+function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptions): string {
 	let version = manifest.version;
 
 	if (options.version && !(options.updatePackageJson ?? true)) {
@@ -1813,7 +1808,7 @@ function getDefaultPackageName(manifest: Manifest, options: IPackageOptions): st
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: Manifest, useYarn?: boolean): Promise<void> {
+export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
@@ -1832,7 +1827,7 @@ export async function prepublish(cwd: string, manifest: Manifest, useYarn?: bool
 	});
 }
 
-async function getPackagePath(cwd: string, manifest: Manifest, options: IPackageOptions = {}): Promise<string> {
+async function getPackagePath(cwd: string, manifest: ManifestPackage, options: IPackageOptions = {}): Promise<string> {
 	if (!options.packagePath) {
 		return path.join(cwd, getDefaultPackageName(manifest, options));
 	}
@@ -1918,7 +1913,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 
 export interface IListFilesOptions {
 	readonly cwd?: string;
-	readonly manifest?: Manifest;
+	readonly manifest?: ManifestPackage;
 	readonly useYarn?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
@@ -1973,7 +1968,7 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 /**
  * Prints the packaged files of an extension. And ensures .vscodeignore and files property in package.json are used correctly.
  */
-export async function printAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: Manifest, options: IPackageOptions): Promise<void> {
+export async function printAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: ManifestPackage, options: IPackageOptions): Promise<void> {
 	// Warn if the extension contains a lot of files
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 	if (files.length > 5000 || jsFiles.length > 100) {

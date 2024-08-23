@@ -6,7 +6,7 @@ import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
-import { Manifest } from './manifest';
+import { ManifestPackage } from './manifest';
 import { EOL } from 'os';
 
 const __read = promisify<_read.Options, string>(_read);
@@ -171,7 +171,7 @@ export const log = {
 	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };
 
-export function patchOptionsWithManifest(options: any, manifest: Manifest): void {
+export function patchOptionsWithManifest(options: any, manifest: ManifestPackage): void {
 	if (!manifest.vsce) {
 		return;
 	}
