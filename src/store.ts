@@ -121,7 +121,7 @@ export interface IVerifyPatOptions {
 }
 
 export async function verifyPat(options: IVerifyPatOptions): Promise<void> {
-	const publisherName = options.publisherName ?? (await readManifest()).publisher;
+	const publisherName = options.publisherName ?? validatePublisher((await readManifest()).publisher);
 	const pat = await getPAT(publisherName, options);
 
 	try {

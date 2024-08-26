@@ -64,14 +64,14 @@ export interface Contributions {
 
 export type ExtensionKind = 'ui' | 'workspace' | 'web';
 
-export interface Manifest {
+export interface ManifestPackage {
 	// mandatory (npm)
 	name: string;
 	version: string;
-	engines: { [name: string]: string };
+	engines: { vscode: string;[name: string]: string };
 
 	// vscode
-	publisher: string;
+	publisher?: string;
 	icon?: string;
 	contributes?: Contributions;
 	activationEvents?: string[];
@@ -125,3 +125,13 @@ export interface Manifest {
 	// preferGlobal
 	// publishConfig
 }
+
+export interface ManifestPublish extends ManifestPackage {
+	publisher: string;
+}
+
+type RecursivePartial<T> = {
+	[P in keyof T]?: T[P] extends object ? RecursivePartial<T[P]> : T[P];
+};
+
+export type UnverifiedManifest = RecursivePartial<ManifestPackage>;
