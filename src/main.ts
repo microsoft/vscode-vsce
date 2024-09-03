@@ -1,6 +1,6 @@
 import program from 'commander';
 import leven from 'leven';
-import { packageCommand, ls, Targets, generateManifest } from './package';
+import { packageCommand, ls, Targets, generateManifest, verifySignature } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
@@ -316,6 +316,14 @@ module.exports = function (argv: string[]): void {
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
 		.action(({ packagePath, out }) => main(generateManifest(packagePath, out)));
+
+	program
+		.command('verify-signature')
+		.description('Verifies the provided signature file against the provided VSIX package and manifest.')
+		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
+		.requiredOption('-m, --manifestPath <path>', 'Path to the Manifest file')
+		.requiredOption('-s, --signaturePath <path>', 'Path to the Signature file')
+		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath)));
 
 	program
 		.command('ls-publishers')

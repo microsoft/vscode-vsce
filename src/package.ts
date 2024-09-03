@@ -1885,6 +1885,19 @@ export function generateManifest(packageFile: string, outputFile?: string): Prom
 	return vsceSign.generateManifest(packageFile, outputFile);
 }
 
+export async function verifySignature(packageFile: string, manifestFile: string, signatureFile: string): Promise<void> {
+	const sigzipPath = await createSignatureArchive(manifestFile, signatureFile);
+	try {
+		const result = await vsceSign.verify(packageFile, sigzipPath, true);
+		console.log(`Signature verification result: ${result.code}`);
+		if (result.output) {
+			console.log(result.output)
+		}
+	} finally {
+		await fs.promises.unlink(sigzipPath);
+	}
+}
+
 // Create a signature zip file containing the manifest and signature file
 export async function createSignatureArchive(manifestFile: string, signatureFile: string, outputFile?: string): Promise<string> {
 	return vsceSign.zip(manifestFile, signatureFile, outputFile)
