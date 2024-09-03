@@ -2019,7 +2019,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 			message += unusedIncludePatterns.map(p => `  - ${p}`).join('\n');
 			message += '\nRemove any include pattern which is not needed.\n';
 			message += `\n=> Run ${chalk.bold('vsce ls --tree')} to see all included files.\n`;
-			message += `=> Use ${chalk.bold('--allow-unused-files-patterns')} to skip this check`;
+			message += `=> Use ${chalk.bold('--allow-unused-files-pattern')} to skip this check`;
 			util.log.error(message);
 			process.exit(1);
 		}
