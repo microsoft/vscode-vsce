@@ -89,33 +89,60 @@ function createManifest(extra: Partial<ManifestPackage> = {}): ManifestPackage {
 	};
 }
 
+const PROCESS_ERROR_MESSAGE = 'PROCESS ERROR';
 async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: ManifestPackage, options: IPackageOptions, errorExpected: boolean, warningExpected: boolean): Promise<void> {
 	const originalLogError = log.error;
 	const originalLogWarn = log.warn;
 	const originalProcessExit = process.exit;
 	const warns: string[] = [];
 	const errors: string[] = [];
+	let exited = false;
+	let errorThrown: string | undefined;
 	log.error = (message: string) => errors.push(message);
 	log.warn = (message: string) => warns.push(message);
-	process.exit = (() => { throw Error('Error'); }) as () => never;
+	process.exit = (() => { exited = true; throw Error(PROCESS_ERROR_MESSAGE); }) as () => never;
 
-	let exitedOrErrorThrown = false;
 	try {
 		await printAndValidatePackagedFiles(files, cwd, manifest, options);
-	} catch (e) {
-		exitedOrErrorThrown = true;
+	} catch (e: any) {
+		if (e instanceof Error && e.message !== PROCESS_ERROR_MESSAGE) {
+			errorThrown = e.message + '\n' + e.stack;
+		}
 	} finally {
 		process.exit = originalProcessExit;
 		log.error = originalLogError;
 		log.warn = originalLogWarn;
 	}
 
-	if (errorExpected !== !!errors.length || exitedOrErrorThrown !== errorExpected) {
-		throw new Error(errors.length ? errors.join('\n') : 'Expected error');
+	// Validate that the correct number of errors and warnings were thrown
+	const messages = [];
+
+	if (errorExpected !== !!errors.length) {
+		if (errors.length) {
+			messages.push(...errors);
+		} else {
+			messages.push('Expected an error');
+		}
 	}
 
 	if (warningExpected !== !!warns.length) {
-		throw new Error(warns.length ? warns.join('\n') : 'Expected warning');
+		if (warns.length) {
+			messages.push(...warns);
+		} else {
+			messages.push('Expected a warning');
+		}
+	}
+
+	if (!errorExpected && exited) {
+		messages.push('Process exited');
+	}
+
+	if (!errorExpected && !!errorThrown && !exited) {
+		messages.push('Error thrown: ' + errorThrown);
+	}
+
+	if (messages.length) {
+		throw new Error(messages.join('\n'));
 	}
 }
 
