@@ -14,6 +14,7 @@ import {
 	versionBump,
 	VSIX,
 	LicenseProcessor,
+	printAndValidatePackagedFiles,
 } from '../package';
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
@@ -88,6 +89,63 @@ function createManifest(extra: Partial<ManifestPackage> = {}): ManifestPackage {
 	};
 }
 
+const PROCESS_ERROR_MESSAGE = 'PROCESS ERROR';
+async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: ManifestPackage, options: IPackageOptions, errorExpected: boolean, warningExpected: boolean): Promise<void> {
+	const originalLogError = log.error;
+	const originalLogWarn = log.warn;
+	const originalProcessExit = process.exit;
+	const warns: string[] = [];
+	const errors: string[] = [];
+	let exited = false;
+	let errorThrown: string | undefined;
+	log.error = (message: string) => errors.push(message);
+	log.warn = (message: string) => warns.push(message);
+	process.exit = (() => { exited = true; throw Error(PROCESS_ERROR_MESSAGE); }) as () => never;
+
+	try {
+		await printAndValidatePackagedFiles(files, cwd, manifest, options);
+	} catch (e: any) {
+		if (e instanceof Error && e.message !== PROCESS_ERROR_MESSAGE) {
+			errorThrown = e.message + '\n' + e.stack;
+		}
+	} finally {
+		process.exit = originalProcessExit;
+		log.error = originalLogError;
+		log.warn = originalLogWarn;
+	}
+
+	// Validate that the correct number of errors and warnings were thrown
+	const messages = [];
+
+	if (errorExpected !== !!errors.length) {
+		if (errors.length) {
+			messages.push(...errors);
+		} else {
+			messages.push('Expected an error');
+		}
+	}
+
+	if (warningExpected !== !!warns.length) {
+		if (warns.length) {
+			messages.push(...warns);
+		} else {
+			messages.push('Expected a warning');
+		}
+	}
+
+	if (!errorExpected && exited) {
+		messages.push('Process exited');
+	}
+
+	if (!errorExpected && !!errorThrown && !exited) {
+		messages.push('Error thrown: ' + errorThrown);
+	}
+
+	if (messages.length) {
+		throw new Error(messages.join('\n'));
+	}
+}
+
 describe('collect', function () {
 	this.timeout(60000);
 
@@ -133,20 +191,53 @@ describe('collect', function () {
 		]);
 	});
 
-	it('should include content of manifest.files', async () => {
+	it('manifest.files', async () => {
 		const cwd = fixture('manifestFiles');
 		const manifest = await readManifest(cwd);
 		const files = await collect(manifest, { cwd });
 		const names = files.map(f => f.path).sort();
 
+		await testPrintAndValidatePackagedFiles(files, cwd, manifest, {}, false, false);
+
 		assert.deepStrictEqual(names, [
 			'[Content_Types].xml',
 			'extension.vsixmanifest',
+			'extension/LICENSE.txt',
 			'extension/foo/bar/hello.txt',
 			'extension/foo2/bar2/include.me',
 			'extension/foo3/bar3/hello.txt',
 			'extension/package.json',
 		]);
+	});
+
+	it('manifest.files unused-files-patterns check 1', async () => {
+		const cwd = fixture('manifestFiles');
+		const manifest = await readManifest(cwd);
+
+		const manifestCopy = { ...manifest, files: [...manifest.files ?? [], 'extension/foo/bar/bye.txt'] };
+		const files = await collect(manifestCopy, { cwd });
+
+		await testPrintAndValidatePackagedFiles(files, cwd, manifestCopy, {}, true, false);
+	});
+
+	it('manifest.files unused-files-patterns check 2', async () => {
+		const cwd = fixture('manifestFiles');
+		const manifest = await readManifest(cwd);
+
+		const manifestCopy = { ...manifest, files: [...manifest.files ?? [], 'extension/fo'] };
+		const files = await collect(manifestCopy, { cwd });
+
+		await testPrintAndValidatePackagedFiles(files, cwd, manifestCopy, {}, true, false);
+	});
+
+	it('manifest.files unused-files-patterns check 3', async () => {
+		const cwd = fixture('manifestFiles');
+		const manifest = await readManifest(cwd);
+
+		const manifestCopy = { ...manifest, files: ['**'] };
+		const files = await collect(manifestCopy, { cwd });
+
+		await testPrintAndValidatePackagedFiles(files, cwd, manifestCopy, {}, false, false);
 	});
 
 	it('should ignore devDependencies', () => {

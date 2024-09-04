@@ -284,6 +284,10 @@ export async function generateFileStructureTree(rootFolder: string, filePaths: {
 		const parts = filePath.split('/');
 		let currentLevel = folderTree;
 		parts.forEach(part => {
+			if (currentLevel === undefined) {
+				throw new Error(`currentLevel is undefined for ${part} in ${filePath}`);
+			}
+
 			if (typeof currentLevel[part] === 'number') {
 				currentLevel[part] = size;
 			} else if (currentLevel[part]) {
