@@ -1955,7 +1955,7 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 	if (options.tree) {
 		const printableFileStructure = await util.generateFileStructureTree(
 			getDefaultPackageName(manifest, options),
-			files.map(f => ({ origin: f, tree: f }))
+			files.map(f => ({ origin: path.join(cwd, f), tree: f }))
 		);
 		console.log(printableFileStructure.join('\n'));
 	} else {
@@ -1998,8 +1998,23 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	// Throw an error if the extension uses the files property in package.json and 
 	// the package does not include at least one file for each include pattern
 	else if (manifest.files !== undefined && manifest.files.length > 0 && !options.allowUnusedFilesPattern) {
-		const originalFilePaths = files.map(f => util.vsixPathToFilePath(f.path));
-		const unusedIncludePatterns = manifest.files.filter(includePattern => !originalFilePaths.some(filePath => minimatch(filePath, includePattern, MinimatchOptions)));
+		const localPaths = (files.filter(f => !isInMemoryFile(f)) as ILocalFile[]).map(f => util.normalize(f.localPath));
+		const filesIncludePatterns = manifest.files.map(includePattern => util.normalize(path.join(cwd, includePattern)));
+
+		const unusedIncludePatterns = filesIncludePatterns.filter(includePattern => {
+			// Check if the pattern provided by the user matches any file in the package
+			if (localPaths.some(localFilePath => minimatch(localFilePath, includePattern, MinimatchOptions))) {
+				return false;
+			}
+			// Check if the pattern provided by the user matches any folder in the package
+			if (!/(^|\/)[^/]*\*[^/]*$/.test(includePattern)) {
+				includePattern = (/\/$/.test(includePattern) ? `${includePattern}**` : `${includePattern}/**`);
+				return !localPaths.some(localFilePath => minimatch(localFilePath, includePattern, MinimatchOptions));
+			}
+			// Pattern does not match any file or folder
+			return true;
+		});
+
 		if (unusedIncludePatterns.length > 0) {
 			let message = '';
 			message += `The following include patterns in the ${chalk.bold('"files"')} property in package.json do not match any files packaged in the extension:\n`;
@@ -2017,7 +2032,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 		getDefaultPackageName(manifest, options),
 		files.map(f => ({
 			// File path relative to the extension root
-			origin: util.vsixPathToFilePath(f.path),
+			origin: !isInMemoryFile(f) ? f.localPath : path.join(cwd, util.vsixPathToFilePath(f.path)),
 			// File path in the VSIX
 			tree: f.path
 		})),
