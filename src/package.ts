@@ -1617,7 +1617,7 @@ async function collectAllFiles(
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+		glob('**', { cwd: dep, nodir: true, follow: true, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 		)
 	);
