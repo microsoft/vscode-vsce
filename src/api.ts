@@ -1,4 +1,4 @@
-import { publish as _publish, IPublishOptions } from './publish';
+import { publish as _publish, IPublishOptions, unpublish as _unpublish, IUnpublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
 
 /**
@@ -105,4 +105,12 @@ export function publishVSIX(packagePath: string | string[], options: IPublishVSI
 		targets: typeof options.target === 'string' ? [options.target] : undefined,
 		...{ target: undefined },
 	});
+}
+
+/**
+ * Unpublishes a live extension.
+ * @public
+ */
+export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
+    return _unpublish(options);
 }
