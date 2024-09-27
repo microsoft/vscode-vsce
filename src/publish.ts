@@ -273,10 +273,10 @@ async function _publishSignedPackage(api: GalleryApi, packageName: string, packa
 	const lineBreak = '\r\n';
 	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
 	form.append('vsix', packageStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=vsix; filename=${packageName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
+		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=vsix; filename=\"${packageName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
 	});
 	form.append('sigzip', sigzipStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=${sigzipName}${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
+		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=\"${sigzipName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
 	});
 
 	const publishWithRetry = retry(handleWhen(err => err.message.includes('timeout')), {
