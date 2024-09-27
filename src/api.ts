@@ -108,6 +108,12 @@ export function publishVSIX(packagePath: string | string[], options: IPublishVSI
 }
 
 /**
+ * Options for the `unpublish` function.
+ * @public
+ */
+export type { IUnpublishOptions } from './publish';
+
+/**
  * Unpublishes a live extension.
  * @public
  */
