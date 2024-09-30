@@ -1332,6 +1332,22 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet,__web_extension'));
 	});
 
+	it('should automatically add chatParticipant tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				chatParticipants: [{ name: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,__web_extension'));
+	});
+
 	it('should remove duplicate tags', () => {
 		const manifest = {
 			name: 'test',
