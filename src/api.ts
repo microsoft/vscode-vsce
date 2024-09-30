@@ -108,19 +108,15 @@ export function publishVSIX(packagePath: string | string[], options: IPublishVSI
 }
 
 /**
- * Options for the `unpublish` function.
+ * Options for the `unpublishVSIX` function.
  * @public
  */
-export type { IUnpublishOptions } from './publish';
+export type IUnpublishVSIXOptions = IPublishOptions & Pick<IUnpublishOptions, 'id'>;
 
 /**
- * Unpublishes a live extension.
+ * Deletes a specific extension from the marketplace.
  * @public
  */
-export function unpublish(options: IUnpublishOptions = {}): Promise<any> {
-	if  (!options.force) {
-		options.force = true;
-	}
-
-    return _unpublish(options);
+export function unpublishVSIX(options: IUnpublishVSIXOptions = {}): Promise<any> {
+    return _unpublish({"force": true, ...options});
 }
