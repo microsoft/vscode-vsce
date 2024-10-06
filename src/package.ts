@@ -767,6 +767,11 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		if (!this.regexp.test(filePath)) {
 			return Promise.resolve(file);
 		}
+
+		return await this.processFile(file, filePath);
+	}
+
+	protected async processFile(file: IFile, filePath: string): Promise<IFile> {
 		this.filesProcessed++;
 
 		this.assets.push({ type: this.assetType, path: filePath });
@@ -970,6 +975,11 @@ export class ReadmeProcessor extends MarkdownProcessor {
 		);
 	}
 
+	override async processFile(file: IFile): Promise<IFile> {
+		file.path = 'extension/readme.md';
+		return await super.processFile(file, file.path);
+	}
+
 	override async onEnd(): Promise<void> {
 		if (this.options.readmePath && this.filesProcessed === 0) {
 			util.log.error(`The provided readme file (${this.options.readmePath}) could not be found.`);
@@ -987,6 +997,11 @@ export class ChangelogProcessor extends MarkdownProcessor {
 			'Microsoft.VisualStudio.Services.Content.Changelog',
 			options
 		);
+	}
+
+	override async processFile(file: IFile): Promise<IFile> {
+		file.path = 'extension/changelog.md';
+		return await super.processFile(file, file.path);
 	}
 
 	override async onEnd(): Promise<void> {
