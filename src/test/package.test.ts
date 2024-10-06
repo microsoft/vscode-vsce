@@ -706,7 +706,7 @@ describe('toVsixManifest', () => {
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Details'
 				);
-				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/foo/readme-foo.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/readme.md');
 			});
 	});
 
@@ -752,7 +752,7 @@ describe('toVsixManifest', () => {
 					result.PackageManifest.Assets[0].Asset[1].$.Type,
 					'Microsoft.VisualStudio.Services.Content.Changelog'
 				);
-				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/foo/changelog-foo.md');
+				assert.strictEqual(result.PackageManifest.Assets[0].Asset[1].$.Path, 'extension/changelog.md');
 			});
 	});
 
