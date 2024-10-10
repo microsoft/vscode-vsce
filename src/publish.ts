@@ -294,6 +294,10 @@ async function _publishSignedPackage(api: GalleryApi, packageName: string, packa
 	});
 }
 
+/**
+ * Options for the `unpublish` function.
+ * @public
+ */
 export interface IUnpublishOptions extends IPublishOptions {
 	id?: string;
 	force?: boolean;
