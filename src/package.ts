@@ -1721,8 +1721,8 @@ function collectFiles(
 							Promise.reject(err) :
 							// No .vscodeignore file exists
 							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
+								// ignore all, and then include all files in manifestFileIncludes
+								Promise.resolve(['**', ...manifestFileIncludes.map(file => file[0] === '!' ? file.slice(1) : `!${file}`)].join('\n\r')) :
 								// "files" property not used in package.json
 								Promise.resolve('')
 				)
@@ -1745,22 +1745,14 @@ function collectFiles(
 				// Combine with default ignore list
 				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
 
-				// Split into ignore and negate list
+				// Check the ignore list in order to filter out files
 				.then(ignore =>
-					ignore.reduce<[string[], string[]]>(
-						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
-						[[], []]
-					)
-				)
-				.then(r => ({ ignore: r[0], negate: r[1] }))
+					files.filter(f=> ignore.reduce((keep, i) => i[0] === '!'
+						? keep || minimatch(f, i.slice(1), MinimatchOptions)
+						: keep && !minimatch(f, i, MinimatchOptions),
+						true
+					))
 
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
-					)
 				)
 		);
 	});
