@@ -1737,10 +1737,9 @@ function collectFiles(
 				)
 
 				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
+				.then(ignore => 
+					ignore.map(i => !/(^|\/)[^/]*\*[^/]*$/.test(i) ? [i, /\/$/.test(i) ? `${i}**` : `${i}/**`] : [i]).flat(),
+				)
 
 				// Combine with default ignore list
 				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
