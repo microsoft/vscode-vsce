@@ -118,5 +118,5 @@ export type IUnpublishVSIXOptions = IPublishOptions & Pick<IUnpublishOptions, 'i
  * @public
  */
 export function unpublishVSIX(options: IUnpublishVSIXOptions = {}): Promise<any> {
-    return _unpublish({"force": true, ...options});
+	return _unpublish({ force: true, ...options });
 }
