@@ -59,6 +59,11 @@ export interface IPublishOptions {
 	readonly ignoreFile?: string;
 
 	/**
+	 * Recurse into symlinked directories instead of treating them as files
+	 */
+	readonly followSymlinks?: boolean;
+
+	/**
 	 * The Personal Access Token to use.
 	 *
 	 * Defaults to the stored one.

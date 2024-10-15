@@ -95,10 +95,15 @@ export interface IPackageOptions {
 	 * `target` is set. For example, if `target` is `linux-x64` and there are
 	 * folders named `win32-x64`, `darwin-arm64` or `web`, the files inside
 	 * those folders will be ignored.
-	 * 
+	 *
 	 * @default false
 	 */
 	readonly ignoreOtherTargetFolders?: boolean;
+
+	/**
+	 * Recurse into symlinked directories instead of treating them as files.
+	 */
+	readonly followSymlinks?: boolean;
 
 	readonly commitMessage?: string;
 	readonly gitTagVersion?: boolean;
@@ -1630,11 +1635,12 @@ const defaultIgnore = [
 async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
-	dependencyEntryPoints?: string[]
+	dependencyEntryPoints?: string[],
+	followSymlinks:boolean = true
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, dot: true, ignore: 'node_modules/**' }).then(files =>
+		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 		)
 	);
@@ -1664,11 +1670,12 @@ function collectFiles(
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
 	readmePath?: string,
+	followSymlinks:boolean = false
 ): Promise<string[]> {
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
-	return collectAllFiles(cwd, dependencies, dependencyEntryPoints).then(files => {
+	return collectAllFiles(cwd, dependencies, dependencyEntryPoints, followSymlinks).then(files => {
 		files = files.filter(f => !/\r$/m.test(f));
 
 		return (
@@ -1683,7 +1690,7 @@ function collectFiles(
 							manifestFileIncludes ?
 								// include all files in manifestFileIncludes and ignore the rest
 								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
-								// "files" property not used in package.json 
+								// "files" property not used in package.json
 								Promise.resolve('')
 				)
 
@@ -1775,7 +1782,7 @@ export function collect(manifest: ManifestPackage, options: IPackageOptions = {}
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath).then(fileNames => {
+	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1948,6 +1955,7 @@ export interface IListFilesOptions {
 	readonly dependencies?: boolean;
 	readonly prepublish?: boolean;
 	readonly readmePath?: string;
+	readonly followSymlinks?: boolean;
 }
 
 /**
@@ -1961,7 +1969,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath);
+	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath, options.followSymlinks);
 }
 
 interface ILSOptions {
@@ -1971,6 +1979,7 @@ interface ILSOptions {
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
 	readonly readmePath?: string;
+	readonly followSymlinks?: boolean;
 }
 
 /**
@@ -2025,7 +2034,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 		util.log.error(message);
 		process.exit(1);
 	}
-	// Throw an error if the extension uses the files property in package.json and 
+	// Throw an error if the extension uses the files property in package.json and
 	// the package does not include at least one file for each include pattern
 	else if (manifest.files !== undefined && manifest.files.length > 0 && !options.allowUnusedFilesPattern) {
 		const localPaths = (files.filter(f => !isInMemoryFile(f)) as ILocalFile[]).map(f => util.normalize(f.localPath));
