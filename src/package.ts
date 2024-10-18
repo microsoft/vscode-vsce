@@ -675,8 +675,7 @@ export class TagsProcessor extends BaseProcessor {
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
-		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant'] : [];
-		const copilot = doesContribute('chatParticipants') ? ['copilot'] : [];
+		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant', 'copilot'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -718,7 +717,6 @@ export class TagsProcessor extends BaseProcessor {
 			...json,
 			...remoteMenu,
 			...chatParticipants,
-			...copilot,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
@@ -1638,7 +1636,7 @@ async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
-	followSymlinks:boolean = true
+	followSymlinks: boolean = true
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
@@ -1672,7 +1670,7 @@ function collectFiles(
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
 	readmePath?: string,
-	followSymlinks:boolean = false
+	followSymlinks: boolean = false
 ): Promise<string[]> {
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
