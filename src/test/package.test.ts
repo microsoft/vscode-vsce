@@ -1332,7 +1332,7 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet,__web_extension'));
 	});
 
-	it('should automatically add chatParticipant and copilot tag', () => {
+	it('should automatically add chatParticipant and github-copilot tag', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1345,7 +1345,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,copilot,__web_extension'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,github-copilot,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
