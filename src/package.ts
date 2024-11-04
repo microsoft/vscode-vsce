@@ -1008,10 +1008,6 @@ export class ChangelogProcessor extends MarkdownProcessor {
 	}
 
 	override async processFile(file: IFile): Promise<IFile> {
-		if (isInMemoryFile(file)) {
-			util.log.warn(`The provided changelog file is in memory and will not be included in the VSIX.`);
-			return file;
-		}
 		file = { ...file, originalPath: !isInMemoryFile(file) ? file.localPath : undefined, path: 'extension/changelog.md' };
 		return await super.processFile(file, file.path);
 	}
