@@ -207,6 +207,7 @@ describe('collect', function () {
 			'extension/foo2/bar2/include.me',
 			'extension/foo3/bar3/hello.txt',
 			'extension/package.json',
+			'extension/readme.md',
 		]);
 	});
 

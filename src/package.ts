@@ -33,12 +33,14 @@ const MinimatchOptions: minimatch.IOptions = { dot: true };
 export interface IInMemoryFile {
 	path: string;
 	mode?: number;
+	originalPath?: string; // used to track the original path of a file that was renamed
 	readonly contents: Buffer | string;
 }
 
 export interface ILocalFile {
 	path: string;
 	mode?: number;
+	originalPath?: string; // used to track the original path of a file that was renamed
 	readonly localPath: string;
 }
 
@@ -919,6 +921,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		return {
 			path: file.path,
 			contents: Buffer.from(contents, 'utf8'),
+			originalPath: file.originalPath
 		};
 	}
 
@@ -981,7 +984,11 @@ export class ReadmeProcessor extends MarkdownProcessor {
 	}
 
 	override async processFile(file: IFile): Promise<IFile> {
-		file.path = 'extension/readme.md';
+		if (isInMemoryFile(file)) {
+			util.log.warn(`The provided readme file is in memory and will not be included in the VSIX.`);
+			return file;
+		}
+		file = { ...file, originalPath: file.localPath, path: 'extension/readme.md' };
 		return await super.processFile(file, file.path);
 	}
 
@@ -1005,7 +1012,11 @@ export class ChangelogProcessor extends MarkdownProcessor {
 	}
 
 	override async processFile(file: IFile): Promise<IFile> {
-		file.path = 'extension/changelog.md';
+		if (isInMemoryFile(file)) {
+			util.log.warn(`The provided changelog file is in memory and will not be included in the VSIX.`);
+			return file;
+		}
+		file = { ...file, originalPath: file.localPath, path: 'extension/changelog.md' };
 		return await super.processFile(file, file.path);
 	}
 
@@ -2037,18 +2048,19 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	// Throw an error if the extension uses the files property in package.json and
 	// the package does not include at least one file for each include pattern
 	else if (manifest.files !== undefined && manifest.files.length > 0 && !options.allowUnusedFilesPattern) {
-		const localPaths = (files.filter(f => !isInMemoryFile(f)) as ILocalFile[]).map(f => util.normalize(f.localPath));
-		const filesIncludePatterns = manifest.files.map(includePattern => util.normalize(path.join(cwd, includePattern)));
+		const localPaths = files.map(f => util.normalize(f.originalPath ?? (!isInMemoryFile(f) ? f.localPath : path.join(cwd, f.path))));
+		const filesIncludePatterns = manifest.files.map(includePattern => ({ absolute: util.normalize(path.join(cwd, includePattern)), relative: includePattern }));
 
 		const unusedIncludePatterns = filesIncludePatterns.filter(includePattern => {
+			let absoluteIncludePattern = includePattern.absolute;
 			// Check if the pattern provided by the user matches any file in the package
-			if (localPaths.some(localFilePath => minimatch(localFilePath, includePattern, MinimatchOptions))) {
+			if (localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, MinimatchOptions))) {
 				return false;
 			}
 			// Check if the pattern provided by the user matches any folder in the package
-			if (!/(^|\/)[^/]*\*[^/]*$/.test(includePattern)) {
-				includePattern = (/\/$/.test(includePattern) ? `${includePattern}**` : `${includePattern}/**`);
-				return !localPaths.some(localFilePath => minimatch(localFilePath, includePattern, MinimatchOptions));
+			if (!/(^|\/)[^/]*\*[^/]*$/.test(absoluteIncludePattern)) {
+				absoluteIncludePattern = (/\/$/.test(absoluteIncludePattern) ? `${absoluteIncludePattern}**` : `${absoluteIncludePattern}/**`);
+				return !localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, MinimatchOptions));
 			}
 			// Pattern does not match any file or folder
 			return true;
@@ -2057,7 +2069,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 		if (unusedIncludePatterns.length > 0) {
 			let message = '';
 			message += `The following include patterns in the ${chalk.bold('"files"')} property in package.json do not match any files packaged in the extension:\n`;
-			message += unusedIncludePatterns.map(p => `  - ${p}`).join('\n');
+			message += unusedIncludePatterns.map(p => `  - ${p.relative}`).join('\n');
 			message += '\nRemove any include pattern which is not needed.\n';
 			message += `\n=> Run ${chalk.bold('vsce ls --tree')} to see all included files.\n`;
 			message += `=> Use ${chalk.bold('--allow-unused-files-pattern')} to skip this check`;
