@@ -2,6 +2,15 @@
 	"name": "uuid",
 	"publisher": "joaomoreno",
 	"version": "1.0.0",
-	"engines": { "vscode": "*" },
-	"files": ["foo", "foo2/bar2/include.me", "*/bar3/**", "package.json", "LICENSE"]
+	"engines": {
+		"vscode": "*"
+	},
+	"files": [
+		"foo",
+		"foo2/bar2/include.me",
+		"*/bar3/**",
+		"package.json",
+		"LICENSE",
+		"README.md"
+	]
 }
