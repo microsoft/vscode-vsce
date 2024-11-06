@@ -7,6 +7,7 @@
 	},
 	"files": [
 		"foo",
+		"!**/exclude.me",
 		"foo2/bar2/include.me",
 		"*/bar3/**",
 		"package.json",
