@@ -493,17 +493,16 @@ export class ManifestProcessor extends BaseProcessor {
 		const preRelease = options.preRelease;
 
 		if (target || preRelease) {
-			let engineVersion: string;
+			let engineSemver: ReturnType<typeof parseSemver>;
 
 			try {
-				const engineSemver = parseSemver(`vscode@${manifest.engines.vscode}`);
-				engineVersion = engineSemver.version;
+				engineSemver = parseSemver(`vscode@${manifest.engines.vscode}`);
 			} catch (err) {
 				throw new Error('Failed to parse semver of engines.vscode');
 			}
 
 			if (target) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.61', { includePrerelease: true })) {
+				if (engineSemver.version !== 'latest' && !semver.satisfies(engineSemver.range, '>=1.61', { includePrerelease: true })) {
 					throw new Error(
 						`Platform specific extension is supported by VS Code >=1.61. Current 'engines.vscode' is '${manifest.engines.vscode}'.`
 					);
@@ -514,7 +513,7 @@ export class ManifestProcessor extends BaseProcessor {
 			}
 
 			if (preRelease) {
-				if (engineVersion !== 'latest' && !semver.satisfies(engineVersion, '>=1.63', { includePrerelease: true })) {
+				if (engineSemver.version !== 'latest' && !semver.satisfies(engineSemver.range, '>=1.63', { includePrerelease: true })) {
 					throw new Error(
 						`Pre-release versions are supported by VS Code >=1.63. Current 'engines.vscode' is '${manifest.engines.vscode}'.`
 					);
