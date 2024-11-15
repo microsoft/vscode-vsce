@@ -16,7 +16,7 @@ resources:
 
 parameters:
   - name: nextVersion
-    displayName: '🚀 Release Version (eg: none, major, minor, patch, or X.X.X)'
+    displayName: '🚀 Release Version (eg: none, major, minor, patch, prerelease, or X.X.X)'
     type: string
     default: 'none'
 
@@ -40,7 +40,7 @@ extends:
         testSteps:
           - script: npm ci
           - script: npm test
-        ${{ if and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
+        ${{ if or(eq(parameters.nextVersion, 'prerelease'), and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))) }}:
           publishPackage: true
           publishRequiresApproval: false
           nextVersion: prerelease
