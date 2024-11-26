@@ -1,6 +1,0 @@
-{
-	"name": "target",
-	"publisher": "joaomoreno",
-	"version": "1.0.0",
-	"engines": { "vscode": "*" }
-}
