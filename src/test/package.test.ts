@@ -2284,6 +2284,15 @@ describe('ManifestProcessor', () => {
 		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
 		assert.deepStrictEqual(manifest.version, '1.0.0');
 	});
+
+	it('should not throw error for engine version with x (e.g. 1.95.x)', async () => {
+        const root = fixture('uuid');
+        const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+        manifest.engines.vscode = '1.95.x';  // Non-strict semver, but acceptable
+
+        assert.doesNotThrow(() => new ManifestProcessor(manifest, { target: 'web' }));
+        assert.doesNotThrow(() => new ManifestProcessor(manifest, { preRelease: true }));
+    });
 });
 
 describe('MarkdownProcessor', () => {
