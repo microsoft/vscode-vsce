@@ -11,7 +11,7 @@ resources:
     - repository: templates
       type: github
       name: microsoft/vscode-engineering
-      ref: main
+      ref: lszomoru/npm-1es-release-job
       endpoint: Monaco
 
 parameters:
