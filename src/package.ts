@@ -1804,21 +1804,21 @@ export function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 			() =>
 				new Promise((c, e) => {
 					const zip = new yazl.ZipFile();
+					const zipOptions: Partial<yazl.Options> = {};
 
+					// reproducible zip files
 					const sde = process.env.SOURCE_DATE_EPOCH;
-					const epoch = sde ? parseInt(sde) : undefined;
-					const mtime = epoch ? new Date(epoch * 1000) : undefined;
+					if (sde) {
+						const epoch = parseInt(sde);
+						zipOptions.mtime = new Date(epoch * 1000);
+						files = files.sort((a, b) => a.path.localeCompare(b.path))
+					}
 
-					files.sort((a, b) => a.path.localeCompare(b.path)).forEach(f => {
-						let options = {
-							mode: f.mode,
-						} as any;
-						if (mtime) options.mtime = mtime;
-
+					files.forEach(f =>
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, options)
-							: zip.addFile(f.localPath, f.path, options)
-					});
+							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, { ...zipOptions, mode: f.mode })
+							: zip.addFile(f.localPath, f.path, { ...zipOptions, mode: f.mode })
+					);
 					zip.end();
 
 					const zipStream = fs.createWriteStream(packagePath);

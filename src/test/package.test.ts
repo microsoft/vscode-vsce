@@ -14,8 +14,7 @@ import {
 	versionBump,
 	VSIX,
 	LicenseProcessor,
-	printAndValidatePackagedFiles,
-	writeVsix,
+	printAndValidatePackagedFiles, pack
 } from '../package';
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
@@ -27,7 +26,6 @@ import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
-import { globSync } from 'glob';
 
 // don't warn in tests
 console.warn = () => null;
@@ -2288,13 +2286,13 @@ describe('ManifestProcessor', () => {
 	});
 
 	it('should not throw error for engine version with x (e.g. 1.95.x)', async () => {
-        const root = fixture('uuid');
-        const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
-        manifest.engines.vscode = '1.95.x';  // Non-strict semver, but acceptable
+		const root = fixture('uuid');
+		const manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		manifest.engines.vscode = '1.95.x';  // Non-strict semver, but acceptable
 
-        assert.doesNotThrow(() => new ManifestProcessor(manifest, { target: 'web' }));
-        assert.doesNotThrow(() => new ManifestProcessor(manifest, { preRelease: true }));
-    });
+		assert.doesNotThrow(() => new ManifestProcessor(manifest, { target: 'web' }));
+		assert.doesNotThrow(() => new ManifestProcessor(manifest, { preRelease: true }));
+	});
 });
 
 describe('MarkdownProcessor', () => {
@@ -3212,27 +3210,25 @@ describe('writeVsix', function () {
 		try {
 			fs.cpSync(exampleProject, cwd, { recursive: true });
 
-			const files = globSync("**", { cwd });
-
-			process.env["SOURCE_DATE_EPOCH"] = '1000000000';
-
 			const createVsix = async (vsixPath: string, epoch: number) => {
-				files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch, epoch));
-				const manifest1 = await readManifest(cwd);
-				const iFiles1 = await collect(manifest1, { cwd });
-				await writeVsix(iFiles1, vsixPath);
+				process.env["SOURCE_DATE_EPOCH"] = `${epoch}`;
+				await pack({ cwd, packagePath: vsixPath });
 			}
 
 			const vsix1 = testDir.name + '/vsix1.vsix';
 			const vsix2 = testDir.name + '/vsix2.vsix';
+			const vsix3 = testDir.name + '/vsix3.vsix';
 
-			await createVsix(vsix1, 1000000001);
-			await createVsix(vsix2, 1000000002);
+			await createVsix(vsix1, 1000000000);
+			await createVsix(vsix2, 1000000000);
+			await createVsix(vsix3, 1000000002);
 
 			const vsix1bytes = fs.readFileSync(vsix1);
 			const vsix2bytes = fs.readFileSync(vsix2);
+			const vsix3bytes = fs.readFileSync(vsix3);
 
 			assert.deepStrictEqual(vsix1bytes, vsix2bytes);
+			assert.notDeepStrictEqual(vsix1bytes, vsix3bytes);
 
 		} finally {
 			testDir.removeCallback();
