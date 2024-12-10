@@ -505,7 +505,7 @@ export class ManifestProcessor extends BaseProcessor {
 			if (!minEngineVersion) {
 				throw new Error('Failed to get minVersion of engines.vscode')
 			}
-			
+
 			if (target) {
 				if (engineSemver.version !== 'latest' && !semver.satisfies(minEngineVersion, '>=1.61', { includePrerelease: true })) {
 					throw new Error(
@@ -1796,7 +1796,7 @@ export function collect(manifest: ManifestPackage, options: IPackageOptions = {}
 	});
 }
 
-export function writeVsix(files: IFile[], packagePath: string): Promise<void> {
+function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 	return fs.promises
 		.unlink(packagePath)
 		.catch(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null)))
