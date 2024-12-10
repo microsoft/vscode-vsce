@@ -1796,7 +1796,7 @@ export function collect(manifest: ManifestPackage, options: IPackageOptions = {}
 	});
 }
 
-function writeVsix(files: IFile[], packagePath: string): Promise<void> {
+export function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 	return fs.promises
 		.unlink(packagePath)
 		.catch(err => (err.code !== 'ENOENT' ? Promise.reject(err) : Promise.resolve(null)))
@@ -1804,13 +1804,21 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 			() =>
 				new Promise((c, e) => {
 					const zip = new yazl.ZipFile();
-					files.forEach(f =>
+
+					const sde = process.env.SOURCE_DATE_EPOCH;
+					const epoch = sde ? parseInt(sde) : undefined;
+					const mtime = epoch ? new Date(epoch * 1000) : undefined;
+
+					files.sort((a, b) => a.path.localeCompare(b.path)).forEach(f => {
+						let options = {
+							mode: f.mode,
+						} as any;
+						if (mtime) options.mtime = mtime;
+
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
-								mode: f.mode,
-							})
-							: zip.addFile(f.localPath, f.path, { mode: f.mode })
-					);
+							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, options)
+							: zip.addFile(f.localPath, f.path, options)
+					});
 					zip.end();
 
 					const zipStream = fs.createWriteStream(packagePath);

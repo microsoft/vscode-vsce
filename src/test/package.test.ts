@@ -15,6 +15,7 @@ import {
 	VSIX,
 	LicenseProcessor,
 	printAndValidatePackagedFiles,
+	writeVsix,
 } from '../package';
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
@@ -26,6 +27,7 @@ import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
+import { globSync } from 'glob';
 
 // don't warn in tests
 console.warn = () => null;
@@ -3194,5 +3196,43 @@ describe('version', function () {
 		await versionBump({ cwd, version: '1.1.1', updatePackageJson: false });
 		const newManifest = await readManifest(cwd);
 		assert.strictEqual(newManifest.version, '1.0.0');
+	});
+});
+
+describe('writeVsix', () => {
+	it('should be reproducible', async () => {
+		const dir = tmp.dirSync({ unsafeCleanup: true });
+		const cwd = dir.name
+
+		const srcDir = fixture('manifestFiles');
+		fs.cpSync(srcDir, cwd, { recursive: true });
+
+		const files = globSync("**", { cwd });
+
+		process.env["SOURCE_DATE_EPOCH"] = '1000000000';
+
+		const vsix1 = tmp.fileSync();
+		const epoch1 = 1000000001
+		files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch1, epoch1));
+		const manifest1 = await readManifest(cwd);
+		const iFiles1 = await collect(manifest1, { cwd });
+		await writeVsix(iFiles1, vsix1.name);
+
+		// different timestamp and iFiles are reversed
+		const vsix2 = tmp.fileSync();
+		const epoch2 = 1000000002
+		files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch2, epoch2));
+		const manifest2 = await readManifest(cwd);
+		const iFiles2 = (await collect(manifest2, { cwd })).reverse();
+		await writeVsix(iFiles2, vsix2.name);
+
+		const vsix1bytes = fs.readFileSync(vsix1.name);
+		const vsix2bytes = fs.readFileSync(vsix2.name);
+
+		assert.deepStrictEqual(vsix1bytes, vsix2bytes);
+
+		dir.removeCallback();
+		vsix1.removeCallback();
+		vsix2.removeCallback();
 	});
 });
