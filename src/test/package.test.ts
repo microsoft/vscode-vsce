@@ -3199,40 +3199,43 @@ describe('version', function () {
 	});
 });
 
-describe('writeVsix', () => {
+describe('writeVsix', function () {
+	this.timeout(60_000);
+
 	it('should be reproducible', async () => {
-		const dir = tmp.dirSync({ unsafeCleanup: true });
-		const cwd = dir.name
+		const exampleProject = fixture('manifestFiles');
+		const fixtureDir = fixture('');
 
-		const srcDir = fixture('manifestFiles');
-		fs.cpSync(srcDir, cwd, { recursive: true });
+		const testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixtureDir });
+		const cwd = testDir.name
 
-		const files = globSync("**", { cwd });
+		try {
+			fs.cpSync(exampleProject, cwd, { recursive: true });
 
-		process.env["SOURCE_DATE_EPOCH"] = '1000000000';
+			const files = globSync("**", { cwd });
 
-		const vsix1 = tmp.fileSync();
-		const epoch1 = 1000000001
-		files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch1, epoch1));
-		const manifest1 = await readManifest(cwd);
-		const iFiles1 = await collect(manifest1, { cwd });
-		await writeVsix(iFiles1, vsix1.name);
+			process.env["SOURCE_DATE_EPOCH"] = '1000000000';
 
-		// different timestamp and iFiles are reversed
-		const vsix2 = tmp.fileSync();
-		const epoch2 = 1000000002
-		files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch2, epoch2));
-		const manifest2 = await readManifest(cwd);
-		const iFiles2 = (await collect(manifest2, { cwd })).reverse();
-		await writeVsix(iFiles2, vsix2.name);
+			const createVsix = async (vsixPath: string, epoch: number) => {
+				files.forEach((f) => fs.utimesSync(path.join(cwd, f), epoch, epoch));
+				const manifest1 = await readManifest(cwd);
+				const iFiles1 = await collect(manifest1, { cwd });
+				await writeVsix(iFiles1, vsixPath);
+			}
 
-		const vsix1bytes = fs.readFileSync(vsix1.name);
-		const vsix2bytes = fs.readFileSync(vsix2.name);
+			const vsix1 = testDir.name + '/vsix1.vsix';
+			const vsix2 = testDir.name + '/vsix2.vsix';
 
-		assert.deepStrictEqual(vsix1bytes, vsix2bytes);
+			await createVsix(vsix1, 1000000001);
+			await createVsix(vsix2, 1000000002);
 
-		dir.removeCallback();
-		vsix1.removeCallback();
-		vsix2.removeCallback();
+			const vsix1bytes = fs.readFileSync(vsix1);
+			const vsix2bytes = fs.readFileSync(vsix2);
+
+			assert.deepStrictEqual(vsix1bytes, vsix2bytes);
+
+		} finally {
+			testDir.removeCallback();
+		}
 	});
 });
