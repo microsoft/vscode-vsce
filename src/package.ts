@@ -2072,7 +2072,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 
 	// Print the files included in the package
 	const printableFileStructure = await util.generateFileStructureTree(
-		getDefaultPackageName(manifest, options),
+		options.packagePath ? path.basename(options.packagePath) : getDefaultPackageName(manifest, options),
 		files.map(f => ({
 			// File path relative to the extension root
 			origin: !isInMemoryFile(f) ? f.localPath : util.vsixPathToFilePath(f.path),
