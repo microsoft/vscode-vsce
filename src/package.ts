@@ -505,7 +505,7 @@ export class ManifestProcessor extends BaseProcessor {
 			if (!minEngineVersion) {
 				throw new Error('Failed to get minVersion of engines.vscode')
 			}
-			
+
 			if (target) {
 				if (engineSemver.version !== 'latest' && !semver.satisfies(minEngineVersion, '>=1.61', { includePrerelease: true })) {
 					throw new Error(
@@ -1804,12 +1804,20 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 			() =>
 				new Promise((c, e) => {
 					const zip = new yazl.ZipFile();
+					const zipOptions: Partial<yazl.Options> = {};
+
+					// reproducible zip files
+					const sde = process.env.SOURCE_DATE_EPOCH;
+					if (sde) {
+						const epoch = parseInt(sde);
+						zipOptions.mtime = new Date(epoch * 1000);
+						files = files.sort((a, b) => a.path.localeCompare(b.path))
+					}
+
 					files.forEach(f =>
 						isInMemoryFile(f)
-							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, {
-								mode: f.mode,
-							})
-							: zip.addFile(f.localPath, f.path, { mode: f.mode })
+							? zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path, { ...zipOptions, mode: f.mode })
+							: zip.addFile(f.localPath, f.path, { ...zipOptions, mode: f.mode })
 					);
 					zip.end();
 
