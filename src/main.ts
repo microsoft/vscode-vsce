@@ -1,4 +1,4 @@
-import program from 'commander';
+import { Command, Option } from 'commander';
 import leven from 'leven';
 import { packageCommand, ls, Targets, generateManifest, verifySignature } from './package';
 import { publish, unpublish } from './publish';
@@ -56,6 +56,8 @@ function main(task: Promise<any>): void {
 const ValidTargets = [...Targets].join(', ');
 
 module.exports = function (argv: string[]): void {
+	const program = new Command();
+
 	program.version(pkg.version).usage('<command>');
 
 	program
@@ -220,7 +222,8 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
-		.option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
+		.option('--no-verify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
+		.addOption(new Option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)').hideHelp(true))
 		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
 		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
@@ -256,6 +259,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
+					verify,
 					noVerify,
 					allowProposedApis,
 					allowAllProposedApis,
@@ -292,7 +296,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
-						noVerify,
+						noVerify: noVerify || !verify,
 						allowProposedApis,
 						allowAllProposedApis,
 						ignoreFile,
@@ -387,7 +391,7 @@ module.exports = function (argv: string[]): void {
 		}
 
 		program.outputHelp(help => {
-			const availableCommands = program.commands.map(c => c._name);
+			const availableCommands = program.commands.map(c => c.name());
 			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
 
 			help = `${help}\n Unknown command '${cmd}'`;
