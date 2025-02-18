@@ -156,7 +156,7 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		// Validate marketplace requirements before prepublish to avoid unnecessary work
 		validateManifestForPublishing(manifest, options);
 
-		await prepublish(cwd, manifest, options.useYarn);
+		await prepublish(cwd, manifest, options.useYarn, options.preRelease ? 'preRelease' : 'release');
 		await versionBump(options);
 
 		if (options.targets) {
