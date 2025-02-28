@@ -14,6 +14,10 @@ const pkg = require('../package.json');
 
 function fatal(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
+		if (process.env['VSCE_DEBUG']) {
+			console.error(message);
+		}
+
 		message = message.message;
 
 		if (/^cancell?ed$/i.test(message)) {
