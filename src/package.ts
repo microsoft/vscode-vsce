@@ -682,6 +682,7 @@ export class TagsProcessor extends BaseProcessor {
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
 		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant', 'github-copilot'] : [];
+		const languageModelTool = doesContribute('languageModelTool') ? ['tools', 'github-copilot'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -723,6 +724,7 @@ export class TagsProcessor extends BaseProcessor {
 			...json,
 			...remoteMenu,
 			...chatParticipants,
+			...languageModelTool,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
