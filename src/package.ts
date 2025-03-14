@@ -681,8 +681,8 @@ export class TagsProcessor extends BaseProcessor {
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
-		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant', 'github-copilot'] : [];
-		const languageModelTool = doesContribute('languageModelTool') ? ['tools', 'github-copilot'] : [];
+		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant'] : [];
+		const languageModelTool = doesContribute('languageModelTool') ? ['tools'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
