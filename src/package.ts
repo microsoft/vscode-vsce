@@ -682,7 +682,7 @@ export class TagsProcessor extends BaseProcessor {
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
 		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant'] : [];
-		const languageModelTool = doesContribute('languageModelTool') ? ['tools'] : [];
+		const languageModelTools = doesContribute('languageModelTools') ? ['tools'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -724,7 +724,7 @@ export class TagsProcessor extends BaseProcessor {
 			...json,
 			...remoteMenu,
 			...chatParticipants,
-			...languageModelTool,
+			...languageModelTools,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
