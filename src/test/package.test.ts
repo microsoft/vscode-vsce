@@ -1349,7 +1349,7 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,__web_extension'));
 	});
 
-	it('should automatically add tools tag', () => {
+	it('should automatically add languageModelTools tag', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1362,7 +1362,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'tools,__web_extension'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'tools,language-model-tools,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
