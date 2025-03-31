@@ -130,8 +130,11 @@ export async function verifyPat(options: IVerifyPatOptions): Promise<void> {
 		// otherwise we get a 403.
 		const api = await getSecurityRolesAPI(pat);
 		await api.getRoleAssignments('gallery.publisher', publisherName);
-	} catch (error) {
-		throw new Error('The Personal Access Token verification has failed. Additional information:\n\n' + error);
+	} catch (error: unknown) {
+		if (error instanceof Error) {
+			throw new Error('The Personal Access Token verification has failed. Additional information:\n\n' + error.message);
+		}
+		throw new Error('The Personal Access Token verification has failed.' + error);
 	}
 
 	console.log(`The Personal Access Token verification succeeded for the publisher '${publisherName}'.`);
