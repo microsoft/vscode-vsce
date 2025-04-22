@@ -1607,8 +1607,10 @@ export async function toContentTypes(files: IFile[]): Promise<string> {
 	// reproducible vsix files. To fix this, this sorts the contentTypes array
 	// to ensure they are listed in the same order regardless of the order of
 	// the files array.
+	const sortedContentTypes = contentTypes.sort();
+
 	return `<?xml version="1.0" encoding="utf-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${contentTypes.sort().join('')}</Types>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${sortedContentTypes.join('')}</Types>
 `;
 }
 
