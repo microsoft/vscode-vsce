@@ -1,0 +1,7 @@
+{
+	"name": "main",
+	"publisher": "josh",
+	"version": "1.0.0",
+	"engines": { "vscode": "*" },
+    "main": "out/extension.js"
+}

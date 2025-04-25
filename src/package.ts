@@ -164,6 +164,11 @@ export interface IPackageOptions {
 	readonly skipLicense?: boolean;
 
 	readonly signTool?: string;
+
+	/**
+	 * Override the main entrypoint in the resulting packaged vsix.
+	 */
+	readonly overrideMainEntrypoint?: string;
 }
 
 export interface IProcessor {
@@ -492,6 +497,10 @@ export class ManifestProcessor extends BaseProcessor {
 		const target = options.target;
 		const preRelease = options.preRelease;
 
+		if (options.overrideMainEntrypoint) {
+			manifest.main = options.overrideMainEntrypoint;
+		}
+
 		if (target || preRelease) {
 			let engineSemver: ReturnType<typeof parseSemver>;
 
@@ -575,10 +584,17 @@ export class ManifestProcessor extends BaseProcessor {
 			return Promise.resolve(file);
 		}
 
-		if (this.options.version && !(this.options.updatePackageJson ?? true)) {
+		const needsUpdate = this.options.overrideMainEntrypoint || (this.options.version && !(this.options.updatePackageJson ?? true));
+
+		if (needsUpdate) {
 			const contents = await read(file);
 			const packageJson = JSON.parse(contents);
-			packageJson.version = this.options.version;
+			if (this.options.overrideMainEntrypoint) {
+					packageJson.main = this.options.overrideMainEntrypoint;
+			}
+			if (this.options.version && !(this.options.updatePackageJson ?? true)) {
+				packageJson.version = this.options.version;
+			}
 			file = { ...file, contents: JSON.stringify(packageJson, undefined, 2) };
 		}
 
@@ -1081,18 +1097,18 @@ export class LicenseProcessor extends BaseProcessor {
 class LaunchEntryPointProcessor extends BaseProcessor {
 	private entryPoints: Set<string> = new Set<string>();
 
-	constructor(manifest: ManifestPackage) {
+	constructor(manifest: ManifestPackage, options: IPackageOptions = {}) {
 		super(manifest);
 		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
+			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main, options))));
 		}
 		if (manifest.browser) {
 			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
 		}
 	}
 
-	appendJSExt(filePath: string): string {
-		if (filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
+	appendJSExt(filePath: string, options: IPackageOptions = {}): string {
+		if (options.overrideMainEntrypoint || filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
 			return filePath;
 		}
 		return filePath + '.js';
@@ -1777,7 +1793,7 @@ export function createDefaultProcessors(manifest: ManifestPackage, options: IPac
 		new TagsProcessor(manifest),
 		new ReadmeProcessor(manifest, options),
 		new ChangelogProcessor(manifest, options),
-		new LaunchEntryPointProcessor(manifest),
+		new LaunchEntryPointProcessor(manifest, options),
 		new LicenseProcessor(manifest, options),
 		new IconProcessor(manifest),
 		new NLSProcessor(manifest),

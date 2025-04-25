@@ -2309,6 +2309,26 @@ describe('ManifestProcessor', () => {
 		assert.doesNotThrow(() => new ManifestProcessor(manifest, { target: 'web' }));
 		assert.doesNotThrow(() => new ManifestProcessor(manifest, { preRelease: true }));
 	});
+
+	it('should respect --override-main-entrypoint and update package.json in-memory', async () => {
+		const root = fixture('main');
+		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.main, 'out/extension.js');
+		const processor = new ManifestProcessor(manifest, { overrideMainEntrypoint: 'foo.bar' });
+
+		const packageJson = {
+			path: 'extension/package.json',
+			localPath: path.join(root, 'package.json'),
+		};
+
+		// Update in-memory
+		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
+		assert.deepStrictEqual(manifest.main, 'foo.bar');
+
+		// Do not update on-disk
+		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
+		assert.deepStrictEqual(manifest.main, 'out/extension.js');
+	});
 });
 
 describe('MarkdownProcessor', () => {
