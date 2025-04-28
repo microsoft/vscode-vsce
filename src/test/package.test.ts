@@ -441,7 +441,7 @@ describe('validateManifest', () => {
 		assert.ok(
 			validateManifestForPackaging(
 				createManifest({
-					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+					badges: [{ url: 'https://cdn.travis-ci.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
 			)
 		);

@@ -309,19 +309,14 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
  * Remember to reach out to them when adding new domains.
  */
 const TrustedSVGSources = [
-	'api.bintray.com',
 	'api.travis-ci.com',
-	'api.travis-ci.org',
 	'app.fossa.io',
 	'badge.buildkite.com',
 	'badge.fury.io',
-	'badge.waffle.io',
 	'badgen.net',
 	'badges.frapsoft.com',
 	'badges.gitter.im',
-	'badges.greenkeeper.io',
 	'cdn.travis-ci.com',
-	'cdn.travis-ci.org',
 	'ci.appveyor.com',
 	'circleci.com',
 	'cla.opensource.microsoft.com',
@@ -334,8 +329,6 @@ const TrustedSVGSources = [
 	'dev.azure.com',
 	'docs.rs',
 	'flat.badgen.net',
-	'gemnasium.com',
-	'githost.io',
 	'gitlab.com',
 	'godoc.org',
 	'goreportcard.com',
@@ -346,11 +339,8 @@ const TrustedSVGSources = [
 	'opencollective.com',
 	'snyk.io',
 	'travis-ci.com',
-	'travis-ci.org',
 	'visualstudio.com',
 	'vsmarketplacebadges.dev',
-	'www.bithound.io',
-	'www.versioneye.com',
 ];
 
 function isGitHubRepository(repository: string | undefined): boolean {
