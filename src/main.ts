@@ -127,7 +127,7 @@ module.exports = function (argv: string[]): void {
 		.option('--skip-license', 'Allow packaging without license file')
 		.option('--sign-tool <path>', 'Path to the VSIX signing tool. Will be invoked with two arguments: `SIGNTOOL <path/to/extension.signature.manifest> <path/to/extension.signature.p7s>`.')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
-		.addOption(new Option("--override-main-entrypoint <path>", "Override the main entrypoint in the resulting packaged vsix").hideHelp(true))
+		.option("--override-main-entrypoint <path>", "Override the main entrypoint in the resulting packaged vsix")
 		.action(
 			(
 				version,
