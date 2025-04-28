@@ -497,10 +497,6 @@ export class ManifestProcessor extends BaseProcessor {
 		const target = options.target;
 		const preRelease = options.preRelease;
 
-		if (options.overrideMainEntrypoint) {
-			manifest.main = options.overrideMainEntrypoint;
-		}
-
 		if (target || preRelease) {
 			let engineSemver: ReturnType<typeof parseSemver>;
 
@@ -1099,9 +1095,13 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 
 	constructor(manifest: ManifestPackage, options: IPackageOptions = {}) {
 		super(manifest);
-		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', options.overrideMainEntrypoint ? manifest.main : this.appendJSExt(manifest.main))));
+
+		if (options.overrideMainEntrypoint) {
+			this.entryPoints.add(util.normalize(path.join('extension', options.overrideMainEntrypoint)));
+		} else if (manifest.main) {
+			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
 		}
+
 		if (manifest.browser) {
 			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
 		}

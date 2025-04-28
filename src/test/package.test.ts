@@ -2318,7 +2318,7 @@ describe('ManifestProcessor', () => {
 		const processor = new ManifestProcessor(manifest, { overrideMainEntrypoint: 'foo.bar' });
 
 		const packageJson = {
-			path: 'extension/package.json',
+			path: path.join('extension', 'package.json'),
 			localPath: path.join(root, 'package.json'),
 		};
 
@@ -3283,8 +3283,8 @@ describe('writeVsix', function () {
 			fs.cpSync(exampleProject, cwd, { recursive: true });
 			await pack({ cwd, packagePath: path.join(cwd, 'vsix.vsix'), overrideMainEntrypoint: 'entrypoint.foo' });
 
-			const key = path.join('extension', 'package.json');
-			const result = await readZip(path.join(cwd, 'vsix.vsix'), (name) => name === key);
+			const key = 'extension/package.json';
+			const result = await readZip(path.join(cwd, 'vsix.vsix'), (_) => true);
 			const packageJson = JSON.parse(result.get(key)?.toString() ?? '{}');
 
 			assert.strictEqual(packageJson.name, 'main');
