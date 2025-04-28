@@ -590,7 +590,7 @@ export class ManifestProcessor extends BaseProcessor {
 			const contents = await read(file);
 			const packageJson = JSON.parse(contents);
 			if (this.options.overrideMainEntrypoint) {
-					packageJson.main = this.options.overrideMainEntrypoint;
+				packageJson.main = this.options.overrideMainEntrypoint;
 			}
 			if (this.options.version && !(this.options.updatePackageJson ?? true)) {
 				packageJson.version = this.options.version;
@@ -1100,15 +1100,15 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	constructor(manifest: ManifestPackage, options: IPackageOptions = {}) {
 		super(manifest);
 		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main, options))));
+			this.entryPoints.add(util.normalize(path.join('extension', options.overrideMainEntrypoint ? manifest.main : this.appendJSExt(manifest.main))));
 		}
 		if (manifest.browser) {
 			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
 		}
 	}
 
-	appendJSExt(filePath: string, options: IPackageOptions = {}): string {
-		if (options.overrideMainEntrypoint || filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
+	appendJSExt(filePath: string): string {
+		if (filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
 			return filePath;
 		}
 		return filePath + '.js';

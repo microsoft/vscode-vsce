@@ -26,6 +26,7 @@ import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten, log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
+import { readZip } from '../zip';
 
 // don't warn in tests
 console.warn = () => null;
@@ -3266,6 +3267,28 @@ describe('writeVsix', function () {
 			assert.deepStrictEqual(vsix1bytes, vsix2bytes);
 			assert.notDeepStrictEqual(vsix1bytes, vsix3bytes);
 
+		} finally {
+			testDir.removeCallback();
+		}
+	});
+
+	it('--override-main-entrypoint sets the main entrypoint in the output vsix package.json', async () => {
+		const exampleProject = fixture('main');
+		const fixtureDir = fixture('');
+
+		const testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixtureDir });
+		const cwd = testDir.name;
+
+		try {
+			fs.cpSync(exampleProject, cwd, { recursive: true });
+			await pack({ cwd, packagePath: path.join(cwd, 'vsix.vsix'), overrideMainEntrypoint: 'entrypoint.foo' });
+
+			const key = path.join('extension', 'package.json');
+			const result = await readZip(path.join(cwd, 'vsix.vsix'), (name) => name === key);
+			const packageJson = JSON.parse(result.get(key)?.toString() ?? '{}');
+
+			assert.strictEqual(packageJson.name, 'main');
+			assert.strictEqual(packageJson.main, 'entrypoint.foo');
 		} finally {
 			testDir.removeCallback();
 		}
