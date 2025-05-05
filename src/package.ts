@@ -673,6 +673,7 @@ export class TagsProcessor extends BaseProcessor {
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
 		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant'] : [];
 		const languageModelTools = doesContribute('languageModelTools') ? ['tools', 'language-model-tools'] : [];
+		const mcp = doesContribute('modelContextServerCollections') ? ['mcp'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -715,6 +716,7 @@ export class TagsProcessor extends BaseProcessor {
 			...remoteMenu,
 			...chatParticipants,
 			...languageModelTools,
+			...mcp,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
