@@ -441,7 +441,7 @@ describe('validateManifest', () => {
 		assert.ok(
 			validateManifestForPackaging(
 				createManifest({
-					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+					badges: [{ url: 'https://cdn.travis-ci.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
 			)
 		);
@@ -1363,6 +1363,22 @@ describe('toVsixManifest', () => {
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'tools,language-model-tools,__web_extension'));
+	});
+
+	it('should automatically add mcp tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				modelContextServerCollections: [{ label: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'mcp,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
