@@ -1071,33 +1071,40 @@ export class LicenseProcessor extends BaseProcessor {
 }
 
 class LaunchEntryPointProcessor extends BaseProcessor {
-	private entryPoints: Set<string> = new Set<string>();
+	private seenFiles: Set<string> = new Set<string>();
 
 	constructor(manifest: ManifestPackage) {
 		super(manifest);
-		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
-		}
-		if (manifest.browser) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
-		}
-	}
-
-	appendJSExt(filePath: string): string {
-		if (filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
-			return filePath;
-		}
-		return filePath + '.js';
 	}
 
 	onFile(file: IFile): Promise<IFile> {
-		this.entryPoints.delete(util.normalize(file.path));
+		this.seenFiles.add(util.normalize(file.path));
 		return Promise.resolve(file);
 	}
 
+	private hasSeenEntrypointFile(filePath: string): boolean {
+		return this.seenFiles.has(filePath) || this.seenFiles.has(filePath + '.js');
+	}
+
 	async onEnd(): Promise<void> {
-		if (this.entryPoints.size > 0) {
-			const files: string = [...this.entryPoints].join(',\n  ');
+		const missingEntryPoints: string[] = [];
+
+		if (this.manifest.main) {
+			const mainPath = util.normalize(path.join('extension', this.manifest.main));
+			if (!this.hasSeenEntrypointFile(mainPath)) {
+				missingEntryPoints.push(mainPath);
+			}
+		}
+
+		if (this.manifest.browser) {
+			const browserPath = util.normalize(path.join('extension', this.manifest.browser));
+			if (!this.hasSeenEntrypointFile(browserPath)) {
+				missingEntryPoints.push(browserPath);
+			}
+		}
+
+		if (missingEntryPoints.length > 0) {
+			const files: string = missingEntryPoints.join(',\n  ');
 			throw new Error(
 				`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`
 			);
