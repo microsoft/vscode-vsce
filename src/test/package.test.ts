@@ -1378,7 +1378,7 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'mcp,__web_extension'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'mcp,language-model-tools,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
