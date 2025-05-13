@@ -27,6 +27,7 @@ import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
+import { lintFiles, lintText, prettyPrintLintResult } from './secretLint';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -2106,4 +2107,41 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 
 	message += '\n';
 	util.log.info(message);
+
+	await scanFilesForSecrets(files);
+}
+
+export async function scanFilesForSecrets(files: IFile[]): Promise<void> {
+	const onDiskFiles: ILocalFile[] = files.filter(file => !isInMemoryFile(file)) as ILocalFile[];
+	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
+
+	const onDiskResult = await lintFiles(onDiskFiles.map(file => file.localPath));
+	const inMemoryResults = await Promise.all(
+		inMemoryFiles.map(file =>
+			lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path)
+		)
+	);
+
+	const secretsFound = [...inMemoryResults, onDiskResult].filter(result => !result.ok).flatMap(result => result.results);
+	if (secretsFound.length === 0) {
+		return;
+	}
+
+	// secrets found
+	const noneDotEnvSecretsFound = secretsFound.filter(result => result.ruleId !== '@secretlint/secretlint-rule-no-dotenv');
+	if (noneDotEnvSecretsFound.length > 0) {
+		let errorOutput = '';
+		for (const secret of noneDotEnvSecretsFound) {
+			errorOutput += '\n' + prettyPrintLintResult(secret);
+		}
+		util.log.error(`Secrets have been detected in the files which are being packaged:\n\n${errorOutput}`);
+	}
+
+	// .env file found
+	const allRuleIds = new Set(secretsFound.map(result => result.ruleId).filter(Boolean));
+	if (allRuleIds.has('@secretlint/secretlint-rule-no-dotenv')) {
+		util.log.error(`${chalk.bold.red('.env')} files should not be packaged. Ignore them in your ${chalk.bold('.vscodeignore')} file or exclude them from the package.json ${chalk.bold('files')} property.`);
+	}
+
+	process.exit(1);
 }
