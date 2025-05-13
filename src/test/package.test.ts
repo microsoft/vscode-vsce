@@ -146,6 +146,25 @@ async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, ma
 	}
 }
 
+async function processExitExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+	const originalExit = process.exit;
+	let exitCalled = false;
+
+	try {
+		process.exit = (() => {
+			exitCalled = true;
+			throw new Error('Process exit was called');
+		}) as any;
+
+		await fn();
+		assert.fail(errorMessage);
+	} catch (error) {
+		assert.ok(exitCalled, errorMessage);
+	} finally {
+		process.exit = originalExit;
+	}
+}
+
 describe('collect', function () {
 	this.timeout(60000);
 
@@ -350,6 +369,16 @@ describe('collect', function () {
 		const cwd = fixture('icon');
 		const manifest = await readManifest(cwd);
 		await collect(manifest, { cwd });
+	});
+
+	it('should not package .env file', async function () {
+		const cwd = fixture('env');
+		await processExitExpected(() => pack({ cwd }), 'Expected package to throw: .env file should not be packaged');
+	});
+
+	it('should not package file which has a private key', async function () {
+		const cwd = fixture('secret');
+		await processExitExpected(() => pack({ cwd }), 'Expected package to throw: file which has a private key should not be packaged');
 	});
 });
 
