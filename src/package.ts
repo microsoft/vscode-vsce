@@ -2117,9 +2117,7 @@ export async function scanFilesForSecrets(files: IFile[]): Promise<void> {
 
 	const onDiskResult = await lintFiles(onDiskFiles.map(file => file.localPath));
 	const inMemoryResults = await Promise.all(
-		inMemoryFiles.map(file =>
-			lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path)
-		)
+		inMemoryFiles.map(file => lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path))
 	);
 
 	const secretsFound = [...inMemoryResults, onDiskResult].filter(result => !result.ok).flatMap(result => result.results);
