@@ -74,6 +74,9 @@ export interface IPublishOptions {
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
 	readonly allowAllProposedApis?: boolean;
+	readonly allowPackageSecrets?: string[];
+	readonly allowPackageAllSecrets?: boolean;
+	readonly allowPackageEnvFile?: boolean;
 	readonly dependencies?: boolean;
 	readonly preRelease?: boolean;
 	readonly allowStarActivation?: boolean;
