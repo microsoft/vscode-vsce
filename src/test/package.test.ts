@@ -168,6 +168,19 @@ async function processExitExpected(fn: () => Promise<any>, errorMessage: string)
 describe('collect', function () {
 	this.timeout(60000);
 
+	let testDir: tmp.DirResult;
+	before(() => {
+		testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixture('') });
+	});
+	after(() => {
+		testDir.removeCallback();
+	});
+
+	function getVisxOutputPath() {
+		const randomValue = Math.random().toString(36).substring(2, 15);
+		return path.join(testDir.name, `extension-${randomValue}.vsix`);
+	}
+
 	it('should catch all files', () => {
 		const cwd = fixture('uuid');
 
@@ -373,12 +386,27 @@ describe('collect', function () {
 
 	it('should not package .env file', async function () {
 		const cwd = fixture('env');
-		await processExitExpected(() => pack({ cwd }), 'Expected package to throw: .env file should not be packaged');
+		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
+	});
+
+	it('allow packaging .env file with --allow-package-env-file', async function () {
+		const cwd = fixture('env');
+		await pack({ cwd, allowPackageEnvFile: true, packagePath: getVisxOutputPath() });
 	});
 
 	it('should not package file which has a private key', async function () {
 		const cwd = fixture('secret');
-		await processExitExpected(() => pack({ cwd }), 'Expected package to throw: file which has a private key should not be packaged');
+		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: file which has a private key should not be packaged');
+	});
+
+	it('allow packaging file which has a private key with --allow-package-secrets', async function () {
+		const cwd = fixture('secret');
+		await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath() });
+	});
+
+	it('allow packaging file which has a private key with --allow-package-all-secrets', async function () {
+		const cwd = fixture('secret');
+		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath() });
 	});
 });
 

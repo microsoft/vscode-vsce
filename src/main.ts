@@ -124,6 +124,9 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
 		.option('--allow-unused-files-pattern', 'Allow include patterns for the files field in package.json that does not match any file')
+		.option('--allow-package-secrets <secrets...>', 'Allow packaging specific secrets. The names of the secrets can be found in the error message ([SECRET_NAME]).')
+		.option('--allow-package-all-secrets', 'Allow to package all kinds of secrets')
+		.option('--allow-package-env-file', 'Allow packaging .env files')
 		.option('--skip-license', 'Allow packaging without license file')
 		.option('--sign-tool <path>', 'Path to the VSIX signing tool. Will be invoked with two arguments: `SIGNTOOL <path/to/extension.signature.manifest> <path/to/extension.signature.p7s>`.')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
@@ -153,6 +156,9 @@ module.exports = function (argv: string[]): void {
 					allowStarActivation,
 					allowMissingRepository,
 					allowUnusedFilesPattern,
+					allowPackageSecrets,
+					allowPackageAllSecrets,
+					allowPackageEnvFile,
 					skipLicense,
 					signTool,
 					followSymlinks,
@@ -183,6 +189,9 @@ module.exports = function (argv: string[]): void {
 						allowStarActivation,
 						allowMissingRepository,
 						allowUnusedFilesPattern,
+						allowPackageSecrets,
+						allowPackageAllSecrets,
+						allowPackageEnvFile,
 						skipLicense,
 						signTool,
 						followSymlinks,
@@ -230,6 +239,9 @@ module.exports = function (argv: string[]): void {
 		.addOption(new Option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)').hideHelp(true))
 		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
 		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
+		.option('--allow-package-secrets <secrets...>', 'Allow packaging specific secrets. The names of the secrets can be found in the error message ([SECRET_NAME]).')
+		.option('--allow-package-all-secrets', 'Allow to package all kinds of secrets')
+		.option('--allow-package-env-file', 'Allow packaging .env files')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
 		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
@@ -267,6 +279,9 @@ module.exports = function (argv: string[]): void {
 					noVerify,
 					allowProposedApis,
 					allowAllProposedApis,
+					allowPackageSecrets,
+					allowPackageAllSecrets,
+					allowPackageEnvFile,
 					ignoreFile,
 					dependencies,
 					preRelease,
@@ -303,6 +318,9 @@ module.exports = function (argv: string[]): void {
 						noVerify: noVerify || !verify,
 						allowProposedApis,
 						allowAllProposedApis,
+						allowPackageSecrets,
+						allowPackageAllSecrets,
+						allowPackageEnvFile,
 						ignoreFile,
 						dependencies,
 						preRelease,

@@ -27,7 +27,7 @@ import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
-import { lintFiles, lintText, prettyPrintLintResult } from './secretLint';
+import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -162,6 +162,10 @@ export interface IPackageOptions {
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly allowUnusedFilesPattern?: boolean;
+	readonly allowPackageSecrets?: string[];
+	readonly allowPackageAllSecrets?: boolean;
+	readonly allowPackageEnvFile?: boolean;
+
 	readonly skipLicense?: boolean;
 
 	readonly signTool?: string;
@@ -2108,10 +2112,17 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	message += '\n';
 	util.log.info(message);
 
-	await scanFilesForSecrets(files);
+	const fileExclusion = hasIgnoreFile ? FileExclusionType.VSCodeIgnore : manifest.files ? FileExclusionType.PackageFiles : FileExclusionType.None;
+	await scanFilesForSecrets(files, fileExclusion, options);
 }
 
-export async function scanFilesForSecrets(files: IFile[]): Promise<void> {
+enum FileExclusionType {
+	None = 'none',
+	VSCodeIgnore = 'vscodeIgnore',
+	PackageFiles = 'package.files'
+}
+
+export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExclusionType, options: IPackageOptions): Promise<void> {
 	const onDiskFiles: ILocalFile[] = files.filter(file => !isInMemoryFile(file)) as ILocalFile[];
 	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
 
@@ -2121,25 +2132,49 @@ export async function scanFilesForSecrets(files: IFile[]): Promise<void> {
 	);
 
 	const secretsFound = [...inMemoryResults, onDiskResult].filter(result => !result.ok).flatMap(result => result.results);
-	if (secretsFound.length === 0) {
-		return;
-	}
 
 	// secrets found
-	const noneDotEnvSecretsFound = secretsFound.filter(result => result.ruleId !== '@secretlint/secretlint-rule-no-dotenv');
+	const noneDotEnvSecretsFound = secretsFound.filter(result =>
+		result.ruleId &&
+		result.ruleId !== '@secretlint/secretlint-rule-no-dotenv' &&
+		!options.allowPackageAllSecrets &&
+		!options.allowPackageSecrets?.includes(getRuleNameFromRuleId(result.ruleId))
+	);
 	if (noneDotEnvSecretsFound.length > 0) {
-		let errorOutput = '';
-		for (const secret of noneDotEnvSecretsFound) {
-			errorOutput += '\n' + prettyPrintLintResult(secret);
-		}
-		util.log.error(`Secrets have been detected in the files which are being packaged:\n\n${errorOutput}`);
+		const uniqueSecretIds = new Set<string>(noneDotEnvSecretsFound.map(result => result.ruleId!));
+		const secretsFoundRuleNames = Array.from(uniqueSecretIds).map(getRuleNameFromRuleId);
+
+		let errorMessage = `${chalk.bold('Potential security issue detected:')}`;
+		errorMessage += ` Your extension package contains sensitive information that should not be published.`
+		errorMessage += ` Please remove these secrets before packaging.`;
+		errorMessage += `\n` + noneDotEnvSecretsFound.map(prettyPrintLintResult).join('\n');
+
+		let hintMessage = `\nIn case of a false positives, you can allowlist secrets with `;
+		hintMessage += secretsFoundRuleNames.map(name => `--allow-package-secrets ${name}`).join(' ');
+		hintMessage += ` or use --allow-package-all-secrets to skip this check (not recommended).`;
+
+		util.log.error(errorMessage + chalk.italic(hintMessage));
+		process.exit(1);
 	}
 
 	// .env file found
 	const allRuleIds = new Set(secretsFound.map(result => result.ruleId).filter(Boolean));
-	if (allRuleIds.has('@secretlint/secretlint-rule-no-dotenv')) {
-		util.log.error(`${chalk.bold.red('.env')} files should not be packaged. Ignore them in your ${chalk.bold('.vscodeignore')} file or exclude them from the package.json ${chalk.bold('files')} property.`);
+	if (!options.allowPackageEnvFile && allRuleIds.has('@secretlint/secretlint-rule-no-dotenv')) {
+		let errorMessage = `${chalk.bold.red('.env')} files should not be packaged.`;
+
+		switch (fileExclusion) {
+			case FileExclusionType.None:
+				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')} or exclude it from the package.json ${chalk.bold('files')} property.`; break;
+			case FileExclusionType.VSCodeIgnore:
+				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')}.`; break;
+			case FileExclusionType.PackageFiles:
+				errorMessage += ` Do not include the file in your package.json ${chalk.bold('files')} property.`; break;
+		}
+
+		const hintMessage = `\nTo ignore this check, you can use --allow-package-env-file (not recommended).`;
+
+		util.log.error(errorMessage + chalk.italic(hintMessage));
+		process.exit(1);
 	}
 
-	process.exit(1);
 }

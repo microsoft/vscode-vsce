@@ -74,6 +74,11 @@ function parseResult(result: SecretLintEngineResult): SecretLintResult {
 	return { ok: result.ok, results };
 }
 
+export function getRuleNameFromRuleId(ruleId: string): string {
+	const parts = ruleId.split('-rule-');
+	return parts[parts.length - 1];
+}
+
 export function prettyPrintLintResult(result: Result): string {
 	if (!result.message.text) {
 		return JSON.stringify(result);
@@ -82,7 +87,9 @@ export function prettyPrintLintResult(result: Result): string {
 	const text = result.message.text;
 	const titleColor = result.level === undefined || result.level === Level.Error ? chalk.bold.red : chalk.bold.yellow;
 	const title = text.length > 54 ? text.slice(0, 50) + '...' : text;
-	let output = `\t${titleColor(title)}\n`;
+	const ruleName = result.ruleId ? getRuleNameFromRuleId(result.ruleId) : 'unknown';
+
+	let output = `\t${titleColor(title)} [${ruleName}]\n`;
 
 	if (result.locations) {
 		result.locations.forEach(location => {
