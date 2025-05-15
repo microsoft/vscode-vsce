@@ -319,7 +319,7 @@ module.exports = function (argv: string[]): void {
 
 	program
 		.command('unpublish [extensionid]')
-		.description('Unpublishes an extension. Example extension id: ms-vscode.live-server.')
+		.description('Unpublishes and removes an extension from the marketplace. Example extension id: ms-vscode.live-server.')
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
