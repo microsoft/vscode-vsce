@@ -1605,8 +1605,16 @@ export async function toContentTypes(files: IFile[]): Promise<string> {
 		contentTypes.push(`<Default Extension="${extension}" ContentType="${contentType}"/>`);
 	}
 
+	// The files array passed into this function has non-deterministic order
+	// depending on filesystem directory traversal. This leads to the order of
+	// the "Default" elements changing from build to build, which prevents
+	// reproducible vsix files. To fix this, this sorts the contentTypes array
+	// to ensure they are listed in the same order regardless of the order of
+	// the files array.
+	const sortedContentTypes = contentTypes.sort();
+
 	return `<?xml version="1.0" encoding="utf-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${contentTypes.join('')}</Types>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${sortedContentTypes.join('')}</Types>
 `;
 }
 
