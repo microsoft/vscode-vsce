@@ -2123,6 +2123,10 @@ enum FileExclusionType {
 }
 
 export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExclusionType, options: IPackageOptions): Promise<void> {
+	if (options.allowPackageAllSecrets && options.allowPackageEnvFile) {
+		return; // No need to scan
+	}
+
 	const onDiskFiles: ILocalFile[] = files.filter(file => !isInMemoryFile(file)) as ILocalFile[];
 	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
 

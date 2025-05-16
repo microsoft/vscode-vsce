@@ -17,8 +17,18 @@ const lintConfig = {
 			id: "@secretlint/secretlint-rule-preset-recommend",
 			rules: [
 				{
-					"id": "@secretlint/secretlint-rule-basicauth",
-					"allowMessageIds": ["BasicAuth"]
+					id: "@secretlint/secretlint-rule-basicauth",
+					allowMessageIds: ["BasicAuth"]
+				},
+				{
+					id: "@secretlint/secretlint-rule-privatekey",
+					options: {
+						allows: [
+							// Allow all keys which do not start and end with the BEGIN/END PRIVATE KEY and has at least 50 characters in between
+							// https://github.com/microsoft/vscode-vsce/issues/1147
+							"/^(?![\\s\\S]*-----BEGIN .*PRIVATE KEY-----[A-Za-z0-9+/=\\r\\n]{50,}-----END .*PRIVATE KEY-----)[\\s\\S]*$/"
+						]
+					}
 				}
 			]
 		}, {

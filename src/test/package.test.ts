@@ -395,18 +395,33 @@ describe('collect', function () {
 	});
 
 	it('should not package file which has a private key', async function () {
-		const cwd = fixture('secret');
-		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: file which has a private key should not be packaged');
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
 	});
 
 	it('allow packaging file which has a private key with --allow-package-secrets', async function () {
-		const cwd = fixture('secret');
-		await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath() });
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath(), ignoreFile });
 	});
 
 	it('allow packaging file which has a private key with --allow-package-all-secrets', async function () {
-		const cwd = fixture('secret');
-		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath() });
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
+	});
+
+	it('private key false positive 1', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret1Ignore');
+		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
+	});
+
+	it('private key false positive 2', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret2Ignore');
+		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
 	});
 });
 
