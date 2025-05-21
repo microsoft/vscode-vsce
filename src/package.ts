@@ -2128,9 +2128,10 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 	}
 
 	const onDiskFiles: ILocalFile[] = files.filter(file => !isInMemoryFile(file)) as ILocalFile[];
+	const onDiskNoneNodeModulesFiles = onDiskFiles.filter(file => !file.localPath.includes('node_modules'));
 	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
 
-	const onDiskResult = await lintFiles(onDiskFiles.map(file => file.localPath));
+	const onDiskResult = await lintFiles(onDiskNoneNodeModulesFiles.map(file => file.localPath));
 	const inMemoryResults = await Promise.all(
 		inMemoryFiles.map(file => lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path))
 	);
