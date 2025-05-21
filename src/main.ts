@@ -239,7 +239,7 @@ module.exports = function (argv: string[]): void {
 		.addOption(new Option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)').hideHelp(true))
 		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
 		.option('--allow-all-proposed-apis', 'Allow all proposed APIs')
-		.option('--allow-package-secrets <secrets...>', 'Allow packaging specific secrets. The names of the secrets can be found in the error message ([SECRET_NAME]).')
+		.option('--allow-package-secrets <secret_type>', 'Allow packaging a specific type of secret. The type of the secrets can be found in the error message ([SECRET_TYPE]).')
 		.option('--allow-package-all-secrets', 'Allow to package all kinds of secrets')
 		.option('--allow-package-env-file', 'Allow packaging .env files')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
