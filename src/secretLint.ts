@@ -20,14 +20,22 @@ const lintConfig = {
 				{
 					id: "@secretlint/secretlint-rule-basicauth",
 					allowMessageIds: ["BasicAuth"]
-				},
-				{
+				}, {
 					id: "@secretlint/secretlint-rule-privatekey",
 					options: {
 						allows: [
 							// Allow all keys which do not start and end with the BEGIN/END PRIVATE KEY and has at least 50 characters in between
 							// https://github.com/microsoft/vscode-vsce/issues/1147
 							"/^(?![\\s\\S]*-----BEGIN .*PRIVATE KEY-----[A-Za-z0-9+/=\\r\\n]{50,}-----END .*PRIVATE KEY-----)[\\s\\S]*$/"
+						]
+					}
+				}, {
+					id: "@secretlint/secretlint-rule-npm",
+					options: {
+						allows: [
+							// An npm token has the prefix npm_ followed by 36 Base62 characters (30 random + 6-character checksum), totaling 40 characters.
+							// https://github.com/microsoft/vscode-vsce/issues/1153
+							"/^(?!(?:npm_[0-9A-Za-z]{36})$).+$/"
 						]
 					}
 				}
