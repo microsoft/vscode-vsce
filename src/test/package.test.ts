@@ -165,6 +165,19 @@ async function processExitExpected(fn: () => Promise<any>, errorMessage: string)
 	}
 }
 
+async function processExitNotExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+	const originalExit = process.exit;
+	try {
+		process.exit = (() => {
+			throw new Error(errorMessage);
+		}) as any;
+
+		await fn();
+	} finally {
+		process.exit = originalExit;
+	}
+}
+
 describe('collect', function () {
 	this.timeout(60000);
 
@@ -386,42 +399,54 @@ describe('collect', function () {
 
 	it('should not package .env file', async function () {
 		const cwd = fixture('env');
-		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
 	});
 
 	it('allow packaging .env file with --allow-package-env-file', async function () {
 		const cwd = fixture('env');
-		await pack({ cwd, allowPackageEnvFile: true, packagePath: getVisxOutputPath() });
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageEnvFile: true, packagePath: getVisxOutputPath() }), 'Should not have exited');
 	});
 
 	it('should not package file which has a private key', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret1Ignore');
-		await processExitExpected(() => pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
 	});
 
 	it('allow packaging file which has a private key with --allow-package-secrets', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret1Ignore');
-		await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath(), ignoreFile });
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
 	});
 
 	it('allow packaging file which has a private key with --allow-package-all-secrets', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret1Ignore');
-		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
 	});
 
 	it('private key false positive 1', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'noSecret1Ignore');
-		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
 	});
 
 	it('private key false positive 2', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'noSecret2Ignore');
-		await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile });
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
+
+	it('should not package npm token', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret2Ignore');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: should not package npm token');
+	});
+
+	it('npm token false positive 1', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret3Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
 	});
 });
 

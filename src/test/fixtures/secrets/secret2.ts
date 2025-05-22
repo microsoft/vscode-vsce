@@ -1,0 +1,1 @@
+export const k = `npm_Ab3kZy0X9QpLmN4tUvW7aBcDeFgHiJkLmNoPqRsTu`
