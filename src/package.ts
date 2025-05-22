@@ -2123,7 +2123,9 @@ enum FileExclusionType {
 }
 
 export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExclusionType, options: IPackageOptions): Promise<void> {
-	if (options.allowPackageAllSecrets && options.allowPackageEnvFile) {
+	const scanForSecrets = !options.allowPackageAllSecrets;
+	const scanDotEnv = !options.allowPackageEnvFile;
+	if (!scanForSecrets && !scanDotEnv) {
 		return; // No need to scan
 	}
 
@@ -2131,9 +2133,9 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 	const onDiskNoneNodeModulesFiles = onDiskFiles.filter(file => !file.localPath.includes('node_modules'));
 	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
 
-	const onDiskResult = await lintFiles(onDiskNoneNodeModulesFiles.map(file => file.localPath));
+	const onDiskResult = await lintFiles(onDiskNoneNodeModulesFiles.map(file => file.localPath), scanForSecrets, scanDotEnv);
 	const inMemoryResults = await Promise.all(
-		inMemoryFiles.map(file => lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path))
+		inMemoryFiles.map(file => lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path, scanForSecrets, scanDotEnv))
 	);
 
 	const secretsFound = [...inMemoryResults, onDiskResult].filter(result => !result.ok).flatMap(result => result.results);
@@ -2150,13 +2152,13 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 		const secretsFoundRuleNames = Array.from(uniqueSecretIds).map(getRuleNameFromRuleId);
 
 		let errorMessage = `${chalk.bold('Potential security issue detected:')}`;
-		errorMessage += ` Your extension package contains sensitive information that should not be published.`
+		errorMessage += ` Your extension package contains sensitive information that should not be published.`;
 		errorMessage += ` Please remove these secrets before packaging.`;
 		errorMessage += `\n` + noneDotEnvSecretsFound.map(prettyPrintLintResult).join('\n');
 
-		let hintMessage = `\nIn case of a false positives, you can allowlist secrets with `;
+		let hintMessage = `\nIn case of false positives, you can allow specific types of secrets with `;
 		hintMessage += secretsFoundRuleNames.map(name => `--allow-package-secrets ${name}`).join(' ');
-		hintMessage += ` or use --allow-package-all-secrets to skip this check (not recommended).`;
+		hintMessage += ` or use --allow-package-all-secrets to skip this check entirely (not recommended).`;
 
 		util.log.error(errorMessage + chalk.italic(hintMessage));
 		process.exit(1);

@@ -12,61 +12,74 @@ interface SecretLintResult {
 	results: Result[];
 }
 
-const lintConfig = {
-	rules: [
-		{
-			id: "@secretlint/secretlint-rule-preset-recommend",
-			rules: [
-				{
-					id: "@secretlint/secretlint-rule-basicauth",
-					allowMessageIds: ["BasicAuth"]
-				}, {
-					id: "@secretlint/secretlint-rule-privatekey",
-					options: {
-						allows: [
-							// Allow all keys which do not start and end with the BEGIN/END PRIVATE KEY and has at least 50 characters in between
-							// https://github.com/microsoft/vscode-vsce/issues/1147
-							"/^(?![\\s\\S]*-----BEGIN .*PRIVATE KEY-----[A-Za-z0-9+/=\\r\\n]{50,}-----END .*PRIVATE KEY-----)[\\s\\S]*$/"
-						]
-					}
-				}, {
-					id: "@secretlint/secretlint-rule-npm",
-					options: {
-						allows: [
-							// An npm token has the prefix npm_ followed by 36 Base62 characters (30 random + 6-character checksum), totaling 40 characters.
-							// https://github.com/microsoft/vscode-vsce/issues/1153
-							"/^(?!(?:npm_[0-9A-Za-z]{36})$).+$/"
-						]
-					}
+const secretsScanningRules = [
+	{
+		id: "@secretlint/secretlint-rule-preset-recommend",
+		rules: [
+			{
+				id: "@secretlint/secretlint-rule-basicauth",
+				allowMessageIds: ["BasicAuth"]
+			},
+			{
+				id: "@secretlint/secretlint-rule-privatekey",
+				options: {
+					allows: [
+						// Allow all keys which do not start and end with the BEGIN/END PRIVATE KEY and has at least 50 characters in between
+						// https://github.com/microsoft/vscode-vsce/issues/1147
+						"/^(?![\\s\\S]*-----BEGIN .*PRIVATE KEY-----[A-Za-z0-9+/=\\r\\n]{50,}-----END .*PRIVATE KEY-----)[\\s\\S]*$/"
+					]
 				}
-			]
-		}, {
-			id: "@secretlint/secretlint-rule-no-dotenv"
-		}
+			}, {
+				id: "@secretlint/secretlint-rule-npm",
+				options: {
+					allows: [
+						// An npm token has the prefix npm_ followed by 36 Base62 characters (30 random + 6-character checksum), totaling 40 characters.
+						// https://github.com/microsoft/vscode-vsce/issues/1153
+						"/^(?!(?:npm_[0-9A-Za-z]{36})$).+$/"
+					]
+				}
+			}
+		]
+	}
+];
 
-	]
-};
-
-const lintOptions = {
-	configFileJSON: lintConfig,
-	formatter: "@secretlint/secretlint-formatter-sarif",
-	color: true,
-	maskSecrets: false
-};
+const dotEnvRules = [
+	{
+		id: "@secretlint/secretlint-rule-no-dotenv"
+	}
+];
 
 // Helper function to dynamically import the createEngine function
-async function getEngine() {
+async function getEngine(scanSecrets: boolean, scanDotEnv: boolean) {
 	// Use a raw dynamic import that will not be transformed
 	// This is necessary because @secretlint/node is an ESM module
 	const secretlintModule = await eval('import("@secretlint/node")');
+
+	const rules = [];
+	if (scanSecrets) {
+		rules.push(...secretsScanningRules);
+	}
+	if (scanDotEnv) {
+		rules.push(...dotEnvRules);
+	}
+
+	const lintOptions = {
+		configFileJSON: { rules: rules },
+		formatter: "@secretlint/secretlint-formatter-sarif", // checkstyle, compact, jslint-xml, junit, pretty-error, stylish, tap, unix, json, mask-result, table
+		color: true,
+		maskSecrets: false
+	};
+
 	const engine = await secretlintModule.createEngine(lintOptions);
 	return engine;
 }
 
 export async function lintFiles(
-	filePaths: string[]
+	filePaths: string[],
+	scanSecrets: boolean,
+	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine();
+	const engine = await getEngine(scanSecrets, scanDotEnv);
 
 	let engineResult;
 	try {
@@ -83,9 +96,11 @@ export async function lintFiles(
 
 export async function lintText(
 	content: string,
-	fileName: string
+	fileName: string,
+	scanSecrets: boolean,
+	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine();
+	const engine = await getEngine(scanSecrets, scanDotEnv);
 
 	let engineResult;
 	try {
