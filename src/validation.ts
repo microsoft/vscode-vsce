@@ -6,13 +6,13 @@ const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 export function validatePublisher(publisher: string | undefined): string {
 	if (!publisher) {
 		throw new Error(
-			`Missing publisher name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
+			`Missing extension "publisher": "<ID>" in package.json. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#create-a-publisher`
 		);
 	}
 
 	if (!nameRegex.test(publisher)) {
 		throw new Error(
-			`Invalid publisher name '${publisher}'. Expected the identifier of a publisher, not its human-friendly name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions`
+			`Invalid extension "publisher": "${publisher}" in package.json. Expected the identifier of a publisher, not its human-friendly name. Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#create-a-publisher`
 		);
 	}
 
@@ -21,11 +21,11 @@ export function validatePublisher(publisher: string | undefined): string {
 
 export function validateExtensionName(name: string | undefined): string {
 	if (!name) {
-		throw new Error(`Missing extension name`);
+		throw new Error(`Missing extension "name": "<name>" in package.json. Learn more: https://code.visualstudio.com/api/references/extension-manifest`);
 	}
 
 	if (!nameRegex.test(name)) {
-		throw new Error(`Invalid extension name '${name}'`);
+		throw new Error(`Invalid extension "name": "${name}" in package.json. Learn more: https://code.visualstudio.com/api/references/extension-manifest`);
 	}
 
 	return name;
@@ -33,11 +33,11 @@ export function validateExtensionName(name: string | undefined): string {
 
 export function validateVersion(version: string | undefined): string {
 	if (!version) {
-		throw new Error(`Missing extension version`);
+		throw new Error(`Missing extension "version": "<version>" in package.json. Learn more: https://code.visualstudio.com/api/references/extension-manifest`);
 	}
 
 	if (!semver.valid(version)) {
-		throw new Error(`Invalid extension version '${version}'`);
+		throw new Error(`Invalid extension "version": "${version}" in package.json. Learn more:	https://code.visualstudio.com/api/references/extension-manifest`);
 	}
 
 	return version;
@@ -45,11 +45,11 @@ export function validateVersion(version: string | undefined): string {
 
 export function validateEngineCompatibility(version: string | undefined): string {
 	if (!version) {
-		throw new Error(`Missing vscode engine compatibility version`);
+		throw new Error(`Missing vscode engine compatibility version. ("engines": { "vscode": "<version>" } in package.json) Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#visual-studio-code-compatibility`);
 	}
 
 	if (!/^\*$|^(\^|>=)?((\d+)|x)\.((\d+)|x)\.((\d+)|x)(\-.*)?$/.test(version)) {
-		throw new Error(`Invalid vscode engine compatibility version '${version}'`);
+		throw new Error(`Invalid vscode engine compatibility version '${version}'. ("engines": { "vscode": "${version}" } in package.json) Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#visual-studio-code-compatibility`);
 	}
 
 	return version;
