@@ -1478,6 +1478,22 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'mcp,language-model-tools,__web_extension'));
 	});
 
+	it('should automatically add language-models tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languageModels: [{ name: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'language-models,__web_extension'));
+	});
+
 	it('should remove duplicate tags', () => {
 		const manifest = {
 			name: 'test',
