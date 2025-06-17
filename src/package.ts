@@ -297,9 +297,13 @@ function escapeRegExp(value: string) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+function sanitizeTag(tag: string): string {
+	return tag.replace(/[^\w-]/g, '');
+}
+
 function toExtensionTags(extensions: string[]): string[] {
 	return extensions
-		.map(s => s.replace(/\W/g, ''))
+		.map(sanitizeTag)
 		.filter(s => !!s)
 		.map(s => `__ext_${s}`);
 }
@@ -687,7 +691,7 @@ export class TagsProcessor extends BaseProcessor {
 		);
 
 		const languageContributions = ((contributes && contributes['languages']) ?? []).reduce<string[]>(
-			(r, l) => [...r, l.id, ...(l.aliases ?? []), ...toExtensionTags(l.extensions ?? [])],
+			(r, l) => [...r, l.id, ...(l.aliases ?? []).map(sanitizeTag), ...toExtensionTags(l.extensions ?? [])],
 			[]
 		);
 
