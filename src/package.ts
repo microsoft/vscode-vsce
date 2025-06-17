@@ -298,7 +298,7 @@ function escapeRegExp(value: string) {
 }
 
 function sanitizeTag(tag: string): string {
-	return tag.replace(/\W/g, '');
+	return tag.replace(/[^\w-]/g, '');
 }
 
 function toExtensionTags(extensions: string[]): string[] {
