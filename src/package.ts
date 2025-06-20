@@ -1116,9 +1116,10 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 
 		if (missingEntryPoints.length > 0) {
 			const files: string = missingEntryPoints.join(',\n  ');
-			throw new Error(
-				`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`
-			);
+			const hint = this.manifest.files && this.manifest.files.length > 0
+				? `Make sure these files exist and are included by your "files" field in 'package.json'`
+				: `Make sure these files exist and aren't ignored by '.vscodeignore'`;
+			throw new Error(`Extension entrypoint(s) missing. ${hint}:\n  ${files}`);
 		}
 	}
 }
