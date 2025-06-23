@@ -45,11 +45,11 @@ export function validateVersion(version: string | undefined): string {
 
 export function validateEngineCompatibility(version: string | undefined): string {
 	if (!version) {
-		throw new Error(`Missing vscode engine compatibility version`);
+		throw new Error(`Missing vscode engine compatibility version. ("engines": { "vscode": "<version>" } in package.json) Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#visual-studio-code-compatibility`);
 	}
 
 	if (!/^\*$|^(\^|>=)?((\d+)|x)\.((\d+)|x)\.((\d+)|x)(\-.*)?$/.test(version)) {
-		throw new Error(`Invalid vscode engine compatibility version '${version}'`);
+		throw new Error(`Invalid vscode engine compatibility version '${version}'. ("engines": { "vscode": "${version}" } in package.json) Learn more: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#visual-studio-code-compatibility`);
 	}
 
 	return version;
