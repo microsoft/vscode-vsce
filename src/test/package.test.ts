@@ -19,6 +19,7 @@ import {
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
@@ -3350,7 +3351,7 @@ describe('writeVsix', function () {
 		const fixtureDir = fixture('');
 
 		const testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixtureDir });
-		const cwd = testDir.name
+		const cwd = testDir.name;
 
 		try {
 			fs.cpSync(exampleProject, cwd, { recursive: true });
@@ -3376,7 +3377,11 @@ describe('writeVsix', function () {
 			assert.notDeepStrictEqual(vsix1bytes, vsix3bytes);
 
 		} finally {
-			testDir.removeCallback();
+			try {
+				await fsp.rm(testDir.name, { recursive: true, force: true });
+			} catch (e) {
+				testDir.removeCallback();
+			}
 		}
 	});
 });
