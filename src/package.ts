@@ -298,12 +298,13 @@ function escapeRegExp(value: string) {
 }
 
 function sanitizeTag(tag: string): string {
-	return tag.replace(/[^\w-]/g, '');
+	return tag.replace(/[^\w.-]/g, '');
 }
 
 function toExtensionTags(extensions: string[]): string[] {
 	return extensions
 		.map(sanitizeTag)
+		.map(s => s.replace('.', ''))
 		.filter(s => !!s)
 		.map(s => `__ext_${s}`);
 }
