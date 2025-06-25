@@ -1785,7 +1785,7 @@ describe('toVsixManifest', () => {
 				languages: [
 					{
 						id: 'go',
-						extensions: ['.go'],
+						extensions: ['.go', '@sql'],
 					},
 				],
 			},
@@ -1796,6 +1796,7 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert.ok(tags.some(tag => tag === '__ext_go'));
+				assert.ok(tags.some(tag => tag === '__ext_sql'));
 			});
 	});
 
