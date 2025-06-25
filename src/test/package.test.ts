@@ -1643,7 +1643,7 @@ describe('toVsixManifest', () => {
 				languages: [
 					{
 						id: 'go',
-						aliases: ['golang', 'google-go'],
+						aliases: ['golang', 'google-go', '@sql'],
 					},
 				],
 			},
@@ -1656,6 +1656,7 @@ describe('toVsixManifest', () => {
 				assert.ok(tags.some(tag => tag === 'go'));
 				assert.ok(tags.some(tag => tag === 'golang'));
 				assert.ok(tags.some(tag => tag === 'google-go'));
+				assert.ok(tags.some(tag => tag === 'sql'));
 			});
 	});
 
@@ -1785,7 +1786,7 @@ describe('toVsixManifest', () => {
 				languages: [
 					{
 						id: 'go',
-						extensions: ['.go', '@sql'],
+						extensions: ['.go'],
 					},
 				],
 			},
@@ -1796,7 +1797,6 @@ describe('toVsixManifest', () => {
 			.then(result => {
 				const tags = result.PackageManifest.Metadata[0].Tags[0].split(',') as string[];
 				assert.ok(tags.some(tag => tag === '__ext_go'));
-				assert.ok(tags.some(tag => tag === '__ext_sql'));
 			});
 	});
 
