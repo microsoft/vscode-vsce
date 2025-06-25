@@ -1643,7 +1643,7 @@ describe('toVsixManifest', () => {
 				languages: [
 					{
 						id: 'go',
-						aliases: ['golang', 'google-go'],
+						aliases: ['golang', 'google-go', '@sql'],
 					},
 				],
 			},
@@ -1656,6 +1656,7 @@ describe('toVsixManifest', () => {
 				assert.ok(tags.some(tag => tag === 'go'));
 				assert.ok(tags.some(tag => tag === 'golang'));
 				assert.ok(tags.some(tag => tag === 'google-go'));
+				assert.ok(tags.some(tag => tag === 'sql'));
 			});
 	});
 
