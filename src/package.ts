@@ -1805,6 +1805,25 @@ export function createDefaultProcessors(manifest: ManifestPackage, options: IPac
 	];
 }
 
+// if the originalFilePath is from a node_modules folder that escapes the working directory, we want to "un-hoist" the
+// node_modules folder into the extension folder
+export function unHoistedNodeModulesPath(originalFilePath: string): string | undefined {
+	if (!originalFilePath.startsWith('../')) {
+		return undefined;
+	}
+	// iter components to find node_modules
+	let p = originalFilePath;
+	while (p.startsWith('../')) {
+		p = p.substring(3);
+	}
+	if (p.startsWith('node_modules/')) {
+		// remove node_modules/ from the path
+		return p;
+	}
+
+	return undefined;
+}
+
 export function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
@@ -1812,7 +1831,12 @@ export function collect(manifest: ManifestPackage, options: IPackageOptions = {}
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath, options.followSymlinks).then(fileNames => {
-		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
+		const files = fileNames.map(f => {
+			let unHoistedPath = unHoistedNodeModulesPath(f);
+			return unHoistedPath !== undefined ?
+				{ path: util.filePathToVsixPath(unHoistedPath), originalPath: f, localPath: path.join(cwd, f) }
+				: { path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }
+		});
 
 		return processFiles(processors, files);
 	});

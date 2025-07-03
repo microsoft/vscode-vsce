@@ -171,8 +171,19 @@ async function getYarnProductionDependencies(cwd: string, packagedDependencies?:
 	const usingPackagedDependencies = Array.isArray(packagedDependencies);
 	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
 
+	// traverse upward to find the yarn workspace root, if this is running in a monorepo
+	let yarnWorkspaceRoot = cwd;
+	while (!(await exists(path.join(yarnWorkspaceRoot, 'yarn.lock')))) {
+		const parent = path.dirname(yarnWorkspaceRoot);
+		if (parent === yarnWorkspaceRoot) {
+			// reached the root of the filesystem
+			throw new Error('Could not find yarn workspace root in any parent directory of ' + cwd);
+		}
+		yarnWorkspaceRoot = parent;
+	}
+
 	let result = trees
-		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
+		.map(tree => asYarnDependency(path.join(yarnWorkspaceRoot, 'node_modules'), tree, !usingPackagedDependencies))
 		.filter(nonnull);
 
 	if (usingPackagedDependencies) {
