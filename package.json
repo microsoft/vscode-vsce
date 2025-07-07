@@ -6,6 +6,7 @@
 		"type": "git",
 		"url": "https://github.com/Microsoft/vsce"
 	},
+	"type": "commonjs",
 	"homepage": "https://code.visualstudio.com",
 	"bugs": "https://github.com/Microsoft/vsce/issues",
 	"keywords": [
