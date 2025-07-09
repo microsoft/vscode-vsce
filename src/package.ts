@@ -179,7 +179,7 @@ export interface IProcessor {
 	vsix: any;
 }
 
-export interface VSIX {
+export interface VSIX_TEST_DO_NOT_MERGE {
 	id: string;
 	displayName: string;
 	version: string;
@@ -219,7 +219,7 @@ export class BaseProcessor implements IProcessor {
 	constructor(protected manifest: ManifestPackage) { }
 	assets: IAsset[] = [];
 	tags: string[] = [];
-	vsix: VSIX = Object.create(null);
+	vsix: VSIX_TEST_DO_NOT_MERGE = Object.create(null);
 	async onFile(file: IFile): Promise<IFile> {
 		return file;
 	}
@@ -1493,7 +1493,7 @@ function escape(value: any): string {
 	return String(value).replace(/(['"<>&])/g, (_, char) => escapeChars.get(char)!);
 }
 
-export async function toVsixManifest(vsix: VSIX): Promise<string> {
+export async function toVsixManifest(vsix: VSIX_TEST_DO_NOT_MERGE): Promise<string> {
 	return `<?xml version="1.0" encoding="utf-8"?>
 	<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
 		<Metadata>
@@ -1778,7 +1778,7 @@ export function processFiles(processors: IProcessor[], files: IFile[]): Promise<
 					return r;
 				}, new Set()),
 			].join(',');
-			const vsix = processors.reduce<VSIX>((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
+			const vsix = processors.reduce<VSIX_TEST_DO_NOT_MERGE>((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX_TEST_DO_NOT_MERGE);
 
 			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
 				return [

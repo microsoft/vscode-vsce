@@ -12,7 +12,7 @@ import {
 	IPackageOptions,
 	ManifestProcessor,
 	versionBump,
-	VSIX,
+	VSIX_TEST_DO_NOT_MERGE,
 	LicenseProcessor,
 	printAndValidatePackagedFiles, pack
 } from '../package';
@@ -55,7 +55,7 @@ function _toVsixManifest(manifest: ManifestPackage, files: IFile[], options: IPa
 	return processFiles(processors, files).then(() => {
 		const assets = flatten(processors.map(p => p.assets));
 		const tags = flatten(processors.map(p => p.tags)).join(',');
-		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
+		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX_TEST_DO_NOT_MERGE);
 
 		return toVsixManifest(vsix);
 	});
