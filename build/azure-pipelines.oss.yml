@@ -32,14 +32,12 @@ extends:
       - stage: BuildAndTest
         jobs:
         - job: Windows
-          strategy:
           pool:
             name: '1es-oss-windows-2022-x64'
             os: windows
           steps:
             - template: ./build/build.oss.yml@self
         - job: macOS
-          strategy:
           pool:
             name: Azure Pipelines
             vmImage: macOS-latest
@@ -47,7 +45,6 @@ extends:
           steps:
             - template: ./build/build.oss.yml@self
         - job: Linux
-          strategy:
           pool:
             name: '1es-oss-ubuntu-2022-x64'
             os: linux
