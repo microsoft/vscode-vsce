@@ -46,7 +46,7 @@ extends:
             - template: ./build/build.oss.yml@self
         - job: Linux
           pool:
-            name: '1es-oss-ubuntu-2022-x64'
+            name: '1es-oss-ubuntu-22.04-x64'
             os: linux
           steps:
             - template: ./build/build.oss.yml@self
