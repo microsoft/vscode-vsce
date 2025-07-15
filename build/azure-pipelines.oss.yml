@@ -8,28 +8,45 @@ variables:
   - name: skipComponentGovernanceDetection
     value: true
 
-jobs:
-- job: BuildAndTest
-  strategy:
-    matrix:
-      Linux:
-        imageName: 'ubuntu-latest'
-      MacOS:
-        imageName: 'macos-latest'
-      Windows:
-        imageName: 'windows-latest'
-        
-  pool:
-    vmImage: $(imageName)
-    
-  steps:
-  - task: NodeTool@0
-    inputs:
-      versionSpec: '20.x'
-    displayName: 'Install Node.js'
+resources:
+  repositories:
+    - repository: 1esPipelines
+      type: git
+      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      ref: refs/tags/release
 
-  - script: npm ci
-    displayName: 'Install dependencies'
+extends:
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1esPipelines
+  parameters:
+    sdl:
+      sourceAnalysisPool: 1es-oss-windows-2022-x64
+      codeql:
+        compiled:
+          enabled: false
+      componentgovernance:
+        enabled: false
+      tsa:
+        enabled: true
 
-  - script: npm test
-    displayName: 'Run tests'
+    stages:
+      - stage: BuildAndTest
+        jobs:
+        - job: Windows
+          pool:
+            name: '1es-oss-windows-2022-x64'
+            os: windows
+          steps:
+            - template: ./build/build.oss.yml@self
+        - job: macOS
+          pool:
+            name: Azure Pipelines
+            vmImage: macOS-latest
+            os: macOS
+          steps:
+            - template: ./build/build.oss.yml@self
+        - job: Linux
+          pool:
+            name: '1es-oss-ubuntu-22.04-x64'
+            os: linux
+          steps:
+            - template: ./build/build.oss.yml@self
