@@ -1674,7 +1674,7 @@ async function collectAllFiles(
 		)
 	);
 
-	return Promise.all(promises).then(util.flatten);
+	return Promise.all(promises).then(util.flatten).then((files)=> Array.from(new Set(files)));
 }
 
 function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
