@@ -19,6 +19,7 @@ import {
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
@@ -146,8 +147,53 @@ async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, ma
 	}
 }
 
+async function processExitExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+	const originalExit = process.exit;
+	let exitCalled = false;
+
+	try {
+		process.exit = (() => {
+			exitCalled = true;
+			throw new Error('Process exit was called');
+		}) as any;
+
+		await fn();
+		assert.fail(errorMessage);
+	} catch (error) {
+		assert.ok(exitCalled, errorMessage);
+	} finally {
+		process.exit = originalExit;
+	}
+}
+
+async function processExitNotExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+	const originalExit = process.exit;
+	try {
+		process.exit = (() => {
+			throw new Error(errorMessage);
+		}) as any;
+
+		await fn();
+	} finally {
+		process.exit = originalExit;
+	}
+}
+
 describe('collect', function () {
 	this.timeout(60000);
+
+	let testDir: tmp.DirResult;
+	before(() => {
+		testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixture('') });
+	});
+	after(() => {
+		testDir.removeCallback();
+	});
+
+	function getVisxOutputPath() {
+		const randomValue = Math.random().toString(36).substring(2, 15);
+		return path.join(testDir.name, `extension-${randomValue}.vsix`);
+	}
 
 	it('should catch all files', () => {
 		const cwd = fixture('uuid');
@@ -352,6 +398,58 @@ describe('collect', function () {
 		const manifest = await readManifest(cwd);
 		await collect(manifest, { cwd });
 	});
+
+	it('should not package .env file', async function () {
+		const cwd = fixture('env');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
+	});
+
+	it('allow packaging .env file with --allow-package-env-file', async function () {
+		const cwd = fixture('env');
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageEnvFile: true, packagePath: getVisxOutputPath() }), 'Should not have exited');
+	});
+
+	it('should not package file which has a private key', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
+	});
+
+	it('allow packaging file which has a private key with --allow-package-secrets', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageSecrets: ['privatekey'], packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
+
+	it('allow packaging file which has a private key with --allow-package-all-secrets', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret1Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, allowPackageAllSecrets: true, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
+
+	it('private key false positive 1', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret1Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
+
+	it('private key false positive 2', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret2Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
+
+	it('should not package npm token', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'secret2Ignore');
+		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: should not package npm token');
+	});
+
+	it('npm token false positive 1', async function () {
+		const cwd = fixture('secrets');
+		const ignoreFile = path.join(cwd, 'noSecret3Ignore');
+		await processExitNotExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Should not have exited');
+	});
 });
 
 describe('readManifest', () => {
@@ -442,7 +540,7 @@ describe('validateManifest', () => {
 		assert.ok(
 			validateManifestForPackaging(
 				createManifest({
-					badges: [{ url: 'https://gemnasium.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
+					badges: [{ url: 'https://cdn.travis-ci.com/foo.svg', href: 'http://badgeurl', description: 'this is a badge' }],
 				})
 			)
 		);
@@ -1334,7 +1432,7 @@ describe('toVsixManifest', () => {
 			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'snippet,__web_extension'));
 	});
 
-	it('should automatically add chatParticipant and github-copilot tag', () => {
+	it('should automatically add chatParticipant tag', () => {
 		const manifest = {
 			name: 'test',
 			publisher: 'mocha',
@@ -1347,7 +1445,55 @@ describe('toVsixManifest', () => {
 
 		return _toVsixManifest(manifest, [])
 			.then(parseXmlManifest)
-			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,github-copilot,__web_extension'));
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'chat-participant,__web_extension'));
+	});
+
+	it('should automatically add languageModelTools tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languageModelTools: [{ name: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'tools,language-model-tools,__web_extension'));
+	});
+
+	it('should automatically add mcp tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				modelContextServerCollections: [{ label: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'mcp,language-model-tools,__web_extension'));
+	});
+
+	it('should automatically add language-models tag', () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			contributes: {
+				languageModels: [{ name: 'test', id: 'test' }],
+			},
+		};
+
+		return _toVsixManifest(manifest, [])
+			.then(parseXmlManifest)
+			.then(result => assert.deepEqual(result.PackageManifest.Metadata[0].Tags[0], 'language-models,__web_extension'));
 	});
 
 	it('should remove duplicate tags', () => {
@@ -1498,7 +1644,7 @@ describe('toVsixManifest', () => {
 				languages: [
 					{
 						id: 'go',
-						aliases: ['golang', 'google-go'],
+						aliases: ['golang', 'google-go', '@sql'],
 					},
 				],
 			},
@@ -1511,6 +1657,7 @@ describe('toVsixManifest', () => {
 				assert.ok(tags.some(tag => tag === 'go'));
 				assert.ok(tags.some(tag => tag === 'golang'));
 				assert.ok(tags.some(tag => tag === 'google-go'));
+				assert.ok(tags.some(tag => tag === 'sql'));
 			});
 	});
 
@@ -3206,7 +3353,7 @@ describe('writeVsix', function () {
 		const fixtureDir = fixture('');
 
 		const testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixtureDir });
-		const cwd = testDir.name
+		const cwd = testDir.name;
 
 		try {
 			fs.cpSync(exampleProject, cwd, { recursive: true });
@@ -3232,7 +3379,11 @@ describe('writeVsix', function () {
 			assert.notDeepStrictEqual(vsix1bytes, vsix3bytes);
 
 		} finally {
-			testDir.removeCallback();
+			try {
+				await fsp.rm(testDir.name, { recursive: true, force: true });
+			} catch (e) {
+				testDir.removeCallback();
+			}
 		}
 	});
 });

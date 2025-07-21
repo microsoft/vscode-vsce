@@ -6,6 +6,7 @@
 		"type": "git",
 		"url": "https://github.com/Microsoft/vsce"
 	},
+	"type": "commonjs",
 	"homepage": "https://code.visualstudio.com",
 	"bugs": "https://github.com/Microsoft/vsce/issues",
 	"keywords": [
@@ -39,9 +40,13 @@
 	},
 	"dependencies": {
 		"@azure/identity": "^4.1.0",
+		"@secretlint/node": "^10.1.1",
+		"@secretlint/secretlint-formatter-sarif": "^10.1.1",
+		"@secretlint/secretlint-rule-no-dotenv": "^10.1.1",
+		"@secretlint/secretlint-rule-preset-recommend": "^10.1.1",
 		"@vscode/vsce-sign": "^2.0.0",
 		"azure-devops-node-api": "^12.5.0",
-		"chalk": "^2.4.2",
+		"chalk": "^4.1.2",
 		"cheerio": "^1.0.0-rc.9",
 		"cockatiel": "^3.1.2",
 		"commander": "^12.1.0",
@@ -55,6 +60,7 @@
 		"minimatch": "^3.0.3",
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
+		"secretlint": "^10.1.1",
 		"semver": "^7.5.2",
 		"tmp": "^0.2.3",
 		"typed-rest-client": "^1.8.4",
