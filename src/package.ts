@@ -1880,7 +1880,8 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 
 	await new Promise<void>((c, e) => {
 		const tool = useYarn ? 'yarn' : 'npm';
-		const child = cp.spawn(tool, ['run', 'vscode:prepublish'], { cwd, shell: true, stdio: 'inherit' });
+		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
+		const child = cp.spawn(`${tool} run vscode:prepublish`, { cwd, shell: true, stdio: 'inherit' });
 		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
 		child.on('error', e);
 	});
