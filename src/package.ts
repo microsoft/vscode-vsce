@@ -1876,12 +1876,14 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 		useYarn = await detectYarn(cwd);
 	}
 
-	console.log(`Executing prepublish script '${useYarn ? 'yarn' : 'npm'} run vscode:prepublish'...`);
+	const tool = useYarn ? 'yarn' : 'npm';
+	const prepublish = `${tool} run vscode:prepublish`;
+
+	console.log(`Executing prepublish script '${prepublish}'...`);
 
 	await new Promise<void>((c, e) => {
-		const tool = useYarn ? 'yarn' : 'npm';
 		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
-		const child = cp.spawn(`${tool} run vscode:prepublish`, { cwd, shell: true, stdio: 'inherit' });
+		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
 		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
 		child.on('error', e);
 	});
