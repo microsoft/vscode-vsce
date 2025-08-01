@@ -27,6 +27,7 @@ import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
+import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -161,6 +162,10 @@ export interface IPackageOptions {
 	readonly allowStarActivation?: boolean;
 	readonly allowMissingRepository?: boolean;
 	readonly allowUnusedFilesPattern?: boolean;
+	readonly allowPackageSecrets?: string[];
+	readonly allowPackageAllSecrets?: boolean;
+	readonly allowPackageEnvFile?: boolean;
+
 	readonly skipLicense?: boolean;
 
 	readonly signTool?: string;
@@ -292,9 +297,14 @@ function escapeRegExp(value: string) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+function sanitizeTag(tag: string): string {
+	return tag.replace(/[^\w.-]/g, '');
+}
+
 function toExtensionTags(extensions: string[]): string[] {
 	return extensions
-		.map(s => s.replace(/\W/g, ''))
+		.map(sanitizeTag)
+		.map(s => s.replace('.', ''))
 		.filter(s => !!s)
 		.map(s => `__ext_${s}`);
 }
@@ -309,19 +319,14 @@ function toLanguagePackTags(translations: { id: string }[], languageId: string):
  * Remember to reach out to them when adding new domains.
  */
 const TrustedSVGSources = [
-	'api.bintray.com',
 	'api.travis-ci.com',
-	'api.travis-ci.org',
 	'app.fossa.io',
 	'badge.buildkite.com',
 	'badge.fury.io',
-	'badge.waffle.io',
 	'badgen.net',
 	'badges.frapsoft.com',
 	'badges.gitter.im',
-	'badges.greenkeeper.io',
 	'cdn.travis-ci.com',
-	'cdn.travis-ci.org',
 	'ci.appveyor.com',
 	'circleci.com',
 	'cla.opensource.microsoft.com',
@@ -334,8 +339,6 @@ const TrustedSVGSources = [
 	'dev.azure.com',
 	'docs.rs',
 	'flat.badgen.net',
-	'gemnasium.com',
-	'githost.io',
 	'gitlab.com',
 	'godoc.org',
 	'goreportcard.com',
@@ -346,11 +349,8 @@ const TrustedSVGSources = [
 	'opencollective.com',
 	'snyk.io',
 	'travis-ci.com',
-	'travis-ci.org',
 	'visualstudio.com',
 	'vsmarketplacebadges.dev',
-	'www.bithound.io',
-	'www.versioneye.com',
 ];
 
 function isGitHubRepository(repository: string | undefined): boolean {
@@ -681,7 +681,10 @@ export class TagsProcessor extends BaseProcessor {
 		const debuggers = doesContribute('debuggers') ? ['debuggers'] : [];
 		const json = doesContribute('jsonValidation') ? ['json'] : [];
 		const remoteMenu = doesContribute('menus', 'statusBar/remoteIndicator') ? ['remote-menu'] : [];
-		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant', 'github-copilot'] : [];
+		const chatParticipants = doesContribute('chatParticipants') ? ['chat-participant'] : [];
+		const languageModelTools = doesContribute('languageModelTools') ? ['tools', 'language-model-tools'] : [];
+		const languageModels = doesContribute('languageModels') ? ['language-models'] : [];
+		const mcp = doesContribute('modelContextServerCollections') ? ['mcp', 'language-model-tools'] : [];
 
 		const localizationContributions = ((contributes && contributes['localizations']) ?? []).reduce<string[]>(
 			(r, l) => [...r, `lp-${l.languageId}`, ...toLanguagePackTags(l.translations, l.languageId)],
@@ -689,7 +692,7 @@ export class TagsProcessor extends BaseProcessor {
 		);
 
 		const languageContributions = ((contributes && contributes['languages']) ?? []).reduce<string[]>(
-			(r, l) => [...r, l.id, ...(l.aliases ?? []), ...toExtensionTags(l.extensions ?? [])],
+			(r, l) => [...r, l.id, ...(l.aliases ?? []).map(sanitizeTag), ...toExtensionTags(l.extensions ?? [])],
 			[]
 		);
 
@@ -723,6 +726,9 @@ export class TagsProcessor extends BaseProcessor {
 			...json,
 			...remoteMenu,
 			...chatParticipants,
+			...languageModelTools,
+			...languageModels,
+			...mcp,
 			...localizationContributions,
 			...languageContributions,
 			...languageActivations,
@@ -1077,36 +1083,44 @@ export class LicenseProcessor extends BaseProcessor {
 }
 
 class LaunchEntryPointProcessor extends BaseProcessor {
-	private entryPoints: Set<string> = new Set<string>();
+	private seenFiles: Set<string> = new Set<string>();
 
 	constructor(manifest: ManifestPackage) {
 		super(manifest);
-		if (manifest.main) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.main))));
-		}
-		if (manifest.browser) {
-			this.entryPoints.add(util.normalize(path.join('extension', this.appendJSExt(manifest.browser))));
-		}
-	}
-
-	appendJSExt(filePath: string): string {
-		if (filePath.endsWith('.js') || filePath.endsWith('.cjs')) {
-			return filePath;
-		}
-		return filePath + '.js';
 	}
 
 	onFile(file: IFile): Promise<IFile> {
-		this.entryPoints.delete(util.normalize(file.path));
+		this.seenFiles.add(util.normalize(file.path));
 		return Promise.resolve(file);
 	}
 
+	private hasSeenEntrypointFile(filePath: string): boolean {
+		return this.seenFiles.has(filePath) || this.seenFiles.has(filePath + '.js');
+	}
+
 	async onEnd(): Promise<void> {
-		if (this.entryPoints.size > 0) {
-			const files: string = [...this.entryPoints].join(',\n  ');
-			throw new Error(
-				`Extension entrypoint(s) missing. Make sure these files exist and aren't ignored by '.vscodeignore':\n  ${files}`
-			);
+		const missingEntryPoints: string[] = [];
+
+		if (this.manifest.main) {
+			const mainPath = util.normalize(path.join('extension', this.manifest.main));
+			if (!this.hasSeenEntrypointFile(mainPath)) {
+				missingEntryPoints.push(mainPath);
+			}
+		}
+
+		if (this.manifest.browser) {
+			const browserPath = util.normalize(path.join('extension', this.manifest.browser));
+			if (!this.hasSeenEntrypointFile(browserPath)) {
+				missingEntryPoints.push(browserPath);
+			}
+		}
+
+		if (missingEntryPoints.length > 0) {
+			const files: string = missingEntryPoints.join(',\n  ');
+			const hint = this.manifest.files && this.manifest.files.length > 0
+				? `Make sure these files exist and are included by your "files" field in 'package.json'`
+				: `Make sure these files exist and aren't ignored by '.vscodeignore'`;
+			throw new Error(`Extension entrypoint(s) missing. ${hint}:\n  ${files}`);
 		}
 	}
 }
@@ -1599,8 +1613,16 @@ export async function toContentTypes(files: IFile[]): Promise<string> {
 		contentTypes.push(`<Default Extension="${extension}" ContentType="${contentType}"/>`);
 	}
 
+	// The files array passed into this function has non-deterministic order
+	// depending on filesystem directory traversal. This leads to the order of
+	// the "Default" elements changing from build to build, which prevents
+	// reproducible vsix files. To fix this, this sorts the contentTypes array
+	// to ensure they are listed in the same order regardless of the order of
+	// the files array.
+	const sortedContentTypes = contentTypes.sort();
+
 	return `<?xml version="1.0" encoding="utf-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${contentTypes.join('')}</Types>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${sortedContentTypes.join('')}</Types>
 `;
 }
 
@@ -2104,4 +2126,79 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 
 	message += '\n';
 	util.log.info(message);
+
+	const fileExclusion = hasIgnoreFile ? FileExclusionType.VSCodeIgnore : manifest.files ? FileExclusionType.PackageFiles : FileExclusionType.None;
+	await scanFilesForSecrets(files, fileExclusion, options);
+}
+
+enum FileExclusionType {
+	None = 'none',
+	VSCodeIgnore = 'vscodeIgnore',
+	PackageFiles = 'package.files'
+}
+
+export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExclusionType, options: IPackageOptions): Promise<void> {
+	const scanForSecrets = !options.allowPackageAllSecrets;
+	const scanDotEnv = !options.allowPackageEnvFile;
+	if (!scanForSecrets && !scanDotEnv) {
+		return; // No need to scan
+	}
+
+	const onDiskFiles: ILocalFile[] = files.filter(file => !isInMemoryFile(file)) as ILocalFile[];
+	const onDiskFilteredFiles = onDiskFiles
+		.filter(file => !file.localPath.includes('node_modules'))
+		.filter(file => !/\.(jpg|jpeg|png|gif|svg)$/i.test(file.localPath));
+	const inMemoryFiles: IInMemoryFile[] = files.filter(file => isInMemoryFile(file)) as IInMemoryFile[];
+
+	const onDiskResult = await lintFiles(onDiskFilteredFiles.map(file => file.localPath), scanForSecrets, scanDotEnv);
+	const inMemoryResults = await Promise.all(
+		inMemoryFiles.map(file => lintText(typeof file.contents === 'string' ? file.contents : file.contents.toString('utf8'), file.path, scanForSecrets, scanDotEnv))
+	);
+
+	const secretsFound = [...inMemoryResults, onDiskResult].filter(result => !result.ok).flatMap(result => result.results);
+
+	// secrets found
+	const noneDotEnvSecretsFound = secretsFound.filter(result =>
+		result.ruleId &&
+		result.ruleId !== '@secretlint/secretlint-rule-no-dotenv' &&
+		!options.allowPackageAllSecrets &&
+		!options.allowPackageSecrets?.includes(getRuleNameFromRuleId(result.ruleId))
+	);
+	if (noneDotEnvSecretsFound.length > 0) {
+		const uniqueSecretIds = new Set<string>(noneDotEnvSecretsFound.map(result => result.ruleId!));
+		const secretsFoundRuleNames = Array.from(uniqueSecretIds).map(getRuleNameFromRuleId);
+
+		let errorMessage = `${chalk.bold('Potential security issue detected:')}`;
+		errorMessage += ` Your extension package contains sensitive information that should not be published.`;
+		errorMessage += ` Please remove these secrets before packaging.`;
+		errorMessage += `\n` + noneDotEnvSecretsFound.map(prettyPrintLintResult).join('\n');
+
+		let hintMessage = `\nIn case of false positives, you can allow specific types of secrets with `;
+		hintMessage += secretsFoundRuleNames.map(name => `--allow-package-secrets ${name}`).join(' ');
+		hintMessage += ` or use --allow-package-all-secrets to skip this check entirely (not recommended).`;
+
+		util.log.error(errorMessage + chalk.italic(hintMessage));
+		process.exit(1);
+	}
+
+	// .env file found
+	const allRuleIds = new Set(secretsFound.map(result => result.ruleId).filter(Boolean));
+	if (!options.allowPackageEnvFile && allRuleIds.has('@secretlint/secretlint-rule-no-dotenv')) {
+		let errorMessage = `${chalk.bold.red('.env')} files should not be packaged.`;
+
+		switch (fileExclusion) {
+			case FileExclusionType.None:
+				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')} or exclude it from the package.json ${chalk.bold('files')} property.`; break;
+			case FileExclusionType.VSCodeIgnore:
+				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')}.`; break;
+			case FileExclusionType.PackageFiles:
+				errorMessage += ` Do not include the file in your package.json ${chalk.bold('files')} property.`; break;
+		}
+
+		const hintMessage = `\nTo ignore this check, you can use --allow-package-env-file (not recommended).`;
+
+		util.log.error(errorMessage + chalk.italic(hintMessage));
+		process.exit(1);
+	}
+
 }
