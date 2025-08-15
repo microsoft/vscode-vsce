@@ -1925,16 +1925,23 @@ export async function pack(options: IPackageOptions = {}): Promise<IPackageResul
 }
 
 export async function signPackage(packageFile: string, signTool: string): Promise<string> {
+	if (!fs.existsSync(packageFile)) {
+		throw new Error(`Package file not found: ${packageFile}`);
+	}
+	if (!fs.existsSync(signTool)) {
+		throw new Error(`Sign tool not found: ${signTool}`);
+	}
+
 	const packageFolder = path.dirname(packageFile);
 	const packageName = path.basename(packageFile, '.vsix');
 	const manifestFile = path.join(packageFolder, `${packageName}.signature.manifest`);
-	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`);
+	const signatureFile = path.join(packageFolder, `${packageName}.signature.p7s`); // CodeQL [SM03609] the parameters to execSync are checked above.
 	const signatureZip = path.join(packageFolder, `${packageName}.signature.zip`);
 
 	await generateManifest(packageFile, manifestFile);
 
 	// Sign the manifest file to generate the signature file
-	cp.execSync(`${signTool} "${manifestFile}" "${signatureFile}"`, { stdio: 'inherit' });
+	cp.execSync(`"${signTool}" "${manifestFile}" "${signatureFile}"`, { stdio: 'inherit' });
 
 	return createSignatureArchive(manifestFile, signatureFile, signatureZip);
 }
