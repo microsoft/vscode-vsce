@@ -4,7 +4,7 @@ trigger:
     include:
       - main
 
-pr: [main]
+pr: none
 
 resources:
   repositories:
