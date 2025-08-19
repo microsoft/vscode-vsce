@@ -1846,8 +1846,28 @@ function writeVsix(files: IFile[], packagePath: string): Promise<void> {
 					const zipStream = fs.createWriteStream(packagePath);
 					zip.outputStream.pipe(zipStream);
 
-					zip.outputStream.once('error', e);
-					zipStream.once('error', e);
+					const handleErr = (err: unknown) => {
+						// check if it is a "file not exists" error
+						const prefix = "not a file: ";
+						if (err instanceof Error && err.message.startsWith(prefix)) {
+							// extract the real path from the error message
+							const realPath = err.message.substring(prefix.length);
+							if (fs.lstatSync(realPath).isSymbolicLink()) {
+								e(new Error(`Tried to write a symlinked file (${realPath}) to a zip archive. Did you forget to use '--follow-symlinks'?`));
+							} else {
+								e(err);
+							}
+						} else {
+							e(err)
+						}
+					}
+
+					// yazl emits errors on the actual yazl object, if you try to write an invalid file.
+					//
+					// This is not present on the 3rd party type definitions. Work around this here.
+					(zip as any).on?.('error', handleErr);
+					zip.outputStream.once('error', handleErr);
+					zipStream.once('error', handleErr);
 					zipStream.once('finish', () => c());
 				})
 		);
