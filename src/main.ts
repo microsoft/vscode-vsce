@@ -114,6 +114,12 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
+		.option<string[]>(
+			'--packagedDependencies <path>',
+			'Select packages that should be published only (includes dependencies)',
+			(val, all) => (all ? all.concat(val) : [val]),
+			undefined
+		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
@@ -148,6 +154,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
+					packagedDependencies,
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
@@ -181,6 +188,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
+						dependencyEntryPoints: packagedDependencies,
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
@@ -235,6 +243,13 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
+		.option('--deno', 'Use deno instead of npm (default inferred from presence of deno.lock)')
+		.option<string[]>(
+			'--packagedDependencies <path>',
+			'Select packages that should be published only (includes dependencies)',
+			(val, all) => (all ? all.concat(val) : [val]),
+			undefined
+		)
 		.option('--no-verify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
 		.addOption(new Option('--noVerify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)').hideHelp(true))
 		.option('--allow-proposed-apis <apis...>', 'Allow specific proposed APIs')
@@ -275,6 +290,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
+					packagedDependencies,
 					verify,
 					noVerify,
 					allowProposedApis,
@@ -315,6 +331,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
+						dependencyEntryPoints: packagedDependencies,
 						noVerify: noVerify || !verify,
 						allowProposedApis,
 						allowAllProposedApis,
