@@ -1486,7 +1486,7 @@ describe('toVsixManifest', () => {
 			version: '0.0.1',
 			engines: Object.create(null),
 			contributes: {
-				languageModels: [{ name: 'test', id: 'test' }],
+				languageModelChatProviders: [{ name: 'test', id: 'test' }],
 			},
 		};
 
