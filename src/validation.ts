@@ -115,3 +115,29 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 		throw error;
 	}
 }
+
+/**
+ * Validates that extension IDs use only lowercase letters.
+ * Extension IDs should be in the format "publisher.extension-name" where both parts use lowercase letters.
+ */
+export function validateExtensionDependencies(dependencies: string[] | undefined, fieldName: string): void {
+	if (!dependencies || dependencies.length === 0) {
+		return;
+	}
+
+	const invalidDependencies: string[] = [];
+
+	for (const dep of dependencies) {
+		// Extension IDs should be lowercase
+		if (dep !== dep.toLowerCase()) {
+			invalidDependencies.push(dep);
+		}
+	}
+
+	if (invalidDependencies.length > 0) {
+		const depList = invalidDependencies.map(d => `"${d}"`).join(', ');
+		throw new Error(
+			`The extension IDs in "${fieldName}" must use lowercase letters only. Invalid IDs: ${depList}. Learn more: https://code.visualstudio.com/api/references/extension-manifest`
+		);
+	}
+}
