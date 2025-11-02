@@ -628,6 +628,38 @@ describe('validateManifest', () => {
 		assert.throws(() => validateManifestForPackaging(createManifest({ extensionPack: ['valid.ext', 'Invalid.Ext'] })));
 	});
 
+	it('should warn about deprecated github.copilot dependency', () => {
+		const originalLogWarn = log.warn;
+		const warnings: string[] = [];
+		log.warn = (message: string) => warnings.push(message);
+
+		try {
+			// Test with extensionDependencies
+			validateManifestForPackaging(createManifest({ extensionDependencies: ['github.copilot'] }));
+			assert.strictEqual(warnings.length, 1);
+			assert.ok(warnings[0].includes('github.copilot'));
+			assert.ok(warnings[0].includes('deprecated'));
+			assert.ok(warnings[0].includes('github.copilot-chat'));
+
+			// Reset warnings
+			warnings.length = 0;
+
+			// Test with extensionPack
+			validateManifestForPackaging(createManifest({ extensionPack: ['github.copilot'] }));
+			assert.strictEqual(warnings.length, 1);
+			assert.ok(warnings[0].includes('github.copilot'));
+
+			// Reset warnings
+			warnings.length = 0;
+
+			// Test with no github.copilot dependency
+			validateManifestForPackaging(createManifest({ extensionDependencies: ['other.extension'] }));
+			assert.strictEqual(warnings.length, 0);
+		} finally {
+			log.warn = originalLogWarn;
+		}
+	});
+
 	it('should validate pricing', () => {
 		assert.throws(() => validateManifestForPackaging(createManifest({ pricing: 'Paid' })));
 		validateManifestForPackaging(createManifest({ pricing: 'Trial' }));
