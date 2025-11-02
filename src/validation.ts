@@ -118,7 +118,10 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 
 /**
  * Validates that extension IDs use only lowercase letters.
- * Extension IDs should be in the format "publisher.extension-name" where both parts use lowercase letters.
+ * This validation ensures compliance with VS Code extension marketplace requirements.
+ * 
+ * Note: This only validates the case (lowercase). It does not validate the format 
+ * or structure of extension IDs (e.g., presence of dot separator, valid characters).
  */
 export function validateExtensionDependencies(dependencies: string[] | undefined, fieldName: string): void {
 	if (!dependencies || dependencies.length === 0) {
@@ -128,7 +131,8 @@ export function validateExtensionDependencies(dependencies: string[] | undefined
 	const invalidDependencies: string[] = [];
 
 	for (const dep of dependencies) {
-		// Extension IDs should be lowercase
+		// Check if extension ID uses only lowercase letters
+		// Note: This does not validate the format of the extension ID itself
 		if (dep !== dep.toLowerCase()) {
 			invalidDependencies.push(dep);
 		}
