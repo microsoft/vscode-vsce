@@ -1,5 +1,6 @@
 import * as semver from 'semver';
 import parseSemver from 'parse-semver';
+import { log } from './util';
 
 const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
@@ -135,6 +136,12 @@ export function validateExtensionDependencies(dependencies: string[] | undefined
 		// Note: This does not validate the format of the extension ID itself
 		if (dep !== dep.toLowerCase()) {
 			invalidDependencies.push(dep);
+		}
+
+		if (dep === 'github.copilot') {
+			log.warn(
+				`The "github.copilot" extension is being deprecated in favor of the "github.copilot-chat" extension. Please use "github.copilot-chat" in ${fieldName} instead.`
+			);
 		}
 	}
 

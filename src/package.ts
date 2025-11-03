@@ -1432,17 +1432,6 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 	validateExtensionDependencies(manifest.extensionDependencies, 'extensionDependencies');
 	validateExtensionDependencies(manifest.extensionPack, 'extensionPack');
 
-	// Warn about deprecated github.copilot dependency
-	const allDependencies = [
-		...(manifest.extensionDependencies || []),
-		...(manifest.extensionPack || [])
-	];
-	if (allDependencies.includes('github.copilot')) {
-		util.log.warn(
-			`The "github.copilot" extension is being deprecated. Please use "github.copilot-chat" instead.`
-		);
-	}
-
 	return {
 		...manifest,
 		name,
