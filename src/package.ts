@@ -21,6 +21,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 	validatePublisher,
+	validateExtensionDependencies,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
@@ -1426,6 +1427,10 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 			);
 		}
 	}
+
+	// Validate extension dependencies and extension pack use lowercase IDs
+	validateExtensionDependencies(manifest.extensionDependencies, 'extensionDependencies');
+	validateExtensionDependencies(manifest.extensionPack, 'extensionPack');
 
 	return {
 		...manifest,
