@@ -139,16 +139,14 @@ export function validateExtensionDependencies(dependencies: string[] | undefined
 		}
 
 		if (dep === 'github.copilot') {
-			log.warn(
-				`The "github.copilot" extension is being deprecated in favor of the "github.copilot-chat" extension. Please use "github.copilot-chat" in ${fieldName} instead.`
-			);
+			log.warn(`The "github.copilot" extension is being deprecated in favor of the "github.copilot-chat" extension. Please use "github.copilot-chat" in ${fieldName} instead.`);
 		}
 	}
 
 	if (invalidDependencies.length > 0) {
 		const depList = invalidDependencies.map(d => `"${d}"`).join(', ');
 		throw new Error(
-			`The extension IDs in "${fieldName}" must use lowercase letters only. Invalid IDs: ${depList}. Learn more: https://code.visualstudio.com/api/references/extension-manifest`
+			`The extension IDs in "${fieldName}" must use lowercase letters only. Invalid IDs: ${depList}.`
 		);
 	}
 }

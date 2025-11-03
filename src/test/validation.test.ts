@@ -174,15 +174,15 @@ describe('validateExtensionDependencies', () => {
 	it('should list all invalid dependencies in error message', () => {
 		try {
 			validateExtensionDependencies(
-				['valid.extension', 'Invalid.Extension', 'another.Valid', 'Another.Invalid'],
+				['valid.extension', 'Invalid.Extension', 'another.Invalid', 'Another.Invalid'],
 				'extensionDependencies'
 			);
 			assert.fail('Should have thrown an error');
 		} catch (error: any) {
 			assert.ok(error.message.includes('Invalid.Extension'));
 			assert.ok(error.message.includes('Another.Invalid'));
+			assert.ok(error.message.includes('another.Invalid'));
 			assert.ok(!error.message.includes('valid.extension'));
-			assert.ok(!error.message.includes('another.Valid'));
 		}
 	});
 });
