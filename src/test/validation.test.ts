@@ -154,35 +154,20 @@ describe('validateExtensionDependencies', () => {
 		);
 	});
 
-	it('should reject uppercase letters in extension IDs', () => {
-		assert.throws(() => validateExtensionDependencies(['Publisher.extension'], 'extensionDependencies'));
-		assert.throws(() => validateExtensionDependencies(['publisher.Extension'], 'extensionDependencies'));
-		assert.throws(() => validateExtensionDependencies(['Publisher.Extension'], 'extensionDependencies'));
-		assert.throws(() => validateExtensionDependencies(['PUBLISHER.EXTENSION'], 'extensionDependencies'));
+	it('should allow uppercase letters in extension IDs', () => {
+		validateExtensionDependencies(['Publisher.extension'], 'extensionDependencies');
+		validateExtensionDependencies(['publisher.Extension'], 'extensionDependencies');
+		validateExtensionDependencies(['Publisher.Extension'], 'extensionDependencies');
+		validateExtensionDependencies(['PUBLISHER.EXTENSION'], 'extensionDependencies');
 	});
 
-	it('should reject mixed case in extension IDs', () => {
-		assert.throws(() => validateExtensionDependencies(['MyPublisher.my-extension'], 'extensionDependencies'));
-		assert.throws(() => validateExtensionDependencies(['my-publisher.MyExtension'], 'extensionDependencies'));
+	it('should allow mixed case in extension IDs', () => {
+		validateExtensionDependencies(['MyPublisher.my-extension'], 'extensionDependencies');
+		validateExtensionDependencies(['my-publisher.MyExtension'], 'extensionDependencies');
 	});
 
 	it('should work with extensionPack field', () => {
 		validateExtensionDependencies(['publisher.extension'], 'extensionPack');
-		assert.throws(() => validateExtensionDependencies(['Publisher.Extension'], 'extensionPack'));
-	});
-
-	it('should list all invalid dependencies in error message', () => {
-		try {
-			validateExtensionDependencies(
-				['valid.extension', 'Invalid.Extension', 'another.Invalid', 'Another.Invalid'],
-				'extensionDependencies'
-			);
-			assert.fail('Should have thrown an error');
-		} catch (error: any) {
-			assert.ok(error.message.includes('Invalid.Extension'));
-			assert.ok(error.message.includes('Another.Invalid'));
-			assert.ok(error.message.includes('another.Invalid'));
-			assert.ok(!error.message.includes('valid.extension'));
-		}
+		validateExtensionDependencies(['Publisher.Extension'], 'extensionPack');
 	});
 });

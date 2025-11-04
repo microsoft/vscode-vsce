@@ -604,28 +604,28 @@ describe('validateManifest', () => {
 		validateManifestForPackaging(createManifest({ sponsor: { url: 'http://www.foo.com' } }));
 	});
 
-	it('should validate extensionDependencies are lowercase', () => {
+	it('should allow extensionDependencies with any case', () => {
 		// Valid lowercase dependencies
 		validateManifestForPackaging(createManifest({ extensionDependencies: ['publisher.extension'] }));
 		validateManifestForPackaging(createManifest({ extensionDependencies: ['pub.ext', 'another.dep'] }));
 		validateManifestForPackaging(createManifest({ extensionDependencies: ['pub-name.ext-name'] }));
 		
-		// Invalid uppercase dependencies
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionDependencies: ['Publisher.extension'] })));
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionDependencies: ['publisher.Extension'] })));
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionDependencies: ['PUBLISHER.EXTENSION'] })));
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionDependencies: ['valid.ext', 'Invalid.Ext'] })));
+		// Uppercase dependencies are now allowed
+		validateManifestForPackaging(createManifest({ extensionDependencies: ['Publisher.extension'] }));
+		validateManifestForPackaging(createManifest({ extensionDependencies: ['publisher.Extension'] }));
+		validateManifestForPackaging(createManifest({ extensionDependencies: ['PUBLISHER.EXTENSION'] }));
+		validateManifestForPackaging(createManifest({ extensionDependencies: ['valid.ext', 'Invalid.Ext'] }));
 	});
 
-	it('should validate extensionPack are lowercase', () => {
+	it('should allow extensionPack with any case', () => {
 		// Valid lowercase pack
 		validateManifestForPackaging(createManifest({ extensionPack: ['publisher.extension'] }));
 		validateManifestForPackaging(createManifest({ extensionPack: ['pub.ext', 'another.dep'] }));
 		
-		// Invalid uppercase pack
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionPack: ['Publisher.extension'] })));
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionPack: ['publisher.Extension'] })));
-		assert.throws(() => validateManifestForPackaging(createManifest({ extensionPack: ['valid.ext', 'Invalid.Ext'] })));
+		// Uppercase pack is now allowed
+		validateManifestForPackaging(createManifest({ extensionPack: ['Publisher.extension'] }));
+		validateManifestForPackaging(createManifest({ extensionPack: ['publisher.Extension'] }));
+		validateManifestForPackaging(createManifest({ extensionPack: ['valid.ext', 'Invalid.Ext'] }));
 	});
 
 	it('should warn about deprecated github.copilot dependency', () => {
@@ -655,6 +655,35 @@ describe('validateManifest', () => {
 			// Test with no github.copilot dependency
 			validateManifestForPackaging(createManifest({ extensionDependencies: ['other.extension'] }));
 			assert.strictEqual(warnings.length, 0);
+		} finally {
+			log.warn = originalLogWarn;
+		}
+	});
+
+	it('should warn about deprecated github.copilot dependency with case-insensitive check', () => {
+		const originalLogWarn = log.warn;
+		const warnings: string[] = [];
+		log.warn = (message: string) => warnings.push(message);
+
+		try {
+			// Test with mixed case variants
+			validateManifestForPackaging(createManifest({ extensionDependencies: ['Github.Copilot'] }));
+			assert.strictEqual(warnings.length, 1);
+			assert.ok(warnings[0].includes('deprecated'));
+
+			// Reset warnings
+			warnings.length = 0;
+
+			// Test with all uppercase
+			validateManifestForPackaging(createManifest({ extensionDependencies: ['GITHUB.COPILOT'] }));
+			assert.strictEqual(warnings.length, 1);
+
+			// Reset warnings
+			warnings.length = 0;
+
+			// Test with different case in extensionPack
+			validateManifestForPackaging(createManifest({ extensionPack: ['GitHub.CoPilot'] }));
+			assert.strictEqual(warnings.length, 1);
 		} finally {
 			log.warn = originalLogWarn;
 		}
