@@ -12,7 +12,8 @@
 		"noUnusedParameters": true,
 		"noImplicitReturns": true,
 		"declaration": true,
-		"sourceMap": true
+		"sourceMap": true,
+		"skipLibCheck": true
 	},
 	"include": ["src"],
 	"ts-node": {
