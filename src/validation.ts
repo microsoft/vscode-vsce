@@ -117,36 +117,14 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 	}
 }
 
-/**
- * Validates that extension IDs use only lowercase letters.
- * This validation ensures compliance with VS Code extension marketplace requirements.
- * 
- * Note: This only validates the case (lowercase). It does not validate the format 
- * or structure of extension IDs (e.g., presence of dot separator, valid characters).
- */
 export function validateExtensionDependencies(dependencies: string[] | undefined, fieldName: string): void {
 	if (!dependencies || dependencies.length === 0) {
 		return;
 	}
 
-	const invalidDependencies: string[] = [];
-
 	for (const dep of dependencies) {
-		// Check if extension ID uses only lowercase letters
-		// Note: This does not validate the format of the extension ID itself
-		if (dep !== dep.toLowerCase()) {
-			invalidDependencies.push(dep);
+		if (dep.toLowerCase() === 'github.copilot') {
+			log.warn(`The "${dep}" extension is being deprecated in favor of the "${dep}-chat" extension. Please use "${dep}-chat" in ${fieldName} instead and remove any references to "${dep}".`);
 		}
-
-		if (dep === 'github.copilot') {
-			log.warn(`The "github.copilot" extension is being deprecated in favor of the "github.copilot-chat" extension. Please use "github.copilot-chat" in ${fieldName} instead.`);
-		}
-	}
-
-	if (invalidDependencies.length > 0) {
-		const depList = invalidDependencies.map(d => `"${d}"`).join(', ');
-		throw new Error(
-			`The extension IDs in "${fieldName}" must use lowercase letters only. Invalid IDs: ${depList}.`
-		);
 	}
 }
