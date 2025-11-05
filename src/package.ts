@@ -1428,7 +1428,6 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 		}
 	}
 
-	// Validate extension dependencies and extension pack use lowercase IDs
 	validateExtensionDependencies(manifest.extensionDependencies, 'extensionDependencies');
 	validateExtensionDependencies(manifest.extensionPack, 'extensionPack');
 
