@@ -5,10 +5,11 @@ import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
 import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
-import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+import { pmNPM } from './managers/npm';
+import { Managers } from './managers/manager';
 
 const pkg = require('../package.json');
 
@@ -41,7 +42,7 @@ function main(task: Promise<any>): void {
 	const token = new CancellationToken();
 
 	if (isatty(1)) {
-		getLatestVersion(pkg.name, token)
+		pmNPM.pmFetchLatestVersion(pkg.name, token)
 			.then(version => (latestVersion = version))
 			.catch(_ => {
 				/* noop */
@@ -58,6 +59,7 @@ function main(task: Promise<any>): void {
 }
 
 const ValidTargets = [...Targets].join(', ');
+const ValidManagers = [...Managers].join(', ');
 
 module.exports = function (argv: string[]): void {
 	const program = new Command();
@@ -68,6 +70,7 @@ module.exports = function (argv: string[]): void {
 		.command('ls')
 		.description('Lists all the files that will be published/packaged')
 		.option('--tree', 'Prints the files in a tree format', false)
+		.option('--packageManager <name>', `Specify package manager to use. Valid managers: ${ValidManagers}`, undefined)
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option<string[]>(
@@ -82,8 +85,8 @@ module.exports = function (argv: string[]): void {
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
-		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
-			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
+		.action(({ tree, packageManager, yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
+			main(ls({ tree, packageManager, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
 		);
 
 	program
@@ -112,6 +115,7 @@ module.exports = function (argv: string[]): void {
 		.option('--no-rewrite-relative-links', 'Skip rewriting relative links.')
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with the specified URL.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
+		.option('--packageManager <name>', `Specify package manager to use. Valid managers: ${ValidManagers}`, undefined)
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
@@ -147,6 +151,7 @@ module.exports = function (argv: string[]): void {
 					rewriteRelativeLinks,
 					baseContentUrl,
 					baseImagesUrl,
+					packageManager,
 					yarn,
 					ignoreFile,
 					gitHubIssueLinking,
@@ -180,6 +185,7 @@ module.exports = function (argv: string[]): void {
 						rewriteRelativeLinks,
 						baseContentUrl,
 						baseImagesUrl,
+						packageManager,
 						useYarn: yarn,
 						ignoreFile,
 						gitHubIssueLinking,
@@ -233,6 +239,7 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--baseContentUrl <url>', 'Prepend all relative links in README.md with the specified URL.')
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
+		.option('--packageManager <name>', `Specify package manager to use. Valid managers: ${ValidManagers}`, undefined)
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
 		.option('--no-verify', 'Allow all proposed APIs (deprecated: use --allow-all-proposed-apis instead)')
@@ -274,6 +281,7 @@ module.exports = function (argv: string[]): void {
 					gitlabBranch,
 					baseContentUrl,
 					baseImagesUrl,
+					packageManager,
 					yarn,
 					verify,
 					noVerify,
@@ -314,6 +322,7 @@ module.exports = function (argv: string[]): void {
 						gitlabBranch,
 						baseContentUrl,
 						baseImagesUrl,
+						packageManager,
 						useYarn: yarn,
 						noVerify: noVerify || !verify,
 						allowProposedApis,
