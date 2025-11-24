@@ -23,12 +23,12 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
+import { getPackageManager, Managers, PackageManagerLiteral } from './managers/manager';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -145,6 +145,11 @@ export interface IPackageOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * The package manager to use.
+	 */
+	readonly packageManager?: PackageManagerLiteral;
 
 	/**
 	 * Should use Yarn instead of NPM.
@@ -1667,11 +1672,11 @@ const defaultIgnore = [
 
 async function collectAllFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	manager: PackageManagerLiteral | undefined,
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+	const deps = await getPackageManager(manager).pmProdDependencies(cwd, dependencyEntryPoints);
 	const promises = deps.map(dep =>
 		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1681,24 +1686,21 @@ async function collectAllFiles(
 	return Promise.all(promises).then(util.flatten);
 }
 
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IPackageOptions): PackageManagerLiteral | undefined {
 	if (options.dependencies === false) {
 		return 'none';
 	}
 
-	switch (options.useYarn) {
-		case true:
-			return 'yarn';
-		case false:
-			return 'npm';
-		default:
-			return undefined;
+	if (options.useYarn === undefined) {
+		return options.packageManager
 	}
+
+	return options.useYarn ? 'yarn' : 'npm'
 }
 
 function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: PackageManagerLiteral | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
@@ -1871,24 +1873,39 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
+async function detectYarn(cwd: string): Promise<boolean> {
+	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
+		const exists = await fs.promises.stat(path.join(cwd, name)).then(_ => true, _ => false)
+		if (!exists) {
+			continue;
+		}
+		if (!process.env['VSCE_TESTS']) {
+			util.log.info(
+				`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+			);
+		}
+		return true;
+	}
+	return false;
+}
+
 export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
-	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd);
-	}
+	useYarn ??= await detectYarn(cwd);
 
-	const tool = useYarn ? 'yarn' : 'npm';
-	const prepublish = `${tool} run vscode:prepublish`;
+	const tool = useYarn === undefined ? undefined : (useYarn ? 'yarn' : 'npm');
+	const manager = getPackageManager(tool)
+	const prepublish = manager.pmRunCommand("vscode:prepublish");
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
 
 	await new Promise<void>((c, e) => {
 		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
 		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
+		child.on('exit', code => (code === 0 ? c() : e(`${manager.binaryName} failed with exit code ${code}`)));
 		child.on('error', e);
 	});
 }
@@ -1979,6 +1996,10 @@ export async function createSignatureArchive(manifestFile: string, signatureFile
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	if (options.packageManager && !Managers.has(options.packageManager)) {
+		throw new Error(`'${options.packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
+	}
+
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
@@ -2025,6 +2046,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 
 interface ILSOptions {
 	readonly tree?: boolean;
+	readonly packageManager?: PackageManagerLiteral;
 	readonly useYarn?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
@@ -2037,6 +2059,10 @@ interface ILSOptions {
  * Lists the files included in the extension's package.
  */
 export async function ls(options: ILSOptions = {}): Promise<void> {
+	if (options.packageManager && !Managers.has(options.packageManager)) {
+		throw new Error(`'${options.packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
+	}
+
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
