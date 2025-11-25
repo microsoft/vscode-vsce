@@ -20,6 +20,11 @@ export const pmYarn: IPackageManager = {
 	pmRunCommand(scriptName: string): string {
 		return `${this.binaryName} run ${scriptName}`;
 	},
+	pmInstallCommand(pkg: string, global: boolean): string {
+		let flag = (global ? 'global' : '')
+		flag &&= flag + " "
+		return `${this.binaryName} ${flag}add ${pkg}`
+	},
 	async pmFetchLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
 		await this.selfCheck(cancellationToken)
 		const { stdout } = await exec(`yarn info ${name} version`, {}, cancellationToken)

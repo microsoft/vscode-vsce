@@ -18,6 +18,11 @@ export const pmNPM: IPackageManager = {
 	pmRunCommand(scriptName: string): string {
 		return `${this.binaryName} run ${scriptName}`
 	},
+	pmInstallCommand(pkg: string, global: boolean): string {
+		let flag = (global ? '-g' : '')
+		flag &&= flag + " "
+		return `${this.binaryName} install ${flag}${pkg}`
+	},
 	async pmProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
 		await this.selfCheck()
 		const { stdout } = await exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })

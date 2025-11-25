@@ -5,7 +5,8 @@ export const pmNone: IPackageManager = {
 	binaryName: "",
 	selfVersion: pmNPM.selfVersion.bind(pmNPM),
 	selfCheck: pmNPM.selfCheck.bind(pmNPM),
-	pmRunCommand: pmNPM.pmRunCommand,
+	pmRunCommand: pmNPM.pmRunCommand.bind(pmNPM),
+	pmInstallCommand: pmNPM.pmInstallCommand.bind(pmNPM),
 	async pmProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
 		return [cwd]
 	},
