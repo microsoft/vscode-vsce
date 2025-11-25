@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as semver from 'semver';
 import { exec } from "./exec";
 import type { IPackageManager } from "./manager";
 import type { CancellationToken } from "../util";
@@ -12,8 +13,8 @@ export const pmNPM: IPackageManager = {
 	},
 	async selfCheck(cancellationToken?: CancellationToken): Promise<void> {
 		const version = await this.selfVersion(cancellationToken);
-		if (/^3\.7\.[0123]$/.test(version)) {
-			throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
+		if (semver.intersects(version, '< 6')) {
+			throw new Error(`npm@${version} doesn't work with vsce. Please update npm: ${this.commandInstall('npm', true)}`);
 		}
 	},
 
