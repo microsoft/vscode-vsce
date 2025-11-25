@@ -10,12 +10,15 @@ export type PackageManagerLiteral = typeof managers[number];
 
 export interface IPackageManager {
 	binaryName: string;
+
 	selfVersion(cancellationToken?: CancellationToken): Promise<string>;
 	selfCheck(cancellationToken?: CancellationToken): Promise<void>;
-	pmRunCommand(scriptName: string): string;
-	pmInstallCommand(packageName: string, global: boolean): string;
-	pmFetchLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string>;
-	pmProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]>;
+
+	commandRun(scriptName: string): string;
+	commandInstall(packageName: string, global: boolean): string;
+
+	pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string>;
+	pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]>;
 }
 
 export function getPackageManager(

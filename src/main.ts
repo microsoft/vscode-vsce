@@ -47,7 +47,7 @@ function main(task: Promise<any>, options: IMainOptions): void {
 	const manager = getPackageManager(options.packageManager);
 
 	if (isatty(1)) {
-		manager.pmFetchLatestVersion(pkg.name, token)
+		manager.pkgRequestLatest(pkg.name, token)
 			.then(version => (latestVersion = version))
 			.catch(_ => {
 				/* noop */
@@ -56,7 +56,7 @@ function main(task: Promise<any>, options: IMainOptions): void {
 
 	task.catch(fatal).then(() => {
 		if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-			log.warn(`The latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: ${manager.pmInstallCommand(pkg.name, true)}`);
+			log.warn(`The latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: ${manager.commandInstall(pkg.name, true)}`);
 		} else {
 			token.cancel();
 		}
