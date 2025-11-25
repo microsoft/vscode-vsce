@@ -1683,7 +1683,7 @@ async function collectAllFiles(
 		)
 	);
 
-	return Promise.all(promises).then(util.flatten);
+	return Promise.all(promises).then(arr => arr.flat());
 }
 
 function getDependenciesOption(options: IPackageOptions): PackageManagerLiteral | undefined {
