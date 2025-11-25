@@ -47,7 +47,8 @@ export const pmYarn: IPackageManager = {
 		deps.forEach(flatten);
 
 		return [...result];
-	}
+	},
+	pkgProdDependenciesFiles: pmNPM.pkgProdDependenciesFiles.bind(pmNPM),
 }
 
 interface YarnTreeNode {

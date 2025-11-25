@@ -13,5 +13,6 @@ export const pmNone: IPackageManager = {
 	pkgRequestLatest: pmNPM.pkgRequestLatest.bind(pmNPM),
 	async pkgProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
 		return [cwd]
-	}
+	},
+	pkgProdDependenciesFiles: pmNPM.pkgProdDependenciesFiles.bind(pmNPM),
 }
