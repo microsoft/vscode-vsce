@@ -7,6 +7,7 @@ import { exec } from './exec';
 
 export const pmYarn: IPackageManager = {
 	binaryName: 'yarn',
+
 	async selfVersion(cancellationToken?: CancellationToken): Promise<string> {
 		const { stdout } = await exec('yarn -v', {}, cancellationToken);
 		return stdout.trim();
@@ -17,19 +18,22 @@ export const pmYarn: IPackageManager = {
 			throw new Error(`yarn@${version} doesn't work with vsce. Please update yarn: npm install -g yarn`);
 		}
 	},
-	pmRunCommand(scriptName: string): string {
+
+	commandRun(scriptName: string): string {
 		return `${this.binaryName} run ${scriptName}`;
 	},
-	pmInstallCommand(pkg: string, global: boolean): string {
+	commandInstall(pkg: string, global: boolean): string {
 		let flag = (global ? 'global' : '')
 		flag &&= flag + " "
 		return `${this.binaryName} ${flag}add ${pkg}`
 	},
-	async pmFetchLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
+
+	async pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string> {
 		await this.selfCheck(cancellationToken)
 		const { stdout } = await exec(`yarn info ${name} version`, {}, cancellationToken)
 		return stdout.split(/[\r\n]/).filter(line => !!line)[1];
 	},
+	async pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	async pmProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 		const result = new Set([cwd]);
 
@@ -41,7 +45,7 @@ export const pmYarn: IPackageManager = {
 		deps.forEach(flatten);
 
 		return [...result];
-	},
+	}
 }
 
 interface YarnTreeNode {

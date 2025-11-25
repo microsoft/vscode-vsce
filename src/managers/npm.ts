@@ -5,6 +5,7 @@ import type { CancellationToken } from "../util";
 
 export const pmNPM: IPackageManager = {
 	binaryName: 'npm',
+
 	async selfVersion(cancellationToken?: CancellationToken): Promise<string> {
 		const { stdout } = await exec('npm -v', {}, cancellationToken);
 		return stdout.trim();
@@ -15,22 +16,24 @@ export const pmNPM: IPackageManager = {
 			throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
 		}
 	},
-	pmRunCommand(scriptName: string): string {
+
+	commandRun(scriptName: string): string {
 		return `${this.binaryName} run ${scriptName}`
 	},
-	pmInstallCommand(pkg: string, global: boolean): string {
+	commandInstall(pkg: string, global: boolean): string {
 		let flag = (global ? '-g' : '')
 		flag &&= flag + " "
 		return `${this.binaryName} install ${flag}${pkg}`
 	},
-	async pmProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
-		await this.selfCheck()
-		const { stdout } = await exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
-		return stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
-	},
-	async pmFetchLatestVersion(name: string, cancellationToken?: CancellationToken): Promise<string> {
+
+	async pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string> {
 		await this.selfCheck(cancellationToken)
 		const { stdout } = await exec(`npm show ${name} version`, {}, cancellationToken)
 		return stdout.split(/[\r\n]/).filter(line => !!line)[0];
+	},
+	async pkgProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
+		await this.selfCheck()
+		const { stdout } = await exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
+		return stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
 	}
 }

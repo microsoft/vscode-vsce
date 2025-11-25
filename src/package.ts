@@ -1676,7 +1676,7 @@ async function collectAllFiles(
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
-	const deps = await getPackageManager(manager).pmProdDependencies(cwd, dependencyEntryPoints);
+	const deps = await getPackageManager(manager).pkgProdDependencies(cwd, dependencyEntryPoints);
 	const promises = deps.map(dep =>
 		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1898,7 +1898,7 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 
 	const tool = useYarn === undefined ? undefined : (useYarn ? 'yarn' : 'npm');
 	const manager = getPackageManager(tool)
-	const prepublish = manager.pmRunCommand("vscode:prepublish");
+	const prepublish = manager.commandRun("vscode:prepublish");
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
 
