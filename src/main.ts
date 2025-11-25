@@ -8,8 +8,7 @@ import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verif
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
-import { pmNPM } from './managers/npm';
-import { Managers } from './managers/manager';
+import { getPackageManager, Managers, PackageManagerLiteral } from './managers/manager';
 
 const pkg = require('../package.json');
 
@@ -36,13 +35,19 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 	process.exit(1);
 }
 
-function main(task: Promise<any>): void {
+export interface IMainOptions {
+	readonly packageManager?: PackageManagerLiteral;
+	readonly useYarn?: boolean;
+}
+
+function main(task: Promise<any>, options: IMainOptions): void {
 	let latestVersion: string | null = null;
 
 	const token = new CancellationToken();
+	const manager = getPackageManager(options.packageManager);
 
 	if (isatty(1)) {
-		pmNPM.pmFetchLatestVersion(pkg.name, token)
+		manager.pmFetchLatestVersion(pkg.name, token)
 			.then(version => (latestVersion = version))
 			.catch(_ => {
 				/* noop */
@@ -51,7 +56,7 @@ function main(task: Promise<any>): void {
 
 	task.catch(fatal).then(() => {
 		if (latestVersion && semver.gt(latestVersion, pkg.version)) {
-			log.warn(`The latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: npm install -g ${pkg.name}`);
+			log.warn(`The latest version of ${pkg.name} is ${latestVersion} and you have ${pkg.version}.\nUpdate it now: ${manager.pmInstallCommand(pkg.name, true)}`);
 		} else {
 			token.cancel();
 		}
@@ -86,7 +91,7 @@ module.exports = function (argv: string[]): void {
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
 		.action(({ tree, packageManager, yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
-			main(ls({ tree, packageManager, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
+			main(ls({ tree, packageManager, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }), { packageManager, useYarn: yarn })
 		);
 
 	program
@@ -201,7 +206,8 @@ module.exports = function (argv: string[]): void {
 						skipLicense,
 						signTool,
 						followSymlinks,
-					})
+					}),
+					{ packageManager, useYarn: yarn }
 				)
 		);
 
@@ -340,7 +346,8 @@ module.exports = function (argv: string[]): void {
 						skipLicense,
 						signTool,
 						followSymlinks
-					})
+					}),
+					{ packageManager, useYarn: yarn }
 				)
 		);
 
@@ -350,14 +357,14 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
-		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force })));
+		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force }), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('generate-manifest')
 		.description('Generates the extension manifest from the provided VSIX package.')
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
-		.action(({ packagePath, out }) => main(generateManifest(packagePath, out)));
+		.action(({ packagePath, out }) => main(generateManifest(packagePath, out), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('verify-signature')
@@ -365,27 +372,27 @@ module.exports = function (argv: string[]): void {
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.requiredOption('-m, --manifestPath <path>', 'Path to the Manifest file')
 		.requiredOption('-s, --signaturePath <path>', 'Path to the Signature file')
-		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath)));
+		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('ls-publishers')
 		.description('Lists all known publishers')
-		.action(() => main(listPublishers()));
+		.action(() => main(listPublishers(), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher from marketplace')
-		.action(publisher => main(deletePublisher(publisher)));
+		.action(publisher => main(deletePublisher(publisher), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('login <publisher>')
 		.description('Adds a publisher to the list of known publishers')
-		.action(name => main(loginPublisher(name)));
+		.action(name => main(loginPublisher(name), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('logout <publisher>')
 		.description('Removes a publisher from the list of known publishers')
-		.action(name => main(logoutPublisher(name)));
+		.action(name => main(logoutPublisher(name), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('verify-pat [publisher]')
@@ -396,13 +403,13 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
-		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential })));
+		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential }), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('show <extensionid>')
 		.description(`Shows an extension's metadata`)
 		.option('--json', 'Outputs data in json format', false)
-		.action((extensionid, { json }) => main(show(extensionid, json)));
+		.action((extensionid, { json }) => main(show(extensionid, json), { packageManager: 'npm', useYarn: false }));
 
 	program
 		.command('search <text>')
@@ -410,7 +417,7 @@ module.exports = function (argv: string[]): void {
 		.option('--json', 'Output results in json format', false)
 		.option('--stats', 'Shows extensions rating and download count', false)
 		.option('-p, --pagesize [value]', 'Number of results to return', '100')
-		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
+		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats), { packageManager: 'npm', useYarn: false }));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
