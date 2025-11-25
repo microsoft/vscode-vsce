@@ -46,6 +46,10 @@ export interface IPackageManager {
 	 * Get the production dependencies of a package.
 	 */
 	pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]>;
+	/**
+	 * Get the files of production dependencies of a package.
+	 */
+	pkgProdDependenciesFiles(cwd: string, deps: string[], followSymlinks?: boolean): Promise<string[]>;
 }
 
 /**

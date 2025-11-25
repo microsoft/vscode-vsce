@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as semver from 'semver';
+import { glob } from 'glob';
 import { exec } from "./exec";
 import type { IPackageManager } from "./manager";
 import type { CancellationToken } from "../util";
@@ -36,5 +37,14 @@ export const pmNPM: IPackageManager = {
 		await this.selfCheck()
 		const { stdout } = await exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
 		return stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
-	}
+	},
+	async pkgProdDependenciesFiles(cwd: string, deps: string[], followSymlinks?: boolean): Promise<string[]> {
+		const promises = deps.map(dep =>
+			glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
+				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
+			)
+		);
+
+		return Promise.all(promises).then(arr => arr.flat());
+	},
 }
