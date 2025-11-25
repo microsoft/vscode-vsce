@@ -3,7 +3,9 @@ import * as cp from "child_process";
 import { type CancellationToken, nonnull } from '../util';
 import type { IPackageManager } from "./manager";
 import parseSemver from 'parse-semver';
+import * as semver from 'semver';
 import { exec } from './exec';
+import { pmNPM } from './npm';
 
 export const pmYarn: IPackageManager = {
 	binaryName: 'yarn',
@@ -14,8 +16,8 @@ export const pmYarn: IPackageManager = {
 	},
 	async selfCheck(cancellationToken?: CancellationToken): Promise<void> {
 		const version = await this.selfVersion(cancellationToken);
-		if (!version.startsWith("1")) {
-			throw new Error(`yarn@${version} doesn't work with vsce. Please update yarn: npm install -g yarn`);
+		if (semver.intersects(version, '>= 2')) {
+			throw new Error(`yarn@${version} doesn't work with vsce. Please update yarn: ${pmNPM.commandInstall('yarn', true)}`);
 		}
 	},
 
@@ -34,7 +36,7 @@ export const pmYarn: IPackageManager = {
 		return stdout.split(/[\r\n]/).filter(line => !!line)[1];
 	},
 	async pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
-	async pmProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
+		await this.selfCheck()
 		const result = new Set([cwd]);
 
 		const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
