@@ -33,6 +33,7 @@ export interface IPackageManager {
 	 * Get the command to run a script.
 	 */
 	commandRun(scriptName: string): string;
+
 	/**
 	 * Get the command to install a package.
 	 */
@@ -42,10 +43,12 @@ export interface IPackageManager {
 	 * Request the latest version of a package from the registry.
 	 */
 	pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string>;
+
 	/**
 	 * Get the production dependencies of a package.
 	 */
 	pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]>;
+
 	/**
 	 * Get the files of production dependencies of a package.
 	 * Should use pkgProdDependencies first to get the dependencies.
