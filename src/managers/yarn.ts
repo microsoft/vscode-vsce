@@ -46,7 +46,8 @@ export const pmYarn: IPackageManager = {
 		};
 		deps.forEach(flatten);
 
-		return [...result];
+		const files = [...result]
+		return files;
 	},
 	pkgProdDependenciesFiles: pmNPM.pkgProdDependenciesFiles.bind(pmNPM),
 }

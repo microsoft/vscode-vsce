@@ -45,6 +45,7 @@ export const pmNPM: IPackageManager = {
 			)
 		);
 
-		return Promise.all(promises).then(arr => arr.flat());
+		const files = (await Promise.all(promises)).flat()
+		return files;
 	},
 }
