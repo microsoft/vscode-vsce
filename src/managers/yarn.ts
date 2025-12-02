@@ -1,40 +1,39 @@
 import * as path from 'path';
 import * as cp from "child_process";
 import { type CancellationToken, nonnull } from '../util';
-import type { IPackageManager } from "./manager";
 import parseSemver from 'parse-semver';
 import * as semver from 'semver';
 import { exec } from './exec';
-import { pmNPM } from './npm';
+import { pmNPM, PackageManagerNpm } from './npm';
 
-export const pmYarn: IPackageManager = {
-	binaryName: 'yarn',
+export class PackageManagerYarn extends PackageManagerNpm {
+	binaryName = 'yarn'
 
 	async selfVersion(cancellationToken?: CancellationToken): Promise<string> {
 		const { stdout } = await exec('yarn -v', {}, cancellationToken);
 		return stdout.trim();
-	},
+	}
 	async selfCheck(cancellationToken?: CancellationToken): Promise<void> {
 		const version = await this.selfVersion(cancellationToken);
 		if (semver.intersects(version, '>= 2')) {
 			throw new Error(`yarn@${version} doesn't work with vsce. Please update yarn: ${pmNPM.commandInstall('yarn', true)}`);
 		}
-	},
+	}
 
 	commandRun(scriptName: string): string {
 		return `${this.binaryName} run ${scriptName}`;
-	},
+	}
 	commandInstall(pkg: string, global: boolean): string {
 		let flag = (global ? 'global' : '')
 		flag &&= flag + " "
 		return `${this.binaryName} ${flag}add ${pkg}`
-	},
+	}
 
 	async pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string> {
 		await this.selfCheck(cancellationToken)
 		const { stdout } = await exec(`yarn info ${name} version`, {}, cancellationToken)
 		return stdout.split(/[\r\n]/).filter(line => !!line)[1];
-	},
+	}
 	async pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 		await this.selfCheck()
 		const result = new Set([cwd]);
@@ -48,9 +47,10 @@ export const pmYarn: IPackageManager = {
 
 		const files = [...result]
 		return files;
-	},
-	pkgProdDependenciesFiles: pmNPM.pkgProdDependenciesFiles.bind(pmNPM),
+	}
 }
+
+export const pmYarn = new PackageManagerYarn()
 
 interface YarnTreeNode {
 	name: string;
