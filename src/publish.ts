@@ -14,7 +14,7 @@ import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
-import { Managers, PackageManagerLiteral } from './managers/manager';
+import { PackageManagerLiteral, assertPackageManager } from './managers/manager';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -98,9 +98,7 @@ export interface IPublishOptions {
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
-	if (options.packageManager && !Managers.has(options.packageManager)) {
-		throw new Error(`'${options.packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
-	}
+	assertPackageManager(options.packageManager)
 
 	if (options.packagePath) {
 		if (options.version) {

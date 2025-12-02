@@ -27,7 +27,7 @@ import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
-import { getPackageManager, Managers, PackageManagerLiteral } from './managers/manager';
+import { getPackageManager, PackageManagerLiteral, assertPackageManager } from './managers/manager';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -1976,9 +1976,7 @@ export async function createSignatureArchive(manifestFile: string, signatureFile
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
-	if (options.packageManager && !Managers.has(options.packageManager)) {
-		throw new Error(`'${options.packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
-	}
+	assertPackageManager(options.packageManager)
 
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
@@ -2039,9 +2037,7 @@ interface ILSOptions {
  * Lists the files included in the extension's package.
  */
 export async function ls(options: ILSOptions = {}): Promise<void> {
-	if (options.packageManager && !Managers.has(options.packageManager)) {
-		throw new Error(`'${options.packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
-	}
+	assertPackageManager(options.packageManager)
 
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);

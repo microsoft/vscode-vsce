@@ -71,3 +71,16 @@ export function getPackageManager(
 
 	return choice[preference]
 }
+
+/**
+ * Throws only for strings that are not valid package managers.
+ * `undefiend` is allowed.
+ */
+export function assertPackageManager(packageManager: string | undefined): asserts packageManager is PackageManagerLiteral | undefined {
+	if (packageManager === undefined) {
+		return
+	}
+	if (!Managers.has(packageManager as PackageManagerLiteral)) {
+		throw new Error(`'${packageManager}' is not a supported package manager. Valid managers: ${[...Managers].join(', ')}`);
+	}
+}
