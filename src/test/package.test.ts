@@ -24,7 +24,7 @@ import * as assert from 'assert';
 import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
-import { flatten, log } from '../util';
+import { log } from '../util';
 import { validatePublisher } from '../validation';
 import * as jsonc from 'jsonc-parser';
 
@@ -53,8 +53,8 @@ const fixture = (name: string) => path.join(path.dirname(path.dirname(__dirname)
 function _toVsixManifest(manifest: ManifestPackage, files: IFile[], options: IPackageOptions = {}): Promise<string> {
 	const processors = createDefaultProcessors(manifest, options);
 	return processFiles(processors, files).then(() => {
-		const assets = flatten(processors.map(p => p.assets));
-		const tags = flatten(processors.map(p => p.tags)).join(',');
+		const assets = (processors.map(p => p.assets)).flat();
+		const tags = (processors.map(p => p.tags)).flat().join(',');
 		const vsix = processors.reduce((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
 
 		return toVsixManifest(vsix);
