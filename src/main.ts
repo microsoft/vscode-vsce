@@ -8,7 +8,7 @@ import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verif
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
-import { getPackageManager, Managers, PackageManagerLiteral } from './managers/manager';
+import { getPackageManager, Managers, PackageManagerLiteral } from './managers';
 
 const pkg = require('../package.json');
 

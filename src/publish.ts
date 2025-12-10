@@ -14,7 +14,7 @@ import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
-import { PackageManagerLiteral, assertPackageManager } from './managers/manager';
+import { assertPackageManager, PackageManagerLiteral } from './managers';
 
 const tmpName = promisify(tmp.tmpName);
 

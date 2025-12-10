@@ -27,7 +27,7 @@ import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
-import { getPackageManager, PackageManagerLiteral, assertPackageManager } from './managers/manager';
+import { getPackageManager, assertPackageManager, PackageManagerLiteral } from './managers';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
