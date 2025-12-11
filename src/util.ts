@@ -8,6 +8,8 @@ import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { ManifestPackage } from './manifest';
 import { EOL } from 'os';
+import type { IPublishOptions } from './publish';
+import type { IPackageOptions } from './package';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -171,16 +173,22 @@ export const log = {
 	error: _log.bind(null, LogMessageType.ERROR) as LogFn,
 };
 
-export function patchOptionsWithManifest(options: any, manifest: ManifestPackage): void {
+type Writable<T> = {
+	-readonly [key in keyof T]: T[key];
+};
+type PatchableOptions = IPublishOptions | IPackageOptions;
+
+export function patchOptionsWithManifest(options: PatchableOptions, manifest: ManifestPackage): void {
 	if (!manifest.vsce) {
 		return;
 	}
 
 	for (const key of Object.keys(manifest.vsce)) {
-		const optionsKey = key === 'yarn' ? 'useYarn' : key;
+		const optionsKey = (key === 'yarn' ? 'useYarn' : key) as keyof PatchableOptions;
 
 		if (options[optionsKey] === undefined) {
-			options[optionsKey] = manifest.vsce[key];
+			const value = manifest.vsce[key as keyof typeof manifest.vsce];
+			(options as Writable<IPackageOptions>)[optionsKey] = value as any;
 		}
 	}
 }
@@ -229,7 +237,7 @@ export async function generateFileStructureTree(rootFolder: string, filePaths: {
 			// Create the node if it doesn't exist
 			if (!currentLevel[part]) {
 				if (isFile) {
-					// The file size is stored in the leaf node, 
+					// The file size is stored in the leaf node,
 					currentLevel[part] = 0;
 				} else {
 					// The folder size is stored in the folder node
