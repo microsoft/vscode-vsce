@@ -1968,6 +1968,9 @@ export async function verifySignature(packageFile: string, manifestFile: string,
 		if (result.output) {
 			console.log(result.output)
 		}
+		if (result.code !== vsceSign.ExtensionSignatureVerificationCode.Success) {
+			process.exitCode = 1;
+		}
 	} finally {
 		await fs.promises.unlink(sigzipPath);
 	}
