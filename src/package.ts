@@ -84,15 +84,15 @@ export interface IPackageOptions {
 	 *
 	 * Defaults to `NAME-VERSION.vsix`.
 	 */
-	readonly packagePath?: string;
-	readonly version?: string;
+	packagePath?: string;
+	version?: string;
 
 	/**
 	 * Optional target the extension should run on.
 	 *
 	 * https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
 	 */
-	readonly target?: string;
+	target?: string;
 
 	/**
 	 * Ignore all files inside folders named as other targets. Only relevant when
@@ -102,74 +102,74 @@ export interface IPackageOptions {
 	 *
 	 * @default false
 	 */
-	readonly ignoreOtherTargetFolders?: boolean;
+	ignoreOtherTargetFolders?: boolean;
 
 	/**
 	 * Recurse into symlinked directories instead of treating them as files.
 	 */
-	readonly followSymlinks?: boolean;
+	followSymlinks?: boolean;
 
-	readonly commitMessage?: string;
-	readonly gitTagVersion?: boolean;
-	readonly updatePackageJson?: boolean;
+	commitMessage?: string;
+	gitTagVersion?: boolean;
+	updatePackageJson?: boolean;
 
 	/**
 	 * The location of the extension in the file system.
 	 *
 	 * Defaults to `process.cwd()`.
 	 */
-	readonly cwd?: string;
+	cwd?: string;
 
-	readonly readmePath?: string;
-	readonly changelogPath?: string;
+	readmePath?: string;
+	changelogPath?: string;
 
 	/**
 	 * GitHub branch used to publish the package. Used to automatically infer
 	 * the base content and images URI.
 	 */
-	readonly githubBranch?: string;
+	githubBranch?: string;
 
 	/**
 	 * GitLab branch used to publish the package. Used to automatically infer
 	 * the base content and images URI.
 	 */
-	readonly gitlabBranch?: string;
+	gitlabBranch?: string;
 
-	readonly rewriteRelativeLinks?: boolean;
+	rewriteRelativeLinks?: boolean;
 	/**
 	 * The base URL for links detected in Markdown files.
 	 */
-	readonly baseContentUrl?: string;
+	baseContentUrl?: string;
 
 	/**
 	 * The base URL for images detected in Markdown files.
 	 */
-	readonly baseImagesUrl?: string;
+	baseImagesUrl?: string;
 
 	/**
 	 * Should use Yarn instead of NPM.
 	 */
-	readonly useYarn?: boolean;
-	readonly dependencyEntryPoints?: string[];
-	readonly ignoreFile?: string;
-	readonly gitHubIssueLinking?: boolean;
-	readonly gitLabIssueLinking?: boolean;
-	readonly dependencies?: boolean;
+	useYarn?: boolean;
+	dependencyEntryPoints?: string[];
+	ignoreFile?: string;
+	gitHubIssueLinking?: boolean;
+	gitLabIssueLinking?: boolean;
+	dependencies?: boolean;
 
 	/**
 	 * Mark this package as a pre-release
 	 */
-	readonly preRelease?: boolean;
-	readonly allowStarActivation?: boolean;
-	readonly allowMissingRepository?: boolean;
-	readonly allowUnusedFilesPattern?: boolean;
-	readonly allowPackageSecrets?: string[];
-	readonly allowPackageAllSecrets?: boolean;
-	readonly allowPackageEnvFile?: boolean;
+	preRelease?: boolean;
+	allowStarActivation?: boolean;
+	allowMissingRepository?: boolean;
+	allowUnusedFilesPattern?: boolean;
+	allowPackageSecrets?: string[];
+	allowPackageAllSecrets?: boolean;
+	allowPackageEnvFile?: boolean;
 
-	readonly skipLicense?: boolean;
+	skipLicense?: boolean;
 
-	readonly signTool?: string;
+	signTool?: string;
 }
 
 export interface IProcessor {
@@ -371,11 +371,11 @@ function isHostTrusted(url: url.URL): boolean {
 }
 
 export interface IVersionBumpOptions {
-	readonly cwd?: string;
-	readonly version?: string;
-	readonly commitMessage?: string;
-	readonly gitTagVersion?: boolean;
-	readonly updatePackageJson?: boolean;
+	cwd?: string;
+	version?: string;
+	commitMessage?: string;
+	gitTagVersion?: boolean;
+	updatePackageJson?: boolean;
 }
 
 export async function versionBump(options: IVersionBumpOptions): Promise<void> {
