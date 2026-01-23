@@ -2042,6 +2042,7 @@ interface ILSOptions {
 export async function ls(options: ILSOptions = {}): Promise<void> {
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
+	util.patchOptionsWithManifest(options, manifest);
 
 	const files = await listFiles({ ...options, cwd, manifest });
 
