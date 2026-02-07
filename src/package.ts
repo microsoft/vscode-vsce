@@ -28,6 +28,7 @@ import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
+import ora from 'ora';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
@@ -1884,12 +1885,33 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 	const prepublish = `${tool} run vscode:prepublish`;
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
+	const spinner = ora({ spinner: 'dots' }).start();
 
 	await new Promise<void>((c, e) => {
 		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
-		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
-		child.on('error', e);
+		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'pipe' });
+
+		child.stdout?.on('data', data => {
+			spinner.stop();
+			process.stdout.write(data.toString());
+			spinner.start();
+		});
+
+		child.stderr?.on('data', data => {
+			spinner.stop();
+			process.stderr.write(data.toString());
+			spinner.start();
+		});
+
+		child.on('exit', code => {
+			spinner.stop();
+			(code === 0 ? c() : e(`${tool} failed with exit code ${code}`));
+		});
+
+		child.on('error', err => {
+			spinner.stop();
+			e(err);
+		});
 	});
 }
 
@@ -1914,7 +1936,10 @@ async function getPackagePath(cwd: string, manifest: ManifestPackage, options: I
 export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
-	const files = await collect(manifest, options);
+
+	console.log(`Packaging extension...`);
+	const spinner = ora({ spinner: 'dots' }).start();
+	const files = await collect(manifest, options).finally(() => spinner.stop());
 
 	await printAndValidatePackagedFiles(files, cwd, manifest, options);
 
