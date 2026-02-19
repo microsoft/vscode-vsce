@@ -14,6 +14,7 @@ import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
+import { assertPackageManager, PackageManagerLiteral } from './managers';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -50,6 +51,11 @@ export interface IPublishOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * The package manager to use.
+	 */
+	readonly packageManager?: PackageManagerLiteral;
 
 	/**
 	 * Should use Yarn instead of NPM.
@@ -92,6 +98,8 @@ export interface IPublishOptions {
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
+	assertPackageManager(options.packageManager)
+
 	if (options.packagePath) {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);

@@ -6,7 +6,6 @@ import * as yazl from 'yazl';
 import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import { glob } from 'glob';
 import minimatch from 'minimatch';
 import markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
@@ -23,12 +22,12 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
+import { getPackageManager, assertPackageManager, PackageManagerLiteral } from './managers';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -145,6 +144,11 @@ export interface IPackageOptions {
 	 * The base URL for images detected in Markdown files.
 	 */
 	readonly baseImagesUrl?: string;
+
+	/**
+	 * The package manager to use.
+	 */
+	readonly packageManager?: PackageManagerLiteral;
 
 	/**
 	 * Should use Yarn instead of NPM.
@@ -1665,40 +1669,21 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
-async function collectAllFiles(
-	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
-	dependencyEntryPoints?: string[],
-	followSymlinks: boolean = true
-): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
-	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
-			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-		)
-	);
-
-	return Promise.all(promises).then(util.flatten);
-}
-
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IPackageOptions): PackageManagerLiteral | undefined {
 	if (options.dependencies === false) {
 		return 'none';
 	}
 
-	switch (options.useYarn) {
-		case true:
-			return 'yarn';
-		case false:
-			return 'npm';
-		default:
-			return undefined;
+	if (options.useYarn === undefined) {
+		return options.packageManager
 	}
+
+	return options.useYarn ? 'yarn' : 'npm'
 }
 
-function collectFiles(
+async function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: PackageManagerLiteral | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
@@ -1708,91 +1693,85 @@ function collectFiles(
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
-	return collectAllFiles(cwd, dependencies, dependencyEntryPoints, followSymlinks).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	const manager = getPackageManager(dependencies)
 
-		return (
-			fs.promises
-				.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
-				.catch<string>(err =>
-					err.code !== 'ENOENT' ?
-						Promise.reject(err) :
-						ignoreFile ?
-							Promise.reject(err) :
-							// No .vscodeignore file exists
-							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
-								// "files" property not used in package.json
-								Promise.resolve('')
-				)
+	const files = (await manager.pkgProdDependenciesFiles(
+		cwd,
+		await manager.pkgProdDependencies(cwd, dependencyEntryPoints),
+		followSymlinks
+	))
+	.filter(f => !/\r$/m.test(f));
+	return await (
+		fs.promises
+			.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
+			.catch<string>(err => err.code !== 'ENOENT' ?
+				Promise.reject(err) :
+				ignoreFile ?
+					Promise.reject(err) :
+					// No .vscodeignore file exists
+					manifestFileIncludes ?
+						// include all files in manifestFileIncludes and ignore the rest
+						Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
+						// "files" property not used in package.json
+						Promise.resolve('')
+			)
 
-				// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
-				.then(rawIgnore =>
-					rawIgnore
-						.split(/[\n\r]/)
-						.map(s => s.trim())
-						.filter(s => !!s)
-						.filter(i => !/^\s*#/.test(i))
-				)
+			// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
+			.then(rawIgnore => rawIgnore
+				.split(/[\n\r]/)
+				.map(s => s.trim())
+				.filter(s_1 => !!s_1)
+				.filter(i => !/^\s*#/.test(i))
+			)
 
-				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
+			// Add '/**' to possible folder names
+			.then(ignore => [
+				...ignore,
+				...ignore.filter(i_1 => !/(^|\/)[^/]*\*[^/]*$/.test(i_1)).map(i_2 => (/\/$/.test(i_2) ? `${i_2}**` : `${i_2}/**`)),
+			])
 
-				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
+			// Combine with default ignore list
+			.then(ignore_1 => [...defaultIgnore, ...ignore_1, ...notIgnored])
 
-				// Split into ignore and negate list
-				.then(ignore =>
-					ignore.reduce<[string[], string[]]>(
-						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
-						[[], []]
-					)
-				)
-				.then(r => ({ ignore: r[0], negate: r[1] }))
+			// Split into ignore and negate list
+			.then(ignore_2 => ignore_2.reduce<[string[], string[]]>(
+				(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
+				[[], []]
+			)
+			)
+			.then(r_1 => ({ ignore: r_1[0], negate: r_1[1] }))
 
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
-					)
-				)
-		);
-	});
+			// Filter out files
+			.then(({ ignore: ignore_3, negate }) => files.filter(
+				f_1 => !ignore_3.some(i_3 => minimatch(f_1, i_3, MinimatchOptions)) ||
+					negate.some(i_4 => minimatch(f_1, i_4.substr(1), MinimatchOptions))
+			))
+	);
 }
 
-export function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
-	const processedFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
+export async function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
+	const processFiles = files.map(file => util.chain(file, processors, (file, processor) => processor.onFile(file)));
 
-	return Promise.all(processedFiles).then(files => {
-		return util.sequence(processors.map(p => () => p.onEnd())).then(() => {
-			const assets = processors.reduce<IAsset[]>((r, p) => [...r, ...p.assets], []);
-			const tags = [
-				...processors.reduce<Set<string>>((r, p) => {
-					for (const tag of p.tags) {
-						if (tag) {
-							r.add(tag);
-						}
-					}
-					return r;
-				}, new Set()),
-			].join(',');
-			const vsix = processors.reduce<VSIX>((r, p) => ({ ...r, ...p.vsix }), { assets, tags } as VSIX);
-
-			return Promise.all([toVsixManifest(vsix), toContentTypes(files)]).then(result => {
-				return [
-					{ path: 'extension.vsixmanifest', contents: Buffer.from(result[0], 'utf8') },
-					{ path: '[Content_Types].xml', contents: Buffer.from(result[1], 'utf8') },
-					...files,
-				];
-			});
-		});
-	});
+	const processedFiles = await Promise.all(processFiles);
+	await util.sequence(processors.map(p => () => p.onEnd()));
+	const assets = processors.reduce<IAsset[]>((r, p_1) => [...r, ...p_1.assets], []);
+	const tags = [
+		...processors.reduce<Set<string>>((r_1, p_2) => {
+			for (const tag of p_2.tags) {
+				if (tag) {
+					r_1.add(tag);
+				}
+			}
+			return r_1;
+		}, new Set()),
+	].join(',');
+	const vsix = processors.reduce<VSIX>((r_2, p_3) => ({ ...r_2, ...p_3.vsix }), { assets, tags } as VSIX);
+	const result_1 = await Promise.all([toVsixManifest(vsix), toContentTypes(processedFiles)]);
+	return [
+		{ path: 'extension.vsixmanifest', contents: Buffer.from(result_1[0], 'utf8') },
+		{ path: '[Content_Types].xml', contents: Buffer.from(result_1[1], 'utf8') },
+		...processedFiles,
+	];
 }
 
 export function createDefaultProcessors(manifest: ManifestPackage, options: IPackageOptions = {}): IProcessor[] {
@@ -1871,24 +1850,39 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
+async function detectYarn(cwd: string): Promise<boolean> {
+	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
+		const exists = await fs.promises.stat(path.join(cwd, name)).then(_ => true, _ => false)
+		if (!exists) {
+			continue;
+		}
+		if (!process.env['VSCE_TESTS']) {
+			util.log.info(
+				`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
+			);
+		}
+		return true;
+	}
+	return false;
+}
+
 export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
-	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd);
-	}
+	useYarn ??= await detectYarn(cwd);
 
-	const tool = useYarn ? 'yarn' : 'npm';
-	const prepublish = `${tool} run vscode:prepublish`;
+	const tool = useYarn === undefined ? undefined : (useYarn ? 'yarn' : 'npm');
+	const manager = getPackageManager(tool)
+	const prepublish = manager.commandRun("vscode:prepublish");
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
 
 	await new Promise<void>((c, e) => {
 		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
 		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
+		child.on('exit', code => (code === 0 ? c() : e(`${manager.binaryName} failed with exit code ${code}`)));
 		child.on('error', e);
 	});
 }
@@ -1982,6 +1976,8 @@ export async function createSignatureArchive(manifestFile: string, signatureFile
 }
 
 export async function packageCommand(options: IPackageOptions = {}): Promise<any> {
+	assertPackageManager(options.packageManager)
+
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
@@ -2028,6 +2024,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 
 interface ILSOptions {
 	readonly tree?: boolean;
+	readonly packageManager?: PackageManagerLiteral;
 	readonly useYarn?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
@@ -2040,6 +2037,8 @@ interface ILSOptions {
  * Lists the files included in the extension's package.
  */
 export async function ls(options: ILSOptions = {}): Promise<void> {
+	assertPackageManager(options.packageManager)
+
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
