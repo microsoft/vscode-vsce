@@ -58,6 +58,7 @@
 		"markdown-it": "^14.1.0",
 		"mime": "^1.3.4",
 		"minimatch": "^3.0.3",
+		"ora": "^5.4.1",
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
 		"secretlint": "^10.1.2",
