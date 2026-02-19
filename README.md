@@ -45,7 +45,7 @@ You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` t
 $ npx @vscode/vsce publish --baseImagesUrl https://my.custom/base/images/url
 ```
 
-Or you can also set them in the `package.json`, so that you avoid having to retype the common options again. Example:
+You can define the options for `publish` and `package` the `package.json` under the `vsce` property, so that you avoid having to retype the common options again. Example:
 
 ```jsonc
 // package.json
