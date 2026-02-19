@@ -22,73 +22,73 @@ const tmpName = promisify(tmp.tmpName);
  * @public
  */
 export interface IPublishOptions {
-	readonly packagePath?: string[];
-	readonly version?: string;
-	readonly targets?: string[];
-	readonly ignoreOtherTargetFolders?: boolean;
-	readonly commitMessage?: string;
-	readonly gitTagVersion?: boolean;
-	readonly updatePackageJson?: boolean;
+	packagePath?: string[];
+	version?: string;
+	targets?: string[];
+	ignoreOtherTargetFolders?: boolean;
+	commitMessage?: string;
+	gitTagVersion?: boolean;
+	updatePackageJson?: boolean;
 
 	/**
 	 * The location of the extension in the file system.
 	 *
 	 * Defaults to `process.cwd()`.
 	 */
-	readonly cwd?: string;
-	readonly readmePath?: string;
-	readonly changelogPath?: string;
-	readonly githubBranch?: string;
-	readonly gitlabBranch?: string;
+	cwd?: string;
+	readmePath?: string;
+	changelogPath?: string;
+	githubBranch?: string;
+	gitlabBranch?: string;
 
 	/**
 	 * The base URL for links detected in Markdown files.
 	 */
-	readonly baseContentUrl?: string;
+	baseContentUrl?: string;
 
 	/**
 	 * The base URL for images detected in Markdown files.
 	 */
-	readonly baseImagesUrl?: string;
+	baseImagesUrl?: string;
 
 	/**
 	 * Should use Yarn instead of NPM.
 	 */
-	readonly useYarn?: boolean;
-	readonly dependencyEntryPoints?: string[];
-	readonly ignoreFile?: string;
+	useYarn?: boolean;
+	dependencyEntryPoints?: string[];
+	ignoreFile?: string;
 
 	/**
 	 * Recurse into symlinked directories instead of treating them as files
 	 */
-	readonly followSymlinks?: boolean;
+	followSymlinks?: boolean;
 
 	/**
 	 * The Personal Access Token to use.
 	 *
 	 * Defaults to the stored one.
 	 */
-	readonly pat?: string;
-	readonly azureCredential?: boolean;
-	readonly allowProposedApi?: boolean;
-	readonly noVerify?: boolean;
-	readonly allowProposedApis?: string[];
-	readonly allowAllProposedApis?: boolean;
-	readonly allowPackageSecrets?: string[];
-	readonly allowPackageAllSecrets?: boolean;
-	readonly allowPackageEnvFile?: boolean;
-	readonly dependencies?: boolean;
-	readonly preRelease?: boolean;
-	readonly allowStarActivation?: boolean;
-	readonly allowMissingRepository?: boolean;
-	readonly allowUnusedFilesPattern?: boolean;
-	readonly skipDuplicate?: boolean;
-	readonly skipLicense?: boolean;
+	pat?: string;
+	azureCredential?: boolean;
+	allowProposedApi?: boolean;
+	noVerify?: boolean;
+	allowProposedApis?: string[];
+	allowAllProposedApis?: boolean;
+	allowPackageSecrets?: string[];
+	allowPackageAllSecrets?: boolean;
+	allowPackageEnvFile?: boolean;
+	dependencies?: boolean;
+	preRelease?: boolean;
+	allowStarActivation?: boolean;
+	allowMissingRepository?: boolean;
+	allowUnusedFilesPattern?: boolean;
+	skipDuplicate?: boolean;
+	skipLicense?: boolean;
 
-	readonly sigzipPath?: string[];
-	readonly manifestPath?: string[];
-	readonly signaturePath?: string[];
-	readonly signTool?: string;
+	sigzipPath?: string[];
+	manifestPath?: string[];
+	signaturePath?: string[];
+	signTool?: string;
 }
 
 export async function publish(options: IPublishOptions = {}): Promise<any> {
