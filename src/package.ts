@@ -1721,8 +1721,8 @@ function collectFiles(
 							Promise.reject(err) :
 							// No .vscodeignore file exists
 							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
+								// ignore all, and then include all files in manifestFileIncludes
+								Promise.resolve(['**', ...manifestFileIncludes.map(file => file[0] === '!' ? file.slice(1) : `!${file}`)].join('\n\r')) :
 								// "files" property not used in package.json
 								Promise.resolve('')
 				)
@@ -1737,30 +1737,29 @@ function collectFiles(
 				)
 
 				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
+				.then(ignore =>
+					ignore.map(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)
+						? [
+							i,
+							/\/$/.test(i)
+								? `${i}**`
+								: `${i}/**`
+						]
+						: [i]
+					).flat(),
+				)
 
 				// Combine with default ignore list
 				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
 
-				// Split into ignore and negate list
+				// Check the ignore list in order to filter out files
 				.then(ignore =>
-					ignore.reduce<[string[], string[]]>(
-						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
-						[[], []]
-					)
-				)
-				.then(r => ({ ignore: r[0], negate: r[1] }))
+					files.filter(f=> ignore.reduce((keep, i) => i[0] === '!'
+						? keep || minimatch(f, i.slice(1), MinimatchOptions)
+						: keep && !minimatch(f, i, MinimatchOptions),
+						true
+					))
 
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
-					)
 				)
 		);
 	});
@@ -2092,7 +2091,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	// the package does not include at least one file for each include pattern
 	else if (manifest.files !== undefined && manifest.files.length > 0 && !options.allowUnusedFilesPattern) {
 		const localPaths = files.map(f => util.normalize(f.originalPath ?? (!isInMemoryFile(f) ? f.localPath : path.join(cwd, f.path))));
-		const filesIncludePatterns = manifest.files.map(includePattern => ({ absolute: util.normalize(path.join(cwd, includePattern)), relative: includePattern }));
+		const filesIncludePatterns = manifest.files.filter(includePattern => includePattern[0] !== '!').map(includePattern => ({ absolute: util.normalize(path.join(cwd, includePattern)), relative: includePattern }));
 
 		const unusedIncludePatterns = filesIncludePatterns.filter(includePattern => {
 			let absoluteIncludePattern = includePattern.absolute;
