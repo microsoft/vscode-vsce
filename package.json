@@ -99,6 +99,7 @@
 			"ts-node/register"
 		],
 		"watch-files": "src/**",
+		"watch-ignore": "src/test/fixtures/tmp-*",
 		"spec": "src/test/**/*.ts"
 	}
 }
