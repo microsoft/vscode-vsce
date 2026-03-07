@@ -23,7 +23,7 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { detectBun, detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -150,6 +150,10 @@ export interface IPackageOptions {
 	 * Should use Yarn instead of NPM.
 	 */
 	readonly useYarn?: boolean;
+	/**
+	 * Should use Bun instead of NPM.
+	 */
+	readonly useBun?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
@@ -1667,7 +1671,7 @@ const defaultIgnore = [
 
 async function collectAllFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'bun' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
@@ -1681,9 +1685,13 @@ async function collectAllFiles(
 	return Promise.all(promises).then(util.flatten);
 }
 
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'bun' | 'none' | undefined {
 	if (options.dependencies === false) {
 		return 'none';
+	}
+
+	if (options.useBun) {
+		return 'bun';
 	}
 
 	switch (options.useYarn) {
@@ -1698,7 +1706,7 @@ function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none
 
 function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'bun' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
@@ -1871,16 +1879,20 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
+export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean, useBun?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
-	if (useYarn === undefined) {
+	if (useBun === undefined) {
+		useBun = await detectBun(cwd);
+	}
+
+	if (useYarn === undefined && !useBun) {
 		useYarn = await detectYarn(cwd);
 	}
 
-	const tool = useYarn ? 'yarn' : 'npm';
+	const tool = useBun ? 'bun' : (useYarn ? 'yarn' : 'npm');
 	const prepublish = `${tool} run vscode:prepublish`;
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
@@ -1986,7 +1998,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
-	await prepublish(cwd, manifest, options.useYarn);
+	await prepublish(cwd, manifest, options.useYarn, options.useBun);
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
@@ -2004,6 +2016,10 @@ export interface IListFilesOptions {
 	readonly cwd?: string;
 	readonly manifest?: ManifestPackage;
 	readonly useYarn?: boolean;
+	/**
+	 * Should use Bun instead of NPM.
+	 */
+	readonly useBun?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
@@ -2020,7 +2036,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 	const manifest = options.manifest ?? await readManifest(cwd);
 
 	if (options.prepublish) {
-		await prepublish(cwd, manifest, options.useYarn);
+		await prepublish(cwd, manifest, options.useYarn, options.useBun);
 	}
 
 	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath, options.followSymlinks);
@@ -2029,6 +2045,10 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 interface ILSOptions {
 	readonly tree?: boolean;
 	readonly useYarn?: boolean;
+	/**
+	 * Should use Bun instead of NPM.
+	 */
+	readonly useBun?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
