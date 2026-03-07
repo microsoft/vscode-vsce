@@ -21,6 +21,7 @@ import {
 	validateEngineCompatibility,
 	validateVSCodeTypesCompatibility,
 	validatePublisher,
+	validateExtensionDependencies,
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
@@ -1427,6 +1428,9 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 		}
 	}
 
+	validateExtensionDependencies(manifest.extensionDependencies, 'extensionDependencies');
+	validateExtensionDependencies(manifest.extensionPack, 'extensionPack');
+
 	return {
 		...manifest,
 		name,
@@ -1963,6 +1967,9 @@ export async function verifySignature(packageFile: string, manifestFile: string,
 		console.log(`Signature verification result: ${result.code}`);
 		if (result.output) {
 			console.log(result.output)
+		}
+		if (result.code !== vsceSign.ExtensionSignatureVerificationCode.Success) {
+			process.exitCode = 1;
 		}
 	} finally {
 		await fs.promises.unlink(sigzipPath);
