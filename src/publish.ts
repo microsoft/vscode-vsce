@@ -55,6 +55,10 @@ export interface IPublishOptions {
 	 * Should use Yarn instead of NPM.
 	 */
 	readonly useYarn?: boolean;
+	/**
+	 * Should use Bun instead of NPM.
+	 */
+	readonly useBun?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
 
