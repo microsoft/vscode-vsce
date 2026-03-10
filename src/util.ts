@@ -67,10 +67,6 @@ export function chain<T, P>(initial: T, processors: P[], process: (a: T, b: P) =
 	return chain2(initial, processors, process);
 }
 
-export function flatten<T>(arr: T[][]): T[] {
-	return ([] as T[]).concat.apply([], arr) as T[];
-}
-
 export function nonnull<T>(arg: T | null | undefined): arg is T {
 	return !!arg;
 }
