@@ -1,8 +1,8 @@
 import { CancellationToken } from "../util";
 
 /**
- * Interface for package manager implementations.
- * Using interface to force explicit implementations.
+ * Base class for wrapping CLI-based package managers like npm, yarn, or pnpm.
+ * Provides a unified interface for dependency resolution and command execution.
  */
 export abstract class PackageManager {
 	/**
