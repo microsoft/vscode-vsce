@@ -14,7 +14,7 @@ import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
-import { assertPackageManager, PackageManagerLiteral } from './managers';
+import { assertPackageManager } from './managers';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -55,7 +55,7 @@ export interface IPublishOptions {
 	/**
 	 * The package manager to use.
 	 */
-	readonly packageManager?: PackageManagerLiteral;
+	readonly packageManager?: string;
 
 	/**
 	 * Should use Yarn instead of NPM.

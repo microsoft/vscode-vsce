@@ -2,10 +2,10 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { glob } from 'glob';
 import { exec } from "./exec";
-import { PackageManager } from "./manager";
+import { PackageManagerImpl } from "./manager";
 import type { CancellationToken } from "../util";
 
-export class PackageManagerNpm extends PackageManager {
+export class PackageManagerNpm extends PackageManagerImpl {
 	binaryName = 'npm'
 
 	async selfVersion(cancellationToken?: CancellationToken): Promise<string> {
@@ -33,13 +33,14 @@ export class PackageManagerNpm extends PackageManager {
 		const { stdout } = await exec(`npm show ${name} version`, {}, cancellationToken)
 		return stdout.split(/[\r\n]/).filter(line => !!line)[0];
 	}
-	async pkgProdDependencies(cwd: string, _?: string[]): Promise<string[]> {
+	protected async pkgProdDependencies(cwd: string): Promise<string[]> {
 		await this.selfCheck()
 		const { stdout } = await exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
 		return stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir))
 	}
-	async pkgProdDependenciesFiles(cwd: string, deps: string[], followSymlinks?: boolean): Promise<string[]> {
-		const promises = deps.map(dep =>
+	async pkgProdDepFiles(cwd: string, _: string[], followSymlinks?: boolean): Promise<string[]> {
+		const depList = await this.pkgProdDependencies(cwd);
+		const promises = depList.map(dep =>
 			glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
 				files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 			)

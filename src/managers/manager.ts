@@ -4,7 +4,7 @@ import { CancellationToken } from "../util";
  * Base class for wrapping CLI-based package managers like npm, yarn, or pnpm.
  * Provides a unified interface for dependency resolution and command execution.
  */
-export abstract class PackageManager {
+export abstract class PackageManagerImpl {
 	/**
 	 * The binary name of the package manager.
 	 * @example 'yarn' | 'npm' | 'bun'
@@ -37,13 +37,8 @@ export abstract class PackageManager {
 	abstract pkgRequestLatest(name: string, cancellationToken?: CancellationToken): Promise<string>;
 
 	/**
-	 * Get the production dependencies of a package.
-	 */
-	abstract pkgProdDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]>;
-
-	/**
 	 * Get the files of production dependencies of a package.
 	 * Should use pkgProdDependencies first to get the dependencies.
 	 */
-	abstract pkgProdDependenciesFiles(cwd: string, deps: string[], followSymlinks?: boolean): Promise<string[]>;
+	abstract pkgProdDepFiles(cwd: string, deps: string[], followSymlinks?: boolean): Promise<string[]>;
 }

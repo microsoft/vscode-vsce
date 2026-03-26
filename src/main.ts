@@ -8,7 +8,7 @@ import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verif
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
-import { getPackageManager, Managers, PackageManagerLiteral } from './managers';
+import { getPackageManager, Managers, PackageManager } from './managers';
 
 const pkg = require('../package.json');
 
@@ -36,7 +36,7 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 }
 
 export interface IMainOptions {
-	readonly packageManager?: PackageManagerLiteral;
+	readonly packageManager?: PackageManager;
 	readonly useYarn?: boolean;
 }
 
@@ -357,14 +357,14 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
-		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force }), { packageManager: 'npm', useYarn: false }));
+		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force }), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('generate-manifest')
 		.description('Generates the extension manifest from the provided VSIX package.')
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
-		.action(({ packagePath, out }) => main(generateManifest(packagePath, out), { packageManager: 'npm', useYarn: false }));
+		.action(({ packagePath, out }) => main(generateManifest(packagePath, out), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('verify-signature')
@@ -372,27 +372,27 @@ module.exports = function (argv: string[]): void {
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.requiredOption('-m, --manifestPath <path>', 'Path to the Manifest file')
 		.requiredOption('-s, --signaturePath <path>', 'Path to the Signature file')
-		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath), { packageManager: 'npm', useYarn: false }));
+		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('ls-publishers')
 		.description('Lists all known publishers')
-		.action(() => main(listPublishers(), { packageManager: 'npm', useYarn: false }));
+		.action(() => main(listPublishers(), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher from marketplace')
-		.action(publisher => main(deletePublisher(publisher), { packageManager: 'npm', useYarn: false }));
+		.action(publisher => main(deletePublisher(publisher), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('login <publisher>')
 		.description('Adds a publisher to the list of known publishers')
-		.action(name => main(loginPublisher(name), { packageManager: 'npm', useYarn: false }));
+		.action(name => main(loginPublisher(name), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('logout <publisher>')
 		.description('Removes a publisher from the list of known publishers')
-		.action(name => main(logoutPublisher(name), { packageManager: 'npm', useYarn: false }));
+		.action(name => main(logoutPublisher(name), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('verify-pat [publisher]')
@@ -403,13 +403,13 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
-		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential }), { packageManager: 'npm', useYarn: false }));
+		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential }), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('show <extensionid>')
 		.description(`Shows an extension's metadata`)
 		.option('--json', 'Outputs data in json format', false)
-		.action((extensionid, { json }) => main(show(extensionid, json), { packageManager: 'npm', useYarn: false }));
+		.action((extensionid, { json }) => main(show(extensionid, json), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program
 		.command('search <text>')
@@ -417,7 +417,7 @@ module.exports = function (argv: string[]): void {
 		.option('--json', 'Output results in json format', false)
 		.option('--stats', 'Shows extensions rating and download count', false)
 		.option('-p, --pagesize [value]', 'Number of results to return', '100')
-		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats), { packageManager: 'npm', useYarn: false }));
+		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats), { packageManager: PackageManager.Npm, useYarn: false }));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {

@@ -27,7 +27,7 @@ import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
-import { getPackageManager, assertPackageManager, PackageManagerLiteral } from './managers';
+import { getPackageManager, assertPackageManager, PackageManager, getPackageManagerEnum, PackageManagerLiteral } from './managers';
 
 const MinimatchOptions: minimatch.IOptions = { dot: true };
 
@@ -148,7 +148,7 @@ export interface IPackageOptions {
 	/**
 	 * The package manager to use.
 	 */
-	readonly packageManager?: PackageManagerLiteral;
+	readonly packageManager?: string;
 
 	/**
 	 * Should use Yarn instead of NPM.
@@ -1669,21 +1669,22 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
-function getDependenciesOption(options: IPackageOptions): PackageManagerLiteral | undefined {
+function getDependenciesOption(options: IPackageOptions): PackageManager | undefined {
 	if (options.dependencies === false) {
-		return 'none';
+		return PackageManager.None;
 	}
 
 	if (options.useYarn === undefined) {
-		return options.packageManager
+		// as PackageManagerLiteral: packageManager is already asserted here
+		return getPackageManagerEnum(options.packageManager as PackageManagerLiteral);
 	}
 
-	return options.useYarn ? 'yarn' : 'npm'
+	return options.useYarn ? PackageManager.Yarn : PackageManager.Npm;
 }
 
 async function collectFiles(
 	cwd: string,
-	dependencies: PackageManagerLiteral | undefined,
+	dependencies?: PackageManager,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
@@ -1695,9 +1696,9 @@ async function collectFiles(
 
 	const manager = getPackageManager(dependencies)
 
-	const files = (await manager.pkgProdDependenciesFiles(
+	const files = (await manager.pkgProdDepFiles(
 		cwd,
-		await manager.pkgProdDependencies(cwd, dependencyEntryPoints),
+		dependencyEntryPoints || [],
 		followSymlinks
 	))
 	.filter(f => !/\r$/m.test(f));
@@ -2024,7 +2025,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 
 interface ILSOptions {
 	readonly tree?: boolean;
-	readonly packageManager?: PackageManagerLiteral;
+	readonly packageManager?: string;
 	readonly useYarn?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;

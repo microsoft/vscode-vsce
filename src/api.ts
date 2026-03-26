@@ -1,5 +1,7 @@
 import { publish as _publish, IPublishOptions, unpublish as _unpublish, IUnpublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
+import { PackageManager } from './managers';
+export { PackageManager } from './managers';
 
 /**
  * @deprecated prefer IPackageOptions instead
@@ -15,16 +17,6 @@ export type IBaseVSIXOptions = Pick<
  * @public
  */
 export type ICreateVSIXOptions = Pick<IPackageOptions, 'cwd' | 'packagePath'> & IBaseVSIXOptions;
-
-/**
- * The supported list of package managers.
- * @public
- */
-export enum PackageManager {
-	Npm,
-	Yarn,
-	None,
-}
 
 /**
  * Options for the `listFiles` function.
