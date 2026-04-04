@@ -1673,12 +1673,12 @@ async function collectAllFiles(
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
+		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: ['node_modules/**', ".git/**"] }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 		)
 	);
-
-	return Promise.all(promises).then(util.flatten);
+	const files = (await Promise.all(promises)).flat();
+	return files;
 }
 
 function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
