@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
+import type { ManifestPackage } from './manifest';
 
 const exists = (file: string) =>
 	fs.promises.stat(file).then(
@@ -195,13 +196,52 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return [...result];
 }
 
-export async function detectYarn(cwd: string): Promise<boolean> {
-	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
-		if (await exists(path.join(cwd, name))) {
+import * as semver from 'semver';
+
+export async function isNonNpmOrModernYarn(cwd: string, manifest: ManifestPackage): Promise<boolean> {
+    if (await detectPnpm(cwd, manifest) || await detectBun(cwd, manifest) || await detectVlt(cwd, manifest)) {
+        return true;
+    }
+
+    const isYarn = await detectYarn(cwd, manifest);
+    if (isYarn) {
+        // Try to extract version from manifest (e.g., "yarn@3.6.4")
+        const pmString = manifest?.devEngines?.packageManager?.version || manifest?.packageManager;
+
+		if (pmString && pmString.startsWith('yarn@')) {
+            const version = pmString.split('@')[1];
+            if (version && semver.valid(version)) {
+                return semver.gte(version, '2.0.0'); // Returns true if Yarn 2, 3, or 4
+            }
+        }
+
+        // Fallback: If it's Yarn but we can't find a version,
+        // we assume it's modern if a .yarn directory or .pnp.cjs exists
+        if (await exists(path.join(cwd, '.pnp.cjs')) || await exists(path.join(cwd, '.yarn/releases'))) {
+            return true;
+        }
+    }
+
+    return false; // It's likely standard npm or classic yarn
+}
+
+async function detectPackageManager(
+	cwd: string,
+	manifest: ManifestPackage,
+	name: string,
+	lockfiles: string[]
+): Promise<boolean> {
+	if (manifest?.devEngines?.packageManager?.name === name || manifest?.packageManager?.startsWith(`${name}@`)) {
+		return true;
+	}
+
+	for (const filename of lockfiles) {
+		if (await exists(path.join(cwd, filename))) {
 			if (!process.env['VSCE_TESTS']) {
-				log.info(
-					`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
-				);
+				const suffix = name === 'yarn'
+					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
+					: ' logic.';
+				log.info(`Detected presence of ${filename}. Using '${name}'${suffix}`);
 			}
 			return true;
 		}
@@ -209,14 +249,41 @@ export async function detectYarn(cwd: string): Promise<boolean> {
 	return false;
 }
 
+export const detectPnpm = (cwd: string, pkg: ManifestPackage) =>
+	detectPackageManager(cwd, pkg, 'pnpm', ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs']);
+
+export const detectBun = (cwd: string, pkg: ManifestPackage) =>
+	detectPackageManager(cwd, pkg, 'bun', ['bun.lockb', 'bun.lock', 'bunfig.toml']);
+
+export const detectVlt = (cwd: string, pkg: ManifestPackage) =>
+	detectPackageManager(cwd, pkg, 'vlt', ['vlt-lock.json', '.vltrc']);
+
+export const detectYarn = (cwd: string, pkg: ManifestPackage) =>
+	detectPackageManager(cwd, pkg, 'yarn', ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']);
+
+export async function getPrepublishCommand(cwd: string, manifest: ManifestPackage): Promise<string> {
+	const customCommand = process.env['VSCE_RUN_PREPUBLISH'] || manifest?.vsce?.runPrepublish;
+	if (customCommand) {
+		return customCommand;
+	}
+
+	if (await detectPnpm(cwd, manifest)) return 'pnpm run vscode:prepublish';
+	if (await detectBun(cwd, manifest)) return 'bun run vscode:prepublish';
+	if (await detectVlt(cwd, manifest)) return 'vlt run vscode:prepublish';
+	if (await detectYarn(cwd, manifest)) return 'yarn run vscode:prepublish'; // Yarn usually doesn't need 'run' for scripts
+
+	return 'npm run vscode:prepublish';
+}
+
 export async function getDependencies(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	manifest: ManifestPackage,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
 		return [cwd];
-	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
+	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd, manifest)))) {
 		return await getYarnDependencies(cwd, packagedDependencies);
 	} else {
 		return await getNpmDependencies(cwd);

@@ -3,7 +3,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import * as cp from 'child_process';
 import * as yazl from 'yazl';
-import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
+import type { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
@@ -23,7 +23,7 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { detectYarn, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -1667,11 +1667,12 @@ const defaultIgnore = [
 
 async function collectAllFiles(
 	cwd: string,
+	manifest: ManifestPackage,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+	const deps = await getDependencies(cwd, dependencies, manifest, dependencyEntryPoints);
 	const promises = deps.map(dep =>
 		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: ['node_modules/**', ".git/**"] }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1681,10 +1682,13 @@ async function collectAllFiles(
 	return files;
 }
 
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions): Promise<'npm' | 'yarn' | 'none' | undefined> {
 	if (options.dependencies === false) {
 		return 'none';
 	}
+
+	const isUnknown = await isNonNpmOrModernYarn(options.cwd || process.cwd(), manifest);
+	if (isUnknown) return 'none';
 
 	switch (options.useYarn) {
 		case true:
@@ -1696,74 +1700,65 @@ function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none
 	}
 }
 
-function collectFiles(
+async function collectFiles(
 	cwd: string,
+	manifest: ManifestPackage,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
-	manifestFileIncludes?: string[],
 	readmePath?: string,
 	followSymlinks: boolean = false
 ): Promise<string[]> {
+	const manifestFileIncludes = manifest?.files;
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
-	return collectAllFiles(cwd, dependencies, dependencyEntryPoints, followSymlinks).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	const files = (await collectAllFiles(cwd, manifest, dependencies, dependencyEntryPoints, followSymlinks))
+		.filter(f => !/\r$/m.test(f));
 
-		return (
-			fs.promises
-				.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
-				.catch<string>(err =>
-					err.code !== 'ENOENT' ?
-						Promise.reject(err) :
-						ignoreFile ?
-							Promise.reject(err) :
-							// No .vscodeignore file exists
-							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
-								// "files" property not used in package.json
-								Promise.resolve('')
-				)
+	let rawIgnore = '';
+	try {
+		rawIgnore = await fs.promises.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8');
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
+		if (ignoreFile) throw err; // No .vscodeignore file exists
+		// include all files in manifestFileIncludes and ignore the rest
+		if(manifestFileIncludes) {
+			rawIgnore = manifestFileIncludes
+				.map(file => `!${file}`)
+				.concat(['**'])
+				.join('\n\r')
+		}
+		// otherwise "files" property not used in package.json
+	}
 
-				// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
-				.then(rawIgnore =>
-					rawIgnore
-						.split(/[\n\r]/)
-						.map(s => s.trim())
-						.filter(s => !!s)
-						.filter(i => !/^\s*#/.test(i))
-				)
+	// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
+	let i = rawIgnore
+		.split(/[\n\r]/)
+		.map(s => s.trim())
+		.filter(s => !!s)
+		.filter(i => !/^\s*#/.test(i))
 
-				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
+	// Add '/**' to possible folder names
+	// Combine with default ignore list
+	i = [
+		...defaultIgnore,
+		...i,
+		...i.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
+		...notIgnored,
+	]
 
-				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
+	// Split into ignore and negate list
+	const [ignore, negate] = i.reduce<[string[], string[]]>(
+		(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e.substring(1)]]),
+		[[], []]
+	)
 
-				// Split into ignore and negate list
-				.then(ignore =>
-					ignore.reduce<[string[], string[]]>(
-						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
-						[[], []]
-					)
-				)
-				.then(r => ({ ignore: r[0], negate: r[1] }))
-
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), minimatchOptions))
-					)
-				)
-		);
-	});
+	return files.filter(
+		f =>
+			!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
+			negate.some(i => minimatch(f, i, minimatchOptions))
+	);
 }
 
 export function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
@@ -1809,13 +1804,13 @@ export function createDefaultProcessors(manifest: ManifestPackage, options: IPac
 	];
 }
 
-export function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
+export async function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath, options.followSymlinks).then(fileNames => {
+	return collectFiles(cwd, manifest, await getDependenciesOption(manifest, options), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1877,18 +1872,17 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 	}
 
 	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd);
+		useYarn = await detectYarn(cwd, manifest);
 	}
 
-	const tool = useYarn ? 'yarn' : 'npm';
-	const prepublish = `${tool} run vscode:prepublish`;
+	const prepublish = await getPrepublishCommand(cwd, manifest);
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
 
 	await new Promise<void>((c, e) => {
 		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
 		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
+		child.on('exit', code => (code === 0 ? c() : e(`'${prepublish}' failed with exit code ${code}`)));
 		child.on('error', e);
 	});
 }
@@ -2023,7 +2017,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 		await prepublish(cwd, manifest, options.useYarn);
 	}
 
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath, options.followSymlinks);
+	return await collectFiles(cwd, manifest, await getDependenciesOption(manifest, options), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
 interface ILSOptions {
