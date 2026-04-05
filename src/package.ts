@@ -1694,7 +1694,12 @@ async function getDependenciesOption(manifest: ManifestPackage, options: IPackag
 	}
 
 	const isUnknown = await isNonNpmOrModernYarn(options.cwd || process.cwd(), manifest);
-	if (isUnknown) return 'none';
+	if (isUnknown) {
+		if (options.dependencies) {
+			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
+		}
+		return 'none'
+	};
 
 	switch (options.useYarn) {
 		case true:
