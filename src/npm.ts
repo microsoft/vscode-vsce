@@ -261,7 +261,11 @@ export const detectVlt = (cwd: string, pkg: ManifestPackage) =>
 export const detectYarn = (cwd: string, pkg: ManifestPackage) =>
 	detectPackageManager(cwd, pkg, 'yarn', ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']);
 
-export async function getPrepublishCommand(cwd: string, manifest: ManifestPackage): Promise<string> {
+export async function getPrepublishCommand(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined): Promise<string> {
+	if (useYarn === true) {
+		return 'yarn run vscode:prepublish';
+	}
+
 	const envv = process.env['VSCE_RUN_PREPUBLISH']
 	if (envv === "" || manifest?.vsce?.runPrepublish === false) return "";
 	const customCommand = envv || manifest?.vsce?.runPrepublish;
@@ -279,13 +283,12 @@ export async function getPrepublishCommand(cwd: string, manifest: ManifestPackag
 
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
-	manifest: ManifestPackage,
+	dependencies: 'npm' | 'yarn' | 'none',
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
 		return [cwd];
-	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd, manifest)))) {
+	} else if (dependencies === 'yarn') {
 		return await getYarnDependencies(cwd, packagedDependencies);
 	} else {
 		return await getNpmDependencies(cwd);

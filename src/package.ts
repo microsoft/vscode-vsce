@@ -1673,12 +1673,11 @@ const defaultIgnore = [
 
 async function collectAllFiles(
 	cwd: string,
-	manifest: ManifestPackage,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'none',
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, manifest, dependencyEntryPoints);
+	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
 		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: ['node_modules/**', ".git/**"] }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
@@ -1688,12 +1687,14 @@ async function collectAllFiles(
 	return files;
 }
 
-async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions): Promise<'npm' | 'yarn' | 'none' | undefined> {
+async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions): Promise<'npm' | 'yarn' | 'none'> {
 	if (options.dependencies === false) {
 		return 'none';
 	}
 
-	const isUnknown = await isNonNpmOrModernYarn(options.cwd || process.cwd(), manifest);
+	const cwd = options.cwd || process.cwd();
+
+	const isUnknown = await isNonNpmOrModernYarn(cwd, manifest);
 	if (isUnknown) {
 		if (options.dependencies) {
 			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
@@ -1707,14 +1708,14 @@ async function getDependenciesOption(manifest: ManifestPackage, options: IPackag
 		case false:
 			return 'npm';
 		default:
-			return undefined;
+			return await detectYarn(cwd, manifest) ? 'yarn' : 'npm';
 	}
 }
 
 async function collectFiles(
 	cwd: string,
 	manifest: ManifestPackage,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'none',
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	readmePath?: string,
@@ -1766,7 +1767,7 @@ async function collectFiles(
 		"/node_modules/**",
 	]
 	const isNMCompletelyIgnored = anyNM.some(p => i.some(j => j === p));
-	if (process.env['VSCE_TESTS']) console.log("Node_modules completely ignored:", String(isNMCompletelyIgnored));
+	if (process.env['VSCE_DEBUG'] && isNMCompletelyIgnored) console.log("node_modules are completely ignored.");
 
 	// Split into ignore and negate list
 	const [ignore, negate] = i.reduce<[string[], string[]]>(
@@ -1774,7 +1775,7 @@ async function collectFiles(
 		[[], []]
 	)
 
-	const files = (await collectAllFiles(cwd, manifest, isNMCompletelyIgnored ? "none" : dependencies, dependencyEntryPoints, followSymlinks))
+	const files = (await collectAllFiles(cwd, isNMCompletelyIgnored ? "none" : dependencies, dependencyEntryPoints, followSymlinks))
 	.filter(f => !/\r$/m.test(f));
 
 	return files.filter(
@@ -1889,16 +1890,12 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
+export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
-	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd, manifest);
-	}
-
-	const prepublish = await getPrepublishCommand(cwd, manifest);
+	const prepublish = await getPrepublishCommand(cwd, manifest, useYarn);
 
 	if (!prepublish) return;
 
