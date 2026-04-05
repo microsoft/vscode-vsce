@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
+import * as semver from 'semver';
 import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
 import type { ManifestPackage } from './manifest';
@@ -196,76 +197,77 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return [...result];
 }
 
-import * as semver from 'semver';
-
-export async function isNonNpmOrModernYarn(cwd: string, manifest: ManifestPackage): Promise<boolean> {
-    if (await detectPnpm(cwd, manifest) || await detectBun(cwd, manifest) || await detectVlt(cwd, manifest)) {
-        return true;
-    }
-
-    const isYarn = await detectYarn(cwd, manifest);
-    if (isYarn) {
-        // Try to extract version from manifest (e.g., "yarn@3.6.4")
-        const pmString = manifest?.devEngines?.packageManager?.version || manifest?.packageManager;
+/**
+ * @param pm Cares only about yarn.
+ */
+export async function isNonNpmOrModernYarn(cwd: string, manifest: ManifestPackage, pm: string | null): Promise<boolean> {
+	if (pm === 'yarn') {
+		// Try to extract version from manifest (e.g., "yarn@3.6.4")
+		const pmString = manifest?.devEngines?.packageManager?.version || manifest?.packageManager;
 
 		if (pmString && pmString.startsWith('yarn@')) {
-            const version = pmString.split('@')[1];
-            if (version && semver.valid(version)) {
-                return semver.gte(version, '2.0.0'); // Returns true if Yarn 2, 3, or 4
-            }
-        }
-
-        // Fallback: If it's Yarn but we can't find a version,
-        // we assume it's modern if a .yarn directory or .pnp.cjs exists
-        if (await exists(path.join(cwd, '.pnp.cjs')) || await exists(path.join(cwd, '.yarn/releases'))) {
-            return true;
-        }
-    }
-
-    return false; // It's likely standard npm or classic yarn
-}
-
-async function detectPackageManager(
-	cwd: string,
-	manifest: ManifestPackage,
-	name: string,
-	lockfiles: string[]
-): Promise<boolean> {
-	if (manifest?.devEngines?.packageManager?.name === name || manifest?.packageManager?.startsWith(`${name}@`)) {
-		return true;
-	}
-
-	for (const filename of lockfiles) {
-		if (await exists(path.join(cwd, filename))) {
-			if (!process.env['VSCE_TESTS']) {
-				const suffix = name === 'yarn'
-					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
-					: ' logic.';
-				log.info(`Detected presence of ${filename}. Using '${name}'${suffix}`);
+			const version = pmString.split('@')[1];
+			if (version && semver.valid(version)) {
+				return semver.gte(version, '2.0.0'); // Returns true if Yarn 2, 3, or 4
 			}
+		}
+
+		if (await exists(path.join(cwd, '.pnp.cjs')) || await exists(path.join(cwd, '.yarn/releases'))) {
 			return true;
 		}
+
+		return false;
 	}
-	return false;
+
+	return pm !== null; // It's likely standard npm or classic yarn
 }
 
-export const detectPnpm = (cwd: string, pkg: ManifestPackage) =>
-	detectPackageManager(cwd, pkg, 'pnpm', ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs']);
+const MANAGERS = [
+	{ name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
+	{ name: 'bun',  files: ['bun.lockb', 'bun.lock', 'bunfig.toml'] },
+	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
+	{ name: 'yarn', files: ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn'] }
+] as const;
 
-export const detectBun = (cwd: string, pkg: ManifestPackage) =>
-	detectPackageManager(cwd, pkg, 'bun', ['bun.lockb', 'bun.lock', 'bunfig.toml']);
+export type ManagerName = (typeof MANAGERS)[number]['name']
 
-export const detectVlt = (cwd: string, pkg: ManifestPackage) =>
-	detectPackageManager(cwd, pkg, 'vlt', ['vlt-lock.json', '.vltrc']);
-
-export const detectYarn = (cwd: string, pkg: ManifestPackage) =>
-	detectPackageManager(cwd, pkg, 'yarn', ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']);
-
-export async function getPrepublishCommand(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined): Promise<string> {
-	if (useYarn === true) {
-		return 'yarn run vscode:prepublish';
+export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
+	if (useYarn) {
+		if (process.env['VSCE_DEBUG']) console.log('Package manager: yarn');
+		return 'yarn';
+	}
+	const m = care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS
+	for (const { name } of m) {
+		if (
+			manifest?.devEngines?.packageManager?.name === name ||
+			manifest?.packageManager?.startsWith(`${name}@`)
+		) {
+			if (process.env['VSCE_DEBUG']) console.log('Package manager:', name);
+			return name;
+		}
 	}
 
+	for (const mgr of m) {
+		for (const filename of mgr.files) {
+			if (!await exists(path.join(cwd, filename))) {
+				continue;
+			}
+			if (!process.env['VSCE_TESTS']) {
+				const suffix = mgr.name === 'yarn'
+					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
+					: ' logic.';
+				log.info(`Detected presence of ${filename}. Using '${mgr.name}'${suffix}`);
+			}
+			if (process.env['VSCE_DEBUG']) console.log('Package manager:', mgr.name);
+			return mgr.name;
+		}
+	}
+
+	if (process.env['VSCE_DEBUG']) console.log('Package manager: null (npm or unknown manager)');
+	return null; // npm or unknown manager
+}
+
+export async function getPrepublishCommand(manifest: ManifestPackage, pm: string | null): Promise<string> {
 	const envv = process.env['VSCE_RUN_PREPUBLISH']
 	if (envv === "" || manifest?.vsce?.runPrepublish === false) return "";
 	const customCommand = envv || manifest?.vsce?.runPrepublish;
@@ -273,12 +275,8 @@ export async function getPrepublishCommand(cwd: string, manifest: ManifestPackag
 		return customCommand;
 	}
 
-	if (await detectPnpm(cwd, manifest)) return 'pnpm run vscode:prepublish';
-	if (await detectBun(cwd, manifest)) return 'bun run vscode:prepublish';
-	if (await detectVlt(cwd, manifest)) return 'vlt run vscode:prepublish';
-	if (await detectYarn(cwd, manifest)) return 'yarn run vscode:prepublish'; // Yarn usually doesn't need 'run' for scripts
-
-	return 'npm run vscode:prepublish';
+	if (pm === null) return 'npm run vscode:prepublish';
+	return pm + ' run vscode:prepublish';
 }
 
 export async function getDependencies(

@@ -1,5 +1,6 @@
 import { publish as _publish, IPublishOptions, unpublish as _unpublish, IUnpublishOptions } from './publish';
-import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
+import { packageCommand, listFiles as _listFiles, IPackageOptions, readManifest } from './package';
+import { detectPackageManager } from './npm';
 
 /**
  * @deprecated prefer IPackageOptions instead
@@ -80,12 +81,26 @@ export function publish(options: IPublishOptions = {}): Promise<any> {
  * Lists the files included in the extension's package.
  * @public
  */
-export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+	const cwd = options.cwd || process.cwd();
+	const manifest = await readManifest(cwd);
+
+	let pm: string | null;
+	switch (options.packageManager) {
+		case PackageManager.Yarn: pm = 'yarn'; break;
+		case PackageManager.Npm: pm = 'npm'; break;
+
+		case PackageManager.None:
+		default:
+			// cares all: detect prepublish script launcher
+			pm = await detectPackageManager(cwd, manifest, false); break;
+	}
+
 	return _listFiles({
 		...options,
 		useYarn: options.packageManager === PackageManager.Yarn,
 		dependencies: options.packageManager !== PackageManager.None,
-	});
+	}, pm);
 }
 
 /**

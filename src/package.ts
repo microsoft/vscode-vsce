@@ -23,7 +23,7 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectBun, detectYarn, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
+import { detectPackageManager, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -378,7 +378,7 @@ export interface IVersionBumpOptions {
 	readonly updatePackageJson?: boolean;
 }
 
-export async function versionBump(options: IVersionBumpOptions): Promise<void> {
+export async function versionBump(options: IVersionBumpOptions, pm?: string | null): Promise<void> {
 	if (!options.version) {
 		return;
 	}
@@ -389,6 +389,8 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
+	// cares bun: bun pm version
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['bun']);
 
 	if (manifest.version === options.version) {
 		return;
@@ -411,10 +413,8 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-	const isBun = await detectBun(cwd, manifest)
-
 	// call `npm version` or `bun pm version` to do our dirty work
-	const args = isBun ? ['pm', 'version', options.version] : ['version', options.version];
+	const args = pm === 'bun' ? ['pm', 'version', options.version] : ['version', options.version];
 
 	const isWindows = process.platform === 'win32';
 
@@ -427,7 +427,7 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 		args.push('--no-git-tag-version');
 	}
 
-	const bin = isBun ? 'bun'
+	const bin = pm === 'bun' ? 'bun'
 		: isWindows ? 'npm.cmd' : 'npm'
 	const { stdout, stderr } = await promisify(cp.execFile)(bin, args, {
 		cwd,
@@ -1687,28 +1687,33 @@ async function collectAllFiles(
 	return files;
 }
 
-async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions): Promise<'npm' | 'yarn' | 'none'> {
+async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions, pm: string | null): Promise<'npm' | 'yarn' | 'none'> {
 	if (options.dependencies === false) {
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (options.dependencies is false)');
 		return 'none';
 	}
 
 	const cwd = options.cwd || process.cwd();
 
-	const isUnknown = await isNonNpmOrModernYarn(cwd, manifest);
+	const isUnknown = await isNonNpmOrModernYarn(cwd, manifest, pm);
 	if (isUnknown) {
 		if (options.dependencies) {
 			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
 		}
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (unknown package manager or npm)');
 		return 'none'
 	};
 
 	switch (options.useYarn) {
 		case true:
+			if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'yarn');
 			return 'yarn';
 		case false:
+			if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'npm');
 			return 'npm';
 		default:
-			return await detectYarn(cwd, manifest) ? 'yarn' : 'npm';
+			if (process.env['VSCE_DEBUG']) console.log('Dep option:', pm === 'yarn' ? 'yarn' : 'npm');
+			return pm === 'yarn' ? 'yarn' : 'npm';
 	}
 }
 
@@ -1828,13 +1833,16 @@ export function createDefaultProcessors(manifest: ManifestPackage, options: IPac
 	];
 }
 
-export async function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
+export async function collect(manifest: ManifestPackage, options: IPackageOptions = {}, pm?: string | null): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, manifest, await getDependenciesOption(manifest, options), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
+	// cares yarn: only yarn and npm deps are supported
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['yarn']);
+
+	return collectFiles(cwd, manifest, await getDependenciesOption(manifest, options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1890,12 +1898,12 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined): Promise<void> {
+export async function prepublish(cwd: string, manifest: ManifestPackage, pm: string | null): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
 
-	const prepublish = await getPrepublishCommand(cwd, manifest, useYarn);
+	const prepublish = await getPrepublishCommand(manifest, pm);
 
 	if (!prepublish) return;
 
@@ -1927,10 +1935,13 @@ async function getPackagePath(cwd: string, manifest: ManifestPackage, options: I
 	}
 }
 
-export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
+export async function pack(options: IPackageOptions = {}, pm?: string | null): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
-	const files = await collect(manifest, options);
+
+	// cares yarn: only yarn and npm deps are supported
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['yarn']);
+	const files = await collect(manifest, options, pm);
 
 	await printAndValidatePackagedFiles(files, cwd, manifest, options);
 
@@ -2002,10 +2013,12 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
-	await prepublish(cwd, manifest, options.useYarn);
-	await versionBump(options);
+	// cares all: detect prepublish script launcher
+	const pm = await detectPackageManager(cwd, manifest, options.useYarn)
+	await prepublish(cwd, manifest, pm);
 
-	const { packagePath, files } = await pack(options);
+	await versionBump(options, pm);
+	const { packagePath, files } = await pack(options, pm);
 
 	if (options.signTool) {
 		await signPackage(packagePath, options.signTool);
@@ -2031,15 +2044,17 @@ export interface IListFilesOptions {
 /**
  * Lists the files included in the extension's package.
  */
-export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+export async function listFiles(options: IListFilesOptions = {}, pm: string | null): Promise<string[]> {
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = options.manifest ?? await readManifest(cwd);
 
 	if (options.prepublish) {
-		await prepublish(cwd, manifest, options.useYarn);
+		// cares all: detect prepublish script launcher
+		await prepublish(cwd, manifest, pm);
 	}
 
-	return await collectFiles(cwd, manifest, await getDependenciesOption(manifest, options), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
+	// cares yarn
+	return await collectFiles(cwd, manifest, await getDependenciesOption(manifest, options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
 interface ILSOptions {
@@ -2059,7 +2074,10 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
-	const files = await listFiles({ ...options, cwd, manifest });
+	// cares all: detect prepublish script launcher
+	const pm = await detectPackageManager(cwd, manifest, options.useYarn);
+
+	const files = await listFiles({ ...options, cwd, manifest }, pm);
 
 	if (options.tree) {
 		const printableFileStructure = await util.generateFileStructureTree(
