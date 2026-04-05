@@ -41,7 +41,7 @@ These and other package managers should work if you are bundling your extension.
 
 ### Override Prepublish Script
 
-This section is optional. By default, `vsce` automatically detects and uses `npm`, `yarn`, `pnpm`, `vlt` and `bun` to generate this the `run vscode:prepublish` command.
+This section is optional. By default, `vsce` automatically detects and uses `npm`, `yarn`, `pnpm`, `vlt`, `deno` and `bun` to generate this the `run vscode:prepublish` command.
 
 - Use `VSCE_RUN_PREPUBLISH="npm run vscode:prepublish"` or `vsce.runPrepublish: "npm run vscode:prepublish"` in your manifest file to override the auto-detected command.
 - `vsce.runPrepublish: false` and `VSCE_RUN_PREPUBLISH=0` can disable the prepublish script. This is useful when you already transpiled your extension and you want to compile `.vsix` faster.

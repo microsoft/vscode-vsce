@@ -23,7 +23,12 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectPackageManager, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
+import {
+	detectPackageManager,
+	getDependencies,
+	getPrepublishCommand,
+	canNotBeUnbundled,
+} from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -390,7 +395,7 @@ export async function versionBump(options: IVersionBumpOptions, pm?: string | nu
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
 	// cares bun: bun pm version
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['bun']);
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
 
 	if (manifest.version === options.version) {
 		return;
@@ -1687,34 +1692,25 @@ async function collectAllFiles(
 	return files;
 }
 
-async function getDependenciesOption(manifest: ManifestPackage, options: IPackageOptions, pm: string | null): Promise<'npm' | 'yarn' | 'none'> {
+async function getDependenciesOption(options: IPackageOptions, pm: string | null): Promise<'npm' | 'yarn' | 'none'> {
 	if (options.dependencies === false) {
 		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (options.dependencies is false)');
 		return 'none';
 	}
 
-	const cwd = options.cwd || process.cwd();
-
-	const isUnknown = await isNonNpmOrModernYarn(cwd, manifest, pm);
-	if (isUnknown) {
+	const isUnsupported = canNotBeUnbundled(pm ?? "npm");
+	if (isUnsupported) {
 		if (options.dependencies) {
 			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
 		}
-		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (unknown package manager or npm)');
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (can not be unbundled)');
 		return 'none'
 	};
 
-	switch (options.useYarn) {
-		case true:
-			if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'yarn');
-			return 'yarn';
-		case false:
-			if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'npm');
-			return 'npm';
-		default:
-			if (process.env['VSCE_DEBUG']) console.log('Dep option:', pm === 'yarn' ? 'yarn' : 'npm');
-			return pm === 'yarn' ? 'yarn' : 'npm';
-	}
+	const useYarn = options.useYarn ?? pm === 'yarn1';
+	const depOption = useYarn ? 'yarn' : 'npm';
+	if (process.env['VSCE_DEBUG']) console.log('Dep option:', depOption);
+	return depOption;
 }
 
 async function collectFiles(
@@ -1840,9 +1836,9 @@ export async function collect(manifest: ManifestPackage, options: IPackageOption
 	const processors = createDefaultProcessors(manifest, options);
 
 	// cares yarn: only yarn and npm deps are supported
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['yarn']);
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['npm', 'yarn1']);
 
-	return collectFiles(cwd, manifest, await getDependenciesOption(manifest, options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
+	return collectFiles(cwd, manifest, await getDependenciesOption(options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1940,7 +1936,7 @@ export async function pack(options: IPackageOptions = {}, pm?: string | null): P
 	const manifest = await readManifest(cwd);
 
 	// cares yarn: only yarn and npm deps are supported
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['yarn']);
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['npm', 'yarn1']);
 	const files = await collect(manifest, options, pm);
 
 	await printAndValidatePackagedFiles(files, cwd, manifest, options);
@@ -2054,7 +2050,7 @@ export async function listFiles(options: IListFilesOptions = {}, pm: string | nu
 	}
 
 	// cares yarn
-	return await collectFiles(cwd, manifest, await getDependenciesOption(manifest, options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
+	return await collectFiles(cwd, manifest, await getDependenciesOption(options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
 interface ILSOptions {

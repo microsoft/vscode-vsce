@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import * as semver from 'semver';
 import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
 import type { ManifestPackage } from './manifest';
@@ -198,45 +197,30 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 }
 
 /**
- * @param pm Cares only about yarn.
+ * Check if the package manager can be used for unbundled extensions.
  */
-export async function isNonNpmOrModernYarn(cwd: string, manifest: ManifestPackage, pm: string | null): Promise<boolean> {
-	if (pm === 'yarn') {
-		// Try to extract version from manifest (e.g., "yarn@3.6.4")
-		const pmString = manifest?.devEngines?.packageManager?.version || manifest?.packageManager;
-
-		if (pmString && pmString.startsWith('yarn@')) {
-			const version = pmString.split('@')[1];
-			if (version && semver.valid(version)) {
-				return semver.gte(version, '2.0.0'); // Returns true if Yarn 2, 3, or 4
-			}
-		}
-
-		if (await exists(path.join(cwd, '.pnp.cjs')) || await exists(path.join(cwd, '.yarn/releases'))) {
-			return true;
-		}
-
-		return false;
-	}
-
-	return pm !== null; // It's likely standard npm or classic yarn
+export function canNotBeUnbundled(pm: string | null): boolean {
+	return pm !== 'npm' && pm !== 'yarn1';
 }
 
+const YARN = [
+	{ name: 'yarn', files: ['.yarnrc.yaml', '.pnp.cjs', '.yarn/releases'] },
+	{ name: 'yarn1', files: ['.yarnrc', 'yarn.lock'] },
+] as const
+
 const MANAGERS = [
+	{ name: 'npm', files: ['package-lock.json'] },
+    ...YARN,
 	{ name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
-	{ name: 'bun',  files: ['bun.lockb', 'bun.lock', 'bunfig.toml'] },
+	{ name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
 	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
-	{ name: 'yarn', files: ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn'] }
+	{ name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
 ] as const;
 
-export type ManagerName = (typeof MANAGERS)[number]['name']
+export type ManagerName = (typeof MANAGERS)[number]['name'];
 
 export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
-	if (useYarn) {
-		if (process.env['VSCE_DEBUG']) console.log('Package manager: yarn');
-		return 'yarn';
-	}
-	const m = care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS
+	const m = useYarn ? YARN : care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS;
 	for (const { name } of m) {
 		if (
 			manifest?.devEngines?.packageManager?.name === name ||
@@ -263,8 +247,8 @@ export async function detectPackageManager(cwd: string, manifest: ManifestPackag
 		}
 	}
 
-	if (process.env['VSCE_DEBUG']) console.log('Package manager: null (npm or unknown manager)');
-	return null; // npm or unknown manager
+	if (process.env['VSCE_DEBUG']) console.log('Package manager: null');
+	return null;
 }
 
 export async function getPrepublishCommand(manifest: ManifestPackage, pm: string | null): Promise<string> {
@@ -276,7 +260,9 @@ export async function getPrepublishCommand(manifest: ManifestPackage, pm: string
 	}
 
 	if (pm === null) return 'npm run vscode:prepublish';
-	return pm + ' run vscode:prepublish';
+	if (pm === 'deno') return 'npm run vscode:prepublish';
+	if (pm === 'yarn1') return 'yarn run vscode:prepublish';
+	return pm + ' run vscode:prepublish'; // known pms
 }
 
 export async function getDependencies(
