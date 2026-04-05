@@ -269,7 +269,7 @@ export async function detectPackageManager(cwd: string, manifest: ManifestPackag
 
 export async function getPrepublishCommand(manifest: ManifestPackage, pm: string | null): Promise<string> {
 	const envv = process.env['VSCE_RUN_PREPUBLISH']
-	if (envv === "" || manifest?.vsce?.runPrepublish === false) return "";
+	if (envv === "" || envv === "0" || manifest?.vsce?.runPrepublish === false) return "";
 	const customCommand = envv || manifest?.vsce?.runPrepublish;
 	if (customCommand) {
 		return customCommand;

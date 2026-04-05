@@ -37,6 +37,15 @@ Supported package managers:
 - `npm >=6`
 - `yarn >=1 <2`
 
+These and other package managers should work if you are bundling your extension.
+
+### Override Prepublish Script
+
+This section is optional. By default, `vsce` automatically detects and uses `npm`, `yarn`, `pnpm`, `vlt` and `bun` to generate this the `run vscode:prepublish` command.
+
+- Use `VSCE_RUN_PREPUBLISH="npm run vscode:prepublish"` or `vsce.runPrepublish: "npm run vscode:prepublish"` in your manifest file to override the auto-detected command.
+- `vsce.runPrepublish: false` and `VSCE_RUN_PREPUBLISH=0` can disable the prepublish script. This is useful when you already transpiled your extension and you want to compile `.vsix` faster.
+
 ## Configuration
 
 You can configure the behavior of `vsce` by using CLI flags (run `vsce --help` to list them all). Example:
@@ -52,11 +61,16 @@ Or you can also set them in the `package.json`, so that you avoid having to rety
 {
   "vsce": {
     "baseImagesUrl": "https://my.custom/base/images/url",
-    "dependencies": true,
+	"runPrepublish": "pnpm run vscode:prepublish",
+    "dependencies": false,
     "yarn": false
-  }
+  },
+  "packageManager": "pnpm@11.0.0", // optional
 }
 ```
+
+> **Note:** If you are bundling your extension, always set the `dependencies` option to `false`.
+In newer version of `vsce` this option is set to `false` automatically, but providing it can make things a bit faster. Same applies to the `yarn` option.
 
 ## Development
 
@@ -78,5 +92,7 @@ Tests can be executed with:
 ```console
 $ npm test
 ```
+
+Use `VSCE_DEBUG=1` to enable debug output.
 
 > **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
