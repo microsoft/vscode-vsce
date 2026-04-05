@@ -1724,9 +1724,6 @@ async function collectFiles(
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
-	const files = (await collectAllFiles(cwd, manifest, dependencies, dependencyEntryPoints, followSymlinks))
-		.filter(f => !/\r$/m.test(f));
-
 	let rawIgnore = '';
 	try {
 		rawIgnore = await fs.promises.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8');
@@ -1759,11 +1756,26 @@ async function collectFiles(
 		...notIgnored,
 	]
 
+	const anyNM = [
+		"node_modules/**",
+		"node_modules",
+		"**/node_modules/**",
+
+		"**/node_modules",
+		"/node_modules",
+		"/node_modules/**",
+	]
+	const isNMCompletelyIgnored = anyNM.some(p => i.some(j => j === p));
+	if (process.env['VSCE_TESTS']) console.log("Node_modules completely ignored:", String(isNMCompletelyIgnored));
+
 	// Split into ignore and negate list
 	const [ignore, negate] = i.reduce<[string[], string[]]>(
 		(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e.substring(1)]]),
 		[[], []]
 	)
+
+	const files = (await collectAllFiles(cwd, manifest, isNMCompletelyIgnored ? "none" : dependencies, dependencyEntryPoints, followSymlinks))
+	.filter(f => !/\r$/m.test(f));
 
 	return files.filter(
 		f =>
