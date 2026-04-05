@@ -262,7 +262,9 @@ export const detectYarn = (cwd: string, pkg: ManifestPackage) =>
 	detectPackageManager(cwd, pkg, 'yarn', ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']);
 
 export async function getPrepublishCommand(cwd: string, manifest: ManifestPackage): Promise<string> {
-	const customCommand = process.env['VSCE_RUN_PREPUBLISH'] || manifest?.vsce?.runPrepublish;
+	const envv = process.env['VSCE_RUN_PREPUBLISH']
+	if (envv === "" || manifest?.vsce?.runPrepublish === false) return "";
+	const customCommand = envv || manifest?.vsce?.runPrepublish;
 	if (customCommand) {
 		return customCommand;
 	}

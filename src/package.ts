@@ -1900,6 +1900,8 @@ export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn
 
 	const prepublish = await getPrepublishCommand(cwd, manifest);
 
+	if (!prepublish) return;
+
 	console.log(`Executing prepublish script '${prepublish}'...`);
 
 	await new Promise<void>((c, e) => {
