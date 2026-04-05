@@ -209,12 +209,12 @@ const YARN = [
 ] as const
 
 const MANAGERS = [
-	{ name: 'npm', files: ['package-lock.json'] },
-    ...YARN,
+	...YARN,
 	{ name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
 	{ name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
 	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
 	{ name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
+	{ name: 'npm', files: ['package.json', 'package-lock.json'] },
 ] as const;
 
 export type ManagerName = (typeof MANAGERS)[number]['name'];

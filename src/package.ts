@@ -1698,7 +1698,7 @@ async function getDependenciesOption(options: IPackageOptions, pm: string | null
 		return 'none';
 	}
 
-	const isUnsupported = canNotBeUnbundled(pm ?? "npm");
+	const isUnsupported = canNotBeUnbundled(pm);
 	if (isUnsupported) {
 		if (options.dependencies) {
 			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
