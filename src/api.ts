@@ -89,8 +89,9 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 	switch (options.packageManager) {
 		case PackageManager.Yarn: pm = 'yarn'; break;
 		case PackageManager.Npm: pm = 'npm'; break;
+		case PackageManager.None: pm = null; break;
 
-		case PackageManager.None:
+		case undefined:
 		default:
 			// cares all: detect prepublish script launcher
 			pm = await detectPackageManager(cwd, manifest, false); break;
