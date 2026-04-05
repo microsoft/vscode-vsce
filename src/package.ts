@@ -23,7 +23,7 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
+import { detectBun, detectYarn, getDependencies, getPrepublishCommand, isNonNpmOrModernYarn } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -411,9 +411,10 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
+	const isBun = await detectBun(cwd, manifest)
 
-	// call `npm version` to do our dirty work
-	const args = ['version', options.version];
+	// call `npm version` or `bun pm version` to do our dirty work
+	const args = isBun ? ['pm', 'version', options.version] : ['version', options.version];
 
 	const isWindows = process.platform === 'win32';
 
@@ -426,7 +427,12 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 		args.push('--no-git-tag-version');
 	}
 
-	const { stdout, stderr } = await promisify(cp.execFile)(isWindows ? 'npm.cmd' : 'npm', args, { cwd, shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */ });
+	const bin = isBun ? 'bun'
+		: isWindows ? 'npm.cmd' : 'npm'
+	const { stdout, stderr } = await promisify(cp.execFile)(bin, args, {
+		cwd,
+		shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */
+	});
 	if (!process.env['VSCE_TESTS']) {
 		process.stdout.write(stdout);
 		process.stderr.write(stderr);
