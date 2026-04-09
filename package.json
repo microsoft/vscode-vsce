@@ -36,7 +36,7 @@
 		"watch:test": "npm run test -- --watch"
 	},
 	"engines": {
-		"node": ">= 20"
+		"node": ">= 22"
 	},
 	"dependencies": {
 		"@azure/identity": "^4.1.0",
@@ -78,7 +78,7 @@
 		"@types/mime": "^1",
 		"@types/minimatch": "^3.0.3",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^16.11.7",
+		"@types/node": "^22.19.17",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
 		"@types/tmp": "^0.2.2",
