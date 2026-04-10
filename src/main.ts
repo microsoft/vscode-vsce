@@ -6,7 +6,7 @@ import { show } from './show';
 import { search } from './search';
 import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, log } from './util';
+import { CancellationToken, log, setMarketplaceUrl } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 
@@ -63,6 +63,18 @@ module.exports = function (argv: string[]): void {
 	const program = new Command();
 
 	program.version(pkg.version).usage('<command>');
+
+	program.option(
+		'--marketplace-url <url>',
+		'Marketplace endpoint URL (defaults to VSCE_MARKETPLACE_URL environment variable or https://marketplace.visualstudio.com)'
+	);
+
+	program.hook('preAction', (thisCommand) => {
+		const opts = thisCommand.opts();
+		if (opts.marketplaceUrl) {
+			setMarketplaceUrl(opts.marketplaceUrl);
+		}
+	});
 
 	program
 		.command('ls')
