@@ -197,11 +197,9 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 }
 
 /**
- * Check if the package manager can be used for unbundled extensions.
+ * A list of supported package managers that can be used for unbundled extensions.
  */
-export function canNotBeUnbundled(pm: string | null): boolean {
-	return pm !== 'npm' && pm !== 'yarn1';
-}
+export const supportedRaw = ['npm', 'yarn1'] as ManagerName[]
 
 const YARN = [
 	{ name: 'yarn', files: ['.yarnrc.yaml', '.pnp.cjs', '.yarn/releases'] },

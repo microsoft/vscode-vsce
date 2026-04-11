@@ -27,7 +27,7 @@ import {
 	detectPackageManager,
 	getDependencies,
 	getPrepublishCommand,
-	canNotBeUnbundled,
+	supportedRaw,
 } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
@@ -1705,7 +1705,7 @@ async function getDependenciesOption(options: IPackageOptions, pm: string | null
 		return 'none'
 	}
 
-	const isUnsupported = canNotBeUnbundled(pm);
+	const isUnsupported = !supportedRaw.includes(pm as any);
 	if (isUnsupported) {
 		if (options.dependencies) {
 			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
@@ -1837,7 +1837,7 @@ export async function collect(manifest: ManifestPackage, options: IPackageOption
 	const processors = createDefaultProcessors(manifest, options);
 
 	// cares yarn: only yarn and npm deps are supported
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['npm', 'yarn1']);
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
 
 	return collectFiles(cwd, manifest, await getDependenciesOption(options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
@@ -1937,7 +1937,7 @@ export async function pack(options: IPackageOptions = {}, pm?: string | null): P
 	const manifest = await readManifest(cwd);
 
 	// cares yarn: only yarn and npm deps are supported
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, ['npm', 'yarn1']);
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
 	const files = await collect(manifest, options, pm);
 
 	await printAndValidatePackagedFiles(files, cwd, manifest, options);
