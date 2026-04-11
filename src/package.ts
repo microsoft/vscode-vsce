@@ -1698,6 +1698,13 @@ async function getDependenciesOption(options: IPackageOptions, pm: string | null
 		return 'none';
 	}
 
+	const cwd = options.cwd || process.cwd()
+	const isNodeModulesExist = fs.existsSync(path.join(cwd, "node_modules"))
+	if (!isNodeModulesExist) {
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (node_modules directory does not exist)');
+		return 'none'
+	}
+
 	const isUnsupported = canNotBeUnbundled(pm);
 	if (isUnsupported) {
 		if (options.dependencies) {
@@ -1758,17 +1765,11 @@ async function collectFiles(
 		...notIgnored,
 	]
 
-	const anyNM = [
-		"node_modules/**",
-		"node_modules",
-		"**/node_modules/**",
-
-		"**/node_modules",
-		"/node_modules",
-		"/node_modules/**",
-	]
-	const isNMCompletelyIgnored = anyNM.some(p => i.some(j => j === p));
-	if (process.env['VSCE_DEBUG'] && isNMCompletelyIgnored) console.log("node_modules are completely ignored.");
+	const isNMIgnored = dependencies === 'none' || i.some(j => j.includes("node_modules") && !j.startsWith("!"));
+	if (process.env['VSCE_DEBUG'] && isNMIgnored) {
+		if (dependencies !== 'none') console.log("node_modules directory is completely ignored.")
+		else console.log("node_modules directory does not exist.")
+	}
 
 	// Split into ignore and negate list
 	const [ignore, negate] = i.reduce<[string[], string[]]>(
@@ -1776,7 +1777,7 @@ async function collectFiles(
 		[[], []]
 	)
 
-	const files = (await collectAllFiles(cwd, isNMCompletelyIgnored ? "none" : dependencies, dependencyEntryPoints, followSymlinks))
+	const files = (await collectAllFiles(cwd, isNMIgnored ? 'none' : dependencies, dependencyEntryPoints, followSymlinks))
 	.filter(f => !/\r$/m.test(f));
 
 	return files.filter(
