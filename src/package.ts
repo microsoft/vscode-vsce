@@ -100,7 +100,7 @@ export interface IPackageOptions {
 	 * folders named `win32-x64`, `darwin-arm64` or `web`, the files inside
 	 * those folders will be ignored.
 	 *
-	 * @default false
+	 * @returns false by default
 	 */
 	readonly ignoreOtherTargetFolders?: boolean;
 
