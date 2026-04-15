@@ -100,5 +100,8 @@
 		],
 		"watch-files": "src/**",
 		"spec": "src/test/**/*.ts"
+	},
+	"overrides": {
+		"serialize-javascript": "7.x"
 	}
 }
