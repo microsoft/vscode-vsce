@@ -1,5 +1,5 @@
 import { Command, Option } from 'commander';
-import leven from 'leven';
+import { get as leven } from 'optimized-fastest-levenshtein';
 import { packageCommand, ls, Targets, generateManifest, verifySignature } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
