@@ -3,7 +3,6 @@
 build/
 src/
 out/test/
-out/**/*.d.ts
 .dockerignore
 .gitignore
 Dockerfile
