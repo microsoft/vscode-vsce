@@ -18,6 +18,12 @@ export interface IStore extends Iterable<IPublisher> {
 	delete(name: string): Promise<void>;
 }
 
+export interface IKeytar {
+	findCredentials(service: string): Promise<Array<{ account: string; password: string }>>;
+	setPassword(service: string, account: string, password: string): Promise<void>;
+	deletePassword(service: string, account: string): Promise<boolean>;
+};
+
 export class FileStore implements IStore {
 	private static readonly DefaultPath = path.join(homedir(), '.vsce');
 
@@ -75,7 +81,7 @@ export class FileStore implements IStore {
 
 export class KeytarStore implements IStore {
 	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
-		const keytar = await import('keytar');
+		const keytar = await import('keytar').then(module => module.default);
 		const creds = await keytar.findCredentials(serviceName);
 
 		return new KeytarStore(
@@ -90,7 +96,7 @@ export class KeytarStore implements IStore {
 	}
 
 	private constructor(
-		private readonly keytar: typeof import('keytar'),
+		private readonly keytar: IKeytar,
 		private readonly serviceName: string,
 		private publishers: IPublisher[]
 	) { }

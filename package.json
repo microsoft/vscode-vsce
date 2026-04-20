@@ -66,7 +66,7 @@
 		"typed-rest-client": "^1.8.4",
 		"url-join": "^4.0.1",
 		"xml2js": "^0.5.0",
-		"yauzl": "^2.3.1",
+		"yauzl": "^3.2.1",
 		"yazl": "^2.2.2"
 	},
 	"devDependencies": {
@@ -77,7 +77,7 @@
 		"@types/markdown-it": "^0.0.2",
 		"@types/mime": "^1",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^16.11.7",
+		"@types/node": "^20.0.0",
 		"@types/read": "^0.0.28",
 		"@types/semver": "^6.0.0",
 		"@types/tmp": "^0.2.2",
@@ -99,5 +99,8 @@
 		],
 		"watch-files": "src/**",
 		"spec": "src/test/**/*.ts"
+	},
+	"overrides": {
+		"serialize-javascript": "7.x"
 	}
 }

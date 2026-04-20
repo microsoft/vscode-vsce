@@ -1,4 +1,7 @@
 // https://github.com/microsoft/vscode-vsce/issues/1153
+// @ts-ignore
 function npm_i_save_dev_types_Slashjest_or_npm_i_(){}
+// @ts-ignore
 function npm_i_save_dev_types_Slash_1_if_it_exists(){}
+// @ts-ignore
 function Cannot_find_name_0_Do_you_need_to_install_type_definitions_for_jQuery_Try_npm_i_save_dev_types_Slashjquery_and_then_add_jquery_to_the_types_field_in_your_tsconfig(){}
