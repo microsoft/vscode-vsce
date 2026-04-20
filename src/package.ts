@@ -7,7 +7,7 @@ import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
-import minimatch from 'minimatch';
+import { minimatch, MinimatchOptions } from 'minimatch';
 import markdownit from 'markdown-it';
 import * as cheerio from 'cheerio';
 import * as url from 'url';
@@ -30,7 +30,7 @@ import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
 
-const MinimatchOptions: minimatch.IOptions = { dot: true };
+const minimatchOptions: MinimatchOptions = { dot: true };
 
 export interface IInMemoryFile {
 	path: string;
@@ -1758,8 +1758,8 @@ function collectFiles(
 				.then(({ ignore, negate }) =>
 					files.filter(
 						f =>
-							!ignore.some(i => minimatch(f, i, MinimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), MinimatchOptions))
+							!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
+							negate.some(i => minimatch(f, i.substr(1), minimatchOptions))
 					)
 				)
 		);
@@ -2097,13 +2097,13 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 		const unusedIncludePatterns = filesIncludePatterns.filter(includePattern => {
 			let absoluteIncludePattern = includePattern.absolute;
 			// Check if the pattern provided by the user matches any file in the package
-			if (localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, MinimatchOptions))) {
+			if (localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, minimatchOptions))) {
 				return false;
 			}
 			// Check if the pattern provided by the user matches any folder in the package
 			if (!/(^|\/)[^/]*\*[^/]*$/.test(absoluteIncludePattern)) {
 				absoluteIncludePattern = (/\/$/.test(absoluteIncludePattern) ? `${absoluteIncludePattern}**` : `${absoluteIncludePattern}/**`);
-				return !localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, MinimatchOptions));
+				return !localPaths.some(localFilePath => minimatch(localFilePath, absoluteIncludePattern, minimatchOptions));
 			}
 			// Pattern does not match any file or folder
 			return true;
