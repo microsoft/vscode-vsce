@@ -39,7 +39,7 @@
 		"node": ">= 20"
 	},
 	"dependencies": {
-		"@azure/identity": "^4.1.0",
+		"@azure/identity": "^4.13.1",
 		"@secretlint/node": "^10.1.2",
 		"@secretlint/secretlint-formatter-sarif": "^10.1.2",
 		"@secretlint/secretlint-rule-no-dotenv": "^10.1.2",
