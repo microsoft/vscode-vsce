@@ -51,7 +51,7 @@
 		"cockatiel": "^3.1.2",
 		"commander": "^12.1.0",
 		"form-data": "^4.0.0",
-		"glob": "^11.0.0",
+		"glob": "^13.0.6",
 		"hosted-git-info": "^4.0.2",
 		"jsonc-parser": "^3.2.0",
 		"leven": "^3.1.0",
