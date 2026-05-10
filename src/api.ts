@@ -66,7 +66,7 @@ export function createVSIX(options: IPackageOptions = {}): Promise<any> {
 	return packageCommand(options);
 }
 
-export type { IPublishOptions } from './publish';
+export type { IPublishOptions, IUnpublishOptions } from './publish';
 
 /**
  * Publishes the extension in the current working directory.
