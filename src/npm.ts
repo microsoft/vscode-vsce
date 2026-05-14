@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
+import type { ManifestPackage } from './manifest';
 
 const exists = (file: string) =>
 	fs.promises.stat(file).then(
@@ -195,28 +196,81 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return [...result];
 }
 
-export async function detectYarn(cwd: string): Promise<boolean> {
-	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
-		if (await exists(path.join(cwd, name))) {
-			if (!process.env['VSCE_TESTS']) {
-				log.info(
-					`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
-				);
-			}
-			return true;
+/**
+ * A list of supported package managers that can be used for unbundled extensions.
+ */
+export const supportedRaw = ['npm', 'yarn1'] as ManagerName[]
+
+const YARN = [
+	{ name: 'yarn', files: ['.yarnrc.yaml', '.pnp.cjs', '.yarn/releases'] },
+	{ name: 'yarn1', files: ['.yarnrc', 'yarn.lock'] },
+] as const
+
+const MANAGERS = [
+	...YARN,
+	{ name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
+	{ name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
+	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
+	{ name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
+	{ name: 'npm', files: ['package.json', 'package-lock.json'] },
+] as const;
+
+export type ManagerName = (typeof MANAGERS)[number]['name'];
+
+export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
+	const m = useYarn ? YARN : care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS;
+	for (const { name } of m) {
+		if (
+			manifest?.devEngines?.packageManager?.name === name ||
+			manifest?.packageManager?.startsWith(`${name}@`)
+		) {
+			if (process.env['VSCE_DEBUG']) console.log('Package manager:', name);
+			return name;
 		}
 	}
-	return false;
+
+	for (const mgr of m) {
+		for (const filename of mgr.files) {
+			if (!await exists(path.join(cwd, filename))) {
+				continue;
+			}
+			if (!process.env['VSCE_TESTS']) {
+				const suffix = mgr.name === 'yarn'
+					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
+					: ' logic.';
+				log.info(`Detected presence of ${filename}. Using '${mgr.name}'${suffix}`);
+			}
+			if (process.env['VSCE_DEBUG']) console.log('Package manager:', mgr.name);
+			return mgr.name;
+		}
+	}
+
+	if (process.env['VSCE_DEBUG']) console.log('Package manager: null');
+	return null;
+}
+
+export async function getPrepublishCommand(manifest: ManifestPackage, pm: string | null): Promise<string> {
+	const envv = process.env['VSCE_RUN_PREPUBLISH']
+	if (envv === "" || envv === "0" || manifest?.vsce?.runPrepublish === false) return "";
+	const customCommand = envv || manifest?.vsce?.runPrepublish;
+	if (customCommand) {
+		return customCommand;
+	}
+
+	if (pm === null) return 'npm run vscode:prepublish';
+	if (pm === 'deno') return 'npm run vscode:prepublish';
+	if (pm === 'yarn1') return 'yarn run vscode:prepublish';
+	return pm + ' run vscode:prepublish'; // known pms
 }
 
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'none',
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
 		return [cwd];
-	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
+	} else if (dependencies === 'yarn') {
 		return await getYarnDependencies(cwd, packagedDependencies);
 	} else {
 		return await getNpmDependencies(cwd);
