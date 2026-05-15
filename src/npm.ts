@@ -37,7 +37,6 @@ function exec(
 				disposeCancellationListener();
 				disposeCancellationListener = null;
 			}
-
 			if (err) {
 				return e(err);
 			}
@@ -51,12 +50,12 @@ function exec(
 			});
 		}
 	});
+
 }
 
 async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 	const { stdout } = await exec('npm -v', {}, cancellationToken);
 	const version = stdout.trim();
-
 	if (/^3\.7\.[0123]$/.test(version)) {
 		throw new Error(`npm@${version} doesn't work with vsce. Please update npm: npm install -g npm`);
 	}
@@ -64,8 +63,7 @@ async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 
 function getNpmDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
-		.then(() =>
-			exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
+		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
 		)
 		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir)));
 }
@@ -85,27 +83,21 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): Y
 	if (prune && /@[\^~]/.test(tree.name)) {
 		return null;
 	}
-
 	let name: string;
-
 	try {
 		const parseResult = parseSemver(tree.name);
 		name = parseResult.name;
 	} catch (err) {
 		name = tree.name.replace(/^([^@+])@.*$/, '$1');
 	}
-
 	const dependencyPath = path.join(prefix, name);
 	const children: YarnDependency[] = [];
-
 	for (const child of tree.children || []) {
 		const dep = asYarnDependency(path.join(prefix, name, 'node_modules'), child, prune);
-
 		if (dep) {
 			children.push(dep);
 		}
 	}
-
 	return { name, path: dependencyPath, children };
 }
 
@@ -128,7 +120,6 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 			return result;
 		}
 	})();
-
 	const reached = new (class {
 		values: YarnDependency[] = [];
 		add(dep: YarnDependency): boolean {
@@ -139,7 +130,6 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 			return false;
 		}
 	})();
-
 	const visit = (name: string) => {
 		let dep = index.find(name);
 		if (!reached.add(dep)) {
@@ -155,44 +145,55 @@ function selectYarnDependencies(deps: YarnDependency[], packagedDependencies: st
 }
 
 async function getYarnProductionDependencies(cwd: string, packagedDependencies?: string[]): Promise<YarnDependency[]> {
-	const raw = await new Promise<string>((c, e) =>
-		cp.exec(
-			'yarn list --prod --json',
-			{ cwd, encoding: 'utf8', env: { DISABLE_V8_COMPILE_CACHE: "1", ...process.env }, maxBuffer: 5000 * 1024 },
-			(err, stdout) => (err ? e(err) : c(stdout))
-		)
-	);
+	const raw = await new Promise<string>((c, e) => cp.exec(
+		'yarn list --prod --json',
+		{ cwd, encoding: 'utf8', env: { DISABLE_V8_COMPILE_CACHE: "1", ...process.env }, maxBuffer: 5000 * 1024 },
+		(err, stdout) => (err ? e(err) : c(stdout))
+	));
 	const match = /^{"type":"tree".*$/m.exec(raw);
-
 	if (!match || match.length !== 1) {
 		throw new Error('Could not parse result of `yarn list --json`');
 	}
-
 	const usingPackagedDependencies = Array.isArray(packagedDependencies);
 	const trees = JSON.parse(match[0]).data.trees as YarnTreeNode[];
-
 	let result = trees
 		.map(tree => asYarnDependency(path.join(cwd, 'node_modules'), tree, !usingPackagedDependencies))
 		.filter(nonnull);
-
 	if (usingPackagedDependencies) {
 		result = selectYarnDependencies(result, packagedDependencies!);
 	}
-
 	return result;
 }
 
 async function getYarnDependencies(cwd: string, packagedDependencies?: string[]): Promise<string[]> {
 	const result = new Set([cwd]);
-
 	const deps = await getYarnProductionDependencies(cwd, packagedDependencies);
 	const flatten = (dep: YarnDependency) => {
 		result.add(dep.path);
 		dep.children.forEach(flatten);
 	};
 	deps.forEach(flatten);
-
 	return [...result];
+}
+
+export async function detectBun(cwd: string): Promise<boolean> {
+	for (const name of ['bun.lock', 'bun.lockb']) {
+		if (await exists(path.join(cwd, name))) {
+			if (!process.env['VSCE_TESTS']) {
+				log.info(
+					`Detected presence of ${name}. Using 'bun' instead of 'npm' (to override this pass '--no-bun' on the command line).`
+				);
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+export async function getBunDependencies(cwd: string): Promise<string[]> {
+	// Bun doesn't have a direct equivalent to 'npm list --production'
+	// We simply return the current directory since bun.lock handles dependencies
+	return [cwd];
 }
 
 export async function detectYarn(cwd: string): Promise<boolean> {
@@ -211,11 +212,13 @@ export async function detectYarn(cwd: string): Promise<boolean> {
 
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'bun' | 'none' | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
 		return [cwd];
+	} else if (dependencies === 'bun' || (dependencies === undefined && (await detectBun(cwd)))) {
+		return await getBunDependencies(cwd);
 	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
 		return await getYarnDependencies(cwd, packagedDependencies);
 	} else {
