@@ -395,6 +395,9 @@ export async function versionBump(options: IVersionBumpOptions, pm?: string | nu
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
 	// cares bun: bun pm version
+	// ignores deno: 2.8 deno's bump-version isn't npm-cli-compatible
+	// you would think we should throw "Deno isn't supported", but
+	// we can force npm here
 	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
 
 	if (manifest.version === options.version) {
