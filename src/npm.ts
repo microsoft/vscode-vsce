@@ -212,6 +212,7 @@ const MANAGERS = [
 	{ name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
 	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
 	{ name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
+	{ name: 'vp',   files: ['vite.config.ts', 'vite.config.js', 'vite.config.mts', 'vite.config.cts', 'vite.config.mjs', 'vite.config.cjs'] },
 	{ name: 'npm', files: ['package.json', 'package-lock.json'] },
 ] as const;
 
