@@ -52,3 +52,4 @@ extends:
           nextVersion: ${{ parameters.nextVersion }}
         ghCreateRelease: true
         ghReleaseAddChangeLog: true
+        skipAPIScan: true
