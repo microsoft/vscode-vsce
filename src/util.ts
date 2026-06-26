@@ -18,7 +18,11 @@ export function read(prompt: string, options: _read.Options = {}): Promise<strin
 	return __read({ prompt, ...options });
 }
 
-const marketplaceUrl = process.env['VSCE_MARKETPLACE_URL'] || 'https://marketplace.visualstudio.com';
+let marketplaceUrl = process.env['VSCE_MARKETPLACE_URL'] || 'https://marketplace.visualstudio.com';
+
+export function setMarketplaceUrl(url: string): void {
+	marketplaceUrl = url;
+}
 
 export function getPublishedUrl(extension: string): string {
 	return `${marketplaceUrl}/items?itemName=${extension}`;
