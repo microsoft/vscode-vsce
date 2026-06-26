@@ -392,6 +392,16 @@ describe('collect', function () {
 		}
 	});
 
+	it('should use bun when useBun is true', async () => {
+		const cwd = fixture('devDependencies');
+		const manifest = await readManifest(cwd);
+		const files = await collect(manifest, { cwd, useBun: true });
+		// Bun returns only cwd, no node_modules included
+		for (const file of files) {
+			assert.ok(!/\bnode_modules\b/i.test(file.path));
+		}
+	});
+
 	it('should handle relative icon paths', async function () {
 		const cwd = fixture('icon');
 		const manifest = await readManifest(cwd);
