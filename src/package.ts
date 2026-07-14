@@ -13,6 +13,7 @@ import * as cheerio from 'cheerio';
 import * as url from 'url';
 import mime from 'mime';
 import * as semver from 'semver';
+import libnpmversion from 'libnpmversion';
 import urljoin from 'url-join';
 import chalk from 'chalk';
 import {
@@ -395,8 +396,10 @@ export async function versionBump(options: IVersionBumpOptions, pm?: string | nu
 
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
-	// cares bun: bun pm version
-	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
+
+	if (pm === undefined) {
+		pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
+	}
 
 	if (manifest.version === options.version) {
 		return;
@@ -419,48 +422,38 @@ export async function versionBump(options: IVersionBumpOptions, pm?: string | nu
 			}
 	}
 
-	// call `npm version` or `bun pm version` to do our dirty work
-	const args = pm === 'bun' ? ['pm', 'version', options.version] : ['version', options.version];
-
 	const isWindows = process.platform === 'win32';
 
-	const commitMessage = isWindows ? sanitizeCommitMessage(options.commitMessage) : options.commitMessage;
-	if (commitMessage) {
-		args.push('-m', commitMessage);
+	if (pm === 'bun') {
+		const args = ['pm', 'version', options.version];
+		if (options.commitMessage) {
+			args.push('-m', options.commitMessage);
+		}
+		if (!(options.gitTagVersion ?? true)) {
+			args.push('--no-git-tag-version');
+		}
+
+		await promisify(cp.execFile)('bun', args, {
+			cwd,
+			shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */
+		});
+		return;
 	}
 
-	if (!(options.gitTagVersion ?? true)) {
-		args.push('--no-git-tag-version');
+	try {
+		await libnpmversion(options.version, {
+			path: cwd,
+			message: options.commitMessage ?? 'v%s',
+			gitTagVersion: options.gitTagVersion ?? true,
+			force: false,
+			allowSameVersion: false,
+		});
+	} catch (err: any) {
+		let ignore = err.message?.includes('not a git repository') &&
+			(options.gitTagVersion ?? true) === true && options.commitMessage !== undefined
+		if (ignore) return;
+		throw err;
 	}
-
-	const bin = pm === 'bun' ? 'bun'
-		: isWindows ? 'npm.cmd' : 'npm'
-	const { stdout, stderr } = await promisify(cp.execFile)(bin, args, {
-		cwd,
-		shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */
-	});
-	if (!process.env['VSCE_TESTS']) {
-		process.stdout.write(stdout);
-		process.stderr.write(stderr);
-	}
-}
-
-function sanitizeCommitMessage(message?: string): string | undefined {
-	if (!message) {
-		return undefined;
-	}
-
-	// Remove any unsafe characters found by the unsafeRegex
-	// Check for characters that might escape quotes or introduce shell commands.
-	// Don't allow: ', ", `, $, \ (except for \n which is allowed)
-	const sanitizedMessage = message.replace(/(?<!\\)\\(?!n)|['"`$]/g, '');
-
-	if (sanitizedMessage.length === 0) {
-		return undefined;
-	}
-
-	// Add quotes as commit message is passed as a single argument to the shell
-	return `"${sanitizedMessage}"`;
 }
 
 export const Targets = new Set([
@@ -1837,7 +1830,6 @@ export async function collect(manifest: ManifestPackage, options: IPackageOption
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	// cares yarn: only yarn and npm deps are supported
 	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
 
 	return collectFiles(cwd, manifest, await getDependenciesOption(options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
@@ -1932,7 +1924,6 @@ export async function pack(options: IPackageOptions = {}, pm?: string | null): P
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
 
-	// cares yarn: only yarn and npm deps are supported
 	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
 	const files = await collect(manifest, options, pm);
 
@@ -2045,7 +2036,6 @@ export async function listFiles(options: IListFilesOptions = {}, pm: string | nu
 		await prepublish(cwd, manifest, !options.prepublish);
 	}
 
-	// cares yarn: only yarn and npm deps are supported
 	return await collectFiles(cwd, manifest, await getDependenciesOption(options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
@@ -2066,7 +2056,6 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
-	// cares yarn: only yarn and npm deps are supported
 	const pm = await detectPackageManager(cwd, manifest, options.useYarn);
 
 	const files = await listFiles({ ...options, cwd, manifest }, pm);
