@@ -2031,10 +2031,7 @@ export interface IListFilesOptions {
 export async function listFiles(options: IListFilesOptions = {}, pm: string | null): Promise<string[]> {
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = options.manifest ?? await readManifest(cwd);
-
-	if (options.prepublish) {
-		await prepublish(cwd, manifest, !options.prepublish);
-	}
+	await prepublish(cwd, manifest, !options.prepublish);
 
 	return await collectFiles(cwd, manifest, await getDependenciesOption(options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
