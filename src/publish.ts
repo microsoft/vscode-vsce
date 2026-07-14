@@ -58,6 +58,7 @@ export interface IPublishOptions {
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+	readonly prepublish?: boolean;
 
 	/**
 	 * Recurse into symlinked directories instead of treating them as files
@@ -160,10 +161,10 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		// Validate marketplace requirements before prepublish to avoid unnecessary work
 		validateManifestForPublishing(manifest, options);
 
-		// cares all: detect prepublish script launcher
+		// cares bun: bun pm version
 		const pm = await detectPackageManager(cwd, manifest, options.useYarn);
 
-		await prepublish(cwd, manifest, pm);
+		await prepublish(cwd, manifest, !options.prepublish);
 		await versionBump(options, pm);
 
 		if (options.targets) {

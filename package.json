@@ -40,6 +40,7 @@
 	},
 	"dependencies": {
 		"@azure/identity": "^4.1.0",
+		"@npmcli/run-script": "^10.0.4",
 		"@secretlint/node": "^10.1.2",
 		"@secretlint/secretlint-formatter-sarif": "^10.1.2",
 		"@secretlint/secretlint-rule-no-dotenv": "^10.1.2",

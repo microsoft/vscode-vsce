@@ -208,15 +208,15 @@ const YARN = [
 
 const MANAGERS = [
 	...YARN,
-	{ name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
-	{ name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
-	{ name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
-	{ name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
-	{ name: 'vp',   files: ['vite.config.ts', 'vite.config.js', 'vite.config.mts', 'vite.config.cts', 'vite.config.mjs', 'vite.config.cjs'] },
+	// { name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
+	// { name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
+	// { name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
+	// { name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
+	// { name: 'vp',   files: ['vite.config.ts', 'vite.config.js', 'vite.config.mts', 'vite.config.cts', 'vite.config.mjs', 'vite.config.cjs'] },
 	{ name: 'npm', files: ['package.json', 'package-lock.json'] },
 ] as const;
 
-export type ManagerName = (typeof MANAGERS)[number]['name'];
+export type ManagerName = (typeof MANAGERS)[number]['name'] | string;
 
 export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
 	const m = useYarn ? YARN : care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS;
@@ -236,7 +236,7 @@ export async function detectPackageManager(cwd: string, manifest: ManifestPackag
 				continue;
 			}
 			if (!process.env['VSCE_TESTS']) {
-				const suffix = mgr.name === 'yarn'
+				const suffix = mgr.name === 'yarn1' || mgr.name === 'yarn'
 					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
 					: ' logic.';
 				log.info(`Detected presence of ${filename}. Using '${mgr.name}'${suffix}`);
@@ -248,20 +248,6 @@ export async function detectPackageManager(cwd: string, manifest: ManifestPackag
 
 	if (process.env['VSCE_DEBUG']) console.log('Package manager: null');
 	return null;
-}
-
-export async function getPrepublishCommand(manifest: ManifestPackage, pm: string | null): Promise<string> {
-	const envv = process.env['VSCE_RUN_PREPUBLISH']
-	if (envv === "" || envv === "0" || manifest?.vsce?.runPrepublish === false) return "";
-	const customCommand = envv || manifest?.vsce?.runPrepublish;
-	if (customCommand) {
-		return customCommand;
-	}
-
-	if (pm === null) return 'npm run vscode:prepublish';
-	if (pm === 'deno') return 'npm run vscode:prepublish';
-	if (pm === 'yarn1') return 'yarn run vscode:prepublish';
-	return pm + ' run vscode:prepublish'; // known pms
 }
 
 export async function getDependencies(

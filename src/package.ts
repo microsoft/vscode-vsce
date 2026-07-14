@@ -26,10 +26,10 @@ import {
 import {
 	detectPackageManager,
 	getDependencies,
-	getPrepublishCommand,
 	supportedRaw,
 } from './npm';
 import * as GitHost from 'hosted-git-info';
+import runScript from '@npmcli/run-script';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
@@ -157,6 +157,7 @@ export interface IPackageOptions {
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+	readonly prepublish?: boolean;
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
@@ -395,9 +396,6 @@ export async function versionBump(options: IVersionBumpOptions, pm?: string | nu
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
 	// cares bun: bun pm version
-	// ignores deno: 2.8 deno's bump-version isn't npm-cli-compatible
-	// you would think we should throw "Deno isn't supported", but
-	// we can force npm here
 	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
 
 	if (manifest.version === options.version) {
@@ -1898,23 +1896,18 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, pm: string | null): Promise<void> {
-	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
+export async function prepublish(cwd: string, manifest: ManifestPackage, ignoreScripts = false): Promise<void> {
+	if (!manifest.scripts || !manifest.scripts['vscode:prepublish'] || ignoreScripts) {
 		return;
 	}
 
-	const prepublish = await getPrepublishCommand(manifest, pm);
+	console.log(`Executing prepublish script '${manifest.scripts['vscode:prepublish']}'...`);
 
-	if (!prepublish) return;
-
-	console.log(`Executing prepublish script '${prepublish}'...`);
-
-	await new Promise<void>((c, e) => {
-		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
-		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`'${prepublish}' failed with exit code ${code}`)));
-		child.on('error', e);
-	});
+	await runScript({
+		event: 'vscode:prepublish',
+		path: cwd,
+		stdio: 'inherit'
+	})
 }
 
 async function getPackagePath(cwd: string, manifest: ManifestPackage, options: IPackageOptions = {}): Promise<string> {
@@ -2013,9 +2006,9 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
-	// cares all: detect prepublish script launcher
+	// cares yarn: only yarn and npm deps are supported
 	const pm = await detectPackageManager(cwd, manifest, options.useYarn)
-	await prepublish(cwd, manifest, pm);
+	await prepublish(cwd, manifest, !options.prepublish);
 
 	await versionBump(options, pm);
 	const { packagePath, files } = await pack(options, pm);
@@ -2049,11 +2042,10 @@ export async function listFiles(options: IListFilesOptions = {}, pm: string | nu
 	const manifest = options.manifest ?? await readManifest(cwd);
 
 	if (options.prepublish) {
-		// cares all: detect prepublish script launcher
-		await prepublish(cwd, manifest, pm);
+		await prepublish(cwd, manifest, !options.prepublish);
 	}
 
-	// cares yarn
+	// cares yarn: only yarn and npm deps are supported
 	return await collectFiles(cwd, manifest, await getDependenciesOption(options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
@@ -2074,7 +2066,7 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
-	// cares all: detect prepublish script launcher
+	// cares yarn: only yarn and npm deps are supported
 	const pm = await detectPackageManager(cwd, manifest, options.useYarn);
 
 	const files = await listFiles({ ...options, cwd, manifest }, pm);

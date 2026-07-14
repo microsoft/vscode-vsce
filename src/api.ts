@@ -93,7 +93,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 
 		case undefined:
 		default:
-			// cares all: detect prepublish script launcher
+			// cares yarn: only yarn and npm deps are supported
 			pm = await detectPackageManager(cwd, manifest, false); break;
 	}
 
