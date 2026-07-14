@@ -32,18 +32,12 @@ $ npx @vscode/vsce --version
 
 `@vscode/vsce` is meant to be mainly used as a command-line tool. It can also be used as a library since it exposes a small [API](https://github.com/microsoft/vscode-vsce/blob/main/src/api.ts). When using `@vscode/vsce` as a library, be sure to sanitize any user input used in API calls to prevent security issues.
 
-Supported package managers:
+Supported package managers (when not bundling):
 
 - `npm >=6`
 - `yarn >=1 <2`
 
-These and other package managers should work if you are bundling your extension.
-
-### Override Prepublish Script
-
-This section is optional. By default, `vsce` automatically runs the `vscode:prepublish` script in your `package.json`, using `@npmcli/run-script`.
-
-Use `--no-prepublish` flag with `package` or `publish` commands to temporarily disable this behavior.
+If you [bundle](https://code.visualstudio.com/api/working-with-extensions/bundling-extension) your extension or don't have a package manager, it is recommended to use the `--no-dependencies` flag, or `vsce.dependencies: false` in your `package.json`. `vsce` will try to automatically detect the package manager and disable the option based on lockfiles, or skip dependency inclusion entirely if `node_modules` is present in your ignore patterns.
 
 ## Configuration
 
@@ -60,15 +54,18 @@ Or you can also set them in the `package.json`, so that you avoid having to rety
 {
   "vsce": {
     "baseImagesUrl": "https://my.custom/base/images/url",
-    "dependencies": false,
+    "dependencies": false, // almost never true
     "yarn": false
   },
   "packageManager": "pnpm@11.0.0", // optional
 }
 ```
 
-> **Note:** If you are bundling your extension, always set the `dependencies` option to `false`.
-In newer version of `vsce` this option is set to `false` automatically, but providing it can make things a bit faster. Same applies to the `yarn` option.
+### Override Prepublish Script
+
+This section is optional. By default, `vsce` automatically runs the `vscode:prepublish` script in your `package.json`, using `@npmcli/run-script`.
+
+Use the `--no-prepublish` flag with the `package` or `publish` commands to temporarily disable this behavior.
 
 ## Development
 
