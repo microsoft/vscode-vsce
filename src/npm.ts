@@ -212,7 +212,7 @@ const MANAGERS = [
 	{ name: 'bun',  files: ['bun.lock', 'bun.lockb'] },
 	{ name: 'vlt',  files: ['vlt-lock.json'] },
 	{ name: 'deno', files: ['deno.lock'] },
-	{ name: 'npm', files: ['package-lock.json'] },
+	{ name: 'npm', files: ['package-lock.json', 'package.json'] },
 ] as const;
 
 export type ManagerName = (typeof MANAGERS)[number]['name'] | string;
