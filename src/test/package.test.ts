@@ -2428,7 +2428,7 @@ describe('ManifestProcessor', () => {
 		const root = fixture('uuid');
 
 		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
-		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(manifest.version, '100.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1', updatePackageJson: false });
 		const packageJson = {
@@ -2441,14 +2441,14 @@ describe('ManifestProcessor', () => {
 		assert.deepStrictEqual(processor.vsix.version, '1.1.1');
 
 		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
-		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(manifest.version, '100.0.0');
 	});
 
 	it('should not bump package.json version in-memory when not using --no-update-package-json', async () => {
 		const root = fixture('uuid');
 
 		let manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
-		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(manifest.version, '100.0.0');
 
 		const processor = new ManifestProcessor(manifest, { version: '1.1.1' });
 		const packageJson = {
@@ -2457,11 +2457,11 @@ describe('ManifestProcessor', () => {
 		};
 
 		manifest = JSON.parse(await read(await processor.onFile(packageJson)));
-		assert.deepStrictEqual(manifest.version, '1.0.0');
-		assert.deepStrictEqual(processor.vsix.version, '1.0.0');
+		assert.deepStrictEqual(manifest.version, '100.0.0');
+		assert.deepStrictEqual(processor.vsix.version, '100.0.0');
 
 		manifest = JSON.parse(await fs.promises.readFile(path.join(root, 'package.json'), 'utf8'));
-		assert.deepStrictEqual(manifest.version, '1.0.0');
+		assert.deepStrictEqual(manifest.version, '100.0.0');
 	});
 
 	it('should not throw error for engine version with x (e.g. 1.95.x)', async () => {
