@@ -1702,9 +1702,9 @@ async function getDependenciesOption(options: IPackageOptions, pm: string | null
 	const isUnsupported = !supportedRaw.includes(pm as any);
 	if (isUnsupported) {
 		if (options.dependencies) {
-			util.log.warn("You are trying to include node_modules into your extension, but it should be bundled. Do not use --dependencies.")
+			util.log.warn("You are trying to pack node_modules. Disable 'dependencies' while using foreign package managers. See https://code.visualstudio.com/api/working-with-extensions/bundling-extension.")
 		}
-		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (can not be unbundled)');
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (can not include node_modules correctly)');
 		return 'none'
 	};
 
@@ -1759,10 +1759,10 @@ async function collectFiles(
 		...notIgnored,
 	]
 
-	const isNMIgnored = dependencies === 'none' || i.some(j => j.includes("node_modules") && !j.startsWith("!"));
-	if (process.env['VSCE_DEBUG'] && isNMIgnored) {
-		if (dependencies !== 'none') console.log("node_modules directory is completely ignored.")
-		else console.log("node_modules directory does not exist.")
+	const hasNM = () => i.some(j => j.includes("node_modules") && !j.startsWith("!"))
+	const isNMIgnored = dependencies === 'none' || hasNM();
+	if (process.env['VSCE_DEBUG'] && hasNM()) {
+		console.log("node_modules directory is ignored by the ignore list.")
 	}
 
 	// Split into ignore and negate list

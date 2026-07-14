@@ -197,23 +197,22 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 }
 
 /**
- * A list of supported package managers that can be used for unbundled extensions.
+ * Supported package managers for bundlerless extensions.
  */
 export const supportedRaw = ['npm', 'yarn1'] as ManagerName[]
 
 const YARN = [
-	{ name: 'yarn', files: ['.yarnrc.yaml', '.pnp.cjs', '.yarn/releases'] },
-	{ name: 'yarn1', files: ['.yarnrc', 'yarn.lock'] },
+	{ name: 'yarn', files: ['.pnp.cjs', '.yarn/releases'] },
+	{ name: 'yarn1', files: ['yarn.lock'] },
 ] as const
 
 const MANAGERS = [
 	...YARN,
-	// { name: 'pnpm', files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.pnpmfile.cjs'] },
-	// { name: 'bun',  files: ['bun.lock', 'bunfig.toml', 'bun.lockb'] },
-	// { name: 'vlt',  files: ['vlt-lock.json', '.vltrc'] },
-	// { name: 'deno', files: ['deno.lock', 'deno.json', 'deno.jsonc'] },
-	// { name: 'vp',   files: ['vite.config.ts', 'vite.config.js', 'vite.config.mts', 'vite.config.cts', 'vite.config.mjs', 'vite.config.cjs'] },
-	{ name: 'npm', files: ['package.json', 'package-lock.json'] },
+	{ name: 'pnpm', files: ['pnpm-lock.yaml'] },
+	{ name: 'bun',  files: ['bun.lock', 'bun.lockb'] },
+	{ name: 'vlt',  files: ['vlt-lock.json'] },
+	{ name: 'deno', files: ['deno.lock'] },
+	{ name: 'npm', files: ['package-lock.json'] },
 ] as const;
 
 export type ManagerName = (typeof MANAGERS)[number]['name'] | string;
