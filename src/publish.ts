@@ -14,6 +14,7 @@ import FormData from 'form-data';
 import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
+import { detectPackageManager } from './npm';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -57,6 +58,7 @@ export interface IPublishOptions {
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+	readonly prepublish?: boolean;
 
 	/**
 	 * Recurse into symlinked directories instead of treating them as files
@@ -159,20 +161,23 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 		// Validate marketplace requirements before prepublish to avoid unnecessary work
 		validateManifestForPublishing(manifest, options);
 
-		await prepublish(cwd, manifest, options.useYarn);
-		await versionBump(options);
+		// cares bun: bun pm version
+		const pm = await detectPackageManager(cwd, manifest, options.useYarn);
+
+		await prepublish(cwd, manifest, !options.prepublish);
+		await versionBump(options, pm);
 
 		if (options.targets) {
 			for (const target of options.targets) {
 				const packagePath = await tmpName();
-				const packageResult = await pack({ ...options, target, packagePath });
+				const packageResult = await pack({ ...options, target, packagePath }, pm);
 				const manifestValidated = validateManifestForPublishing(packageResult.manifest, options);
 				const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
 				await _publish(packagePath, sigzipPath, manifestValidated, { ...options, target });
 			}
 		} else {
 			const packagePath = await tmpName();
-			const packageResult = await pack({ ...options, packagePath });
+			const packageResult = await pack({ ...options, packagePath }, pm);
 			const manifestValidated = validateManifestForPublishing(packageResult.manifest, options);
 			const sigzipPath = options.signTool ? await signPackage(packagePath, options.signTool) : undefined;
 			await _publish(packagePath, sigzipPath, manifestValidated, options);

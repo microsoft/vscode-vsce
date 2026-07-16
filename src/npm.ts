@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
+import type { ManifestPackage } from './manifest';
 
 const exists = (file: string) =>
 	fs.promises.stat(file).then(
@@ -195,28 +196,73 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return [...result];
 }
 
-export async function detectYarn(cwd: string): Promise<boolean> {
-	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
-		if (await exists(path.join(cwd, name))) {
-			if (!process.env['VSCE_TESTS']) {
-				log.info(
-					`Detected presence of ${name}. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).`
-				);
-			}
-			return true;
+/**
+ * Supported package managers for bundlerless extensions.
+ */
+export const supportedRaw = ['npm', 'yarn1'] as ManagerName[]
+
+const YARN = [
+	{ name: 'yarn', files: ['.pnp.cjs', '.yarn/releases'] },
+	{ name: 'yarn1', files: ['yarn.lock'] },
+] as const
+
+const MANAGERS = [
+	...YARN,
+	{ name: 'pnpm', files: ['pnpm-lock.yaml'] },
+	{ name: 'bun',  files: ['bun.lock', 'bun.lockb'] },
+	{ name: 'vlt',  files: ['vlt-lock.json'] },
+	{ name: 'deno', files: ['deno.lock'] },
+	{ name: 'npm', files: ['package-lock.json', 'package.json'] },
+	{ name: 'deno', files: ['deno.json', 'deno.jsonc'] },
+] as const;
+
+export type ManagerName = (typeof MANAGERS)[number]['name'] | string;
+
+export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
+	function finish(name: string): void {
+		if (process.env['VSCE_DEBUG']) {
+			console.log('Package manager:', name);
+
 		}
 	}
-	return false;
+	const m = useYarn ? YARN : care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS;
+	for (const { name } of m) {
+		if (
+			manifest?.devEngines?.packageManager?.name === name ||
+			manifest?.packageManager?.startsWith(`${name}@`)
+		) {
+			finish(name);
+			return name;
+		}
+	}
+
+	for (const mgr of m) {
+		for (const filename of mgr.files) {
+			if (!await exists(path.join(cwd, filename))) {
+				continue;
+			}
+			if (!process.env['VSCE_TESTS'] && supportedRaw.includes(mgr.name)) {
+				const suffix = mgr.name === 'yarn1' || mgr.name === 'yarn'
+					? "instead of 'npm' (to override this pass '--no-yarn' on the command line)."
+					: 'logic.';
+				log.info(`Detected presence of ${filename}. Using '${mgr.name}' ${suffix}`);
+			}
+			finish(mgr.name);
+			return mgr.name;
+		}
+	}
+	finish('null');
+	return null;
 }
 
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'none',
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
 		return [cwd];
-	} else if (dependencies === 'yarn' || (dependencies === undefined && (await detectYarn(cwd)))) {
+	} else if (dependencies === 'yarn') {
 		return await getYarnDependencies(cwd, packagedDependencies);
 	} else {
 		return await getNpmDependencies(cwd);

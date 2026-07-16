@@ -3,7 +3,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import * as cp from 'child_process';
 import * as yazl from 'yazl';
-import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
+import type { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
@@ -13,6 +13,7 @@ import * as cheerio from 'cheerio';
 import * as url from 'url';
 import mime from 'mime';
 import * as semver from 'semver';
+import libnpmversion from 'libnpmversion';
 import urljoin from 'url-join';
 import chalk from 'chalk';
 import {
@@ -23,8 +24,13 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import {
+	detectPackageManager,
+	getDependencies,
+	supportedRaw,
+} from './npm';
 import * as GitHost from 'hosted-git-info';
+import runScript from '@npmcli/run-script';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
@@ -152,6 +158,7 @@ export interface IPackageOptions {
 	readonly useYarn?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
+	readonly prepublish?: boolean;
 	readonly gitHubIssueLinking?: boolean;
 	readonly gitLabIssueLinking?: boolean;
 	readonly dependencies?: boolean;
@@ -378,7 +385,7 @@ export interface IVersionBumpOptions {
 	readonly updatePackageJson?: boolean;
 }
 
-export async function versionBump(options: IVersionBumpOptions): Promise<void> {
+export async function versionBump(options: IVersionBumpOptions, pm?: string | null): Promise<void> {
 	if (!options.version) {
 		return;
 	}
@@ -389,6 +396,10 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = await readManifest(cwd);
+
+	if (pm === undefined) {
+		pm = await detectPackageManager(cwd, manifest, undefined, ['npm', 'bun']);
+	}
 
 	if (manifest.version === options.version) {
 		return;
@@ -411,44 +422,38 @@ export async function versionBump(options: IVersionBumpOptions): Promise<void> {
 			}
 	}
 
-
-	// call `npm version` to do our dirty work
-	const args = ['version', options.version];
-
 	const isWindows = process.platform === 'win32';
 
-	const commitMessage = isWindows ? sanitizeCommitMessage(options.commitMessage) : options.commitMessage;
-	if (commitMessage) {
-		args.push('-m', commitMessage);
+	if (pm === 'bun') {
+		const args = ['pm', 'version', options.version];
+		if (options.commitMessage) {
+			args.push('-m', options.commitMessage);
+		}
+		if (!(options.gitTagVersion ?? true)) {
+			args.push('--no-git-tag-version');
+		}
+
+		await promisify(cp.execFile)('bun', args, {
+			cwd,
+			shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */
+		});
+		return;
 	}
 
-	if (!(options.gitTagVersion ?? true)) {
-		args.push('--no-git-tag-version');
+	try {
+		await libnpmversion(options.version, {
+			path: cwd,
+			message: options.commitMessage ?? 'v%s',
+			gitTagVersion: options.gitTagVersion ?? true,
+			force: false,
+			allowSameVersion: false,
+		});
+	} catch (err: any) {
+		let ignore = err.message?.includes('not a git repository') &&
+			(options.gitTagVersion ?? true) === true && options.commitMessage !== undefined
+		if (ignore) return;
+		throw err;
 	}
-
-	const { stdout, stderr } = await promisify(cp.execFile)(isWindows ? 'npm.cmd' : 'npm', args, { cwd, shell: isWindows /* https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2 */ });
-	if (!process.env['VSCE_TESTS']) {
-		process.stdout.write(stdout);
-		process.stderr.write(stderr);
-	}
-}
-
-function sanitizeCommitMessage(message?: string): string | undefined {
-	if (!message) {
-		return undefined;
-	}
-
-	// Remove any unsafe characters found by the unsafeRegex
-	// Check for characters that might escape quotes or introduce shell commands.
-	// Don't allow: ', ", `, $, \ (except for \n which is allowed)
-	const sanitizedMessage = message.replace(/(?<!\\)\\(?!n)|['"`$]/g, '');
-
-	if (sanitizedMessage.length === 0) {
-		return undefined;
-	}
-
-	// Add quotes as commit message is passed as a single argument to the shell
-	return `"${sanitizedMessage}"`;
 }
 
 export const Targets = new Set([
@@ -1667,103 +1672,113 @@ const defaultIgnore = [
 
 async function collectAllFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: 'npm' | 'yarn' | 'none',
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
+		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: ['node_modules/**', ".git/**"] }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
 		)
 	);
-
-	return Promise.all(promises).then(util.flatten);
+	const files = (await Promise.all(promises)).flat();
+	return files;
 }
 
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+async function getDependenciesOption(options: IPackageOptions, pm: string | null): Promise<'npm' | 'yarn' | 'none'> {
 	if (options.dependencies === false) {
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (options.dependencies is false)');
 		return 'none';
 	}
 
-	switch (options.useYarn) {
-		case true:
-			return 'yarn';
-		case false:
-			return 'npm';
-		default:
-			return undefined;
+	const cwd = options.cwd || process.cwd()
+	const isNodeModulesExist = fs.existsSync(path.join(cwd, "node_modules"))
+	if (!isNodeModulesExist) {
+		if (options.dependencies) {
+			util.log.warn("Dependencies are enabled, but node_modules is missing.")
+		}
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (node_modules directory does not exist)');
+		return 'none'
 	}
+
+	const isUnsupported = !supportedRaw.includes(pm as any);
+	if (isUnsupported && options.dependencies === undefined) {
+		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (can not include node_modules correctly)');
+		return 'none'
+	};
+
+	const useYarn = options.useYarn ?? pm === 'yarn1';
+	const depOption = useYarn ? 'yarn' : 'npm';
+	if (process.env['VSCE_DEBUG']) console.log('Dep option:', depOption);
+	return depOption;
 }
 
-function collectFiles(
+async function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	manifest: ManifestPackage,
+	dependencies: 'npm' | 'yarn' | 'none',
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
-	manifestFileIncludes?: string[],
 	readmePath?: string,
 	followSymlinks: boolean = false
 ): Promise<string[]> {
+	const manifestFileIncludes = manifest?.files;
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
-	return collectAllFiles(cwd, dependencies, dependencyEntryPoints, followSymlinks).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+	let rawIgnore = '';
+	try {
+		rawIgnore = await fs.promises.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8');
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
+		if (ignoreFile) throw err; // No .vscodeignore file exists
+		// include all files in manifestFileIncludes and ignore the rest
+		if(manifestFileIncludes) {
+			rawIgnore = manifestFileIncludes
+				.map(file => `!${file}`)
+				.concat(['**'])
+				.join('\n\r')
+		}
+		// otherwise "files" property not used in package.json
+	}
 
-		return (
-			fs.promises
-				.readFile(ignoreFile ? ignoreFile : path.join(cwd, '.vscodeignore'), 'utf8')
-				.catch<string>(err =>
-					err.code !== 'ENOENT' ?
-						Promise.reject(err) :
-						ignoreFile ?
-							Promise.reject(err) :
-							// No .vscodeignore file exists
-							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
-								// "files" property not used in package.json
-								Promise.resolve('')
-				)
+	// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
+	let i = rawIgnore
+		.split(/[\n\r]/)
+		.map(s => s.trim())
+		.filter(s => !!s)
+		.filter(i => !/^\s*#/.test(i))
 
-				// Parse raw ignore by splitting output into lines and filtering out empty lines and comments
-				.then(rawIgnore =>
-					rawIgnore
-						.split(/[\n\r]/)
-						.map(s => s.trim())
-						.filter(s => !!s)
-						.filter(i => !/^\s*#/.test(i))
-				)
+	// Add '/**' to possible folder names
+	// Combine with default ignore list
+	i = [
+		...defaultIgnore,
+		...i,
+		...i.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
+		...notIgnored,
+	]
 
-				// Add '/**' to possible folder names
-				.then(ignore => [
-					...ignore,
-					...ignore.filter(i => !/(^|\/)[^/]*\*[^/]*$/.test(i)).map(i => (/\/$/.test(i) ? `${i}**` : `${i}/**`)),
-				])
+	const hasNM = () => i.some(j => j.includes("node_modules") && !j.startsWith("!"))
+	const isNMIgnored = dependencies === 'none' || hasNM();
+	if (process.env['VSCE_DEBUG'] && hasNM()) {
+		console.log("node_modules directory is ignored by the ignore list.")
+	}
 
-				// Combine with default ignore list
-				.then(ignore => [...defaultIgnore, ...ignore, ...notIgnored])
+	// Split into ignore and negate list
+	const [ignore, negate] = i.reduce<[string[], string[]]>(
+		(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e.substring(1)]]),
+		[[], []]
+	)
 
-				// Split into ignore and negate list
-				.then(ignore =>
-					ignore.reduce<[string[], string[]]>(
-						(r, e) => (!/^\s*!/.test(e) ? [[...r[0], e], r[1]] : [r[0], [...r[1], e]]),
-						[[], []]
-					)
-				)
-				.then(r => ({ ignore: r[0], negate: r[1] }))
+	const files = (await collectAllFiles(cwd, isNMIgnored ? 'none' : dependencies, dependencyEntryPoints, followSymlinks))
+	.filter(f => !/\r$/m.test(f));
 
-				// Filter out files
-				.then(({ ignore, negate }) =>
-					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), minimatchOptions))
-					)
-				)
-		);
-	});
+	return files.filter(
+		f =>
+			!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
+			negate.some(i => minimatch(f, i, minimatchOptions))
+	);
 }
 
 export function processFiles(processors: IProcessor[], files: IFile[]): Promise<IFile[]> {
@@ -1809,13 +1824,15 @@ export function createDefaultProcessors(manifest: ManifestPackage, options: IPac
 	];
 }
 
-export function collect(manifest: ManifestPackage, options: IPackageOptions = {}): Promise<IFile[]> {
+export async function collect(manifest: ManifestPackage, options: IPackageOptions = {}, pm?: string | null): Promise<IFile[]> {
 	const cwd = options.cwd || process.cwd();
 	const packagedDependencies = options.dependencyEntryPoints || undefined;
 	const ignoreFile = options.ignoreFile || undefined;
 	const processors = createDefaultProcessors(manifest, options);
 
-	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath, options.followSymlinks).then(fileNames => {
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
+
+	return collectFiles(cwd, manifest, await getDependenciesOption(options, pm), packagedDependencies, ignoreFile, options.readmePath, options.followSymlinks).then(fileNames => {
 		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
 
 		return processFiles(processors, files);
@@ -1871,26 +1888,18 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
-	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
+export async function prepublish(cwd: string, manifest: ManifestPackage, ignoreScripts = false): Promise<void> {
+	if (!manifest.scripts || !manifest.scripts['vscode:prepublish'] || ignoreScripts) {
 		return;
 	}
 
-	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd);
-	}
+	console.log(`Executing prepublish script '${manifest.scripts['vscode:prepublish']}'...`);
 
-	const tool = useYarn ? 'yarn' : 'npm';
-	const prepublish = `${tool} run vscode:prepublish`;
-
-	console.log(`Executing prepublish script '${prepublish}'...`);
-
-	await new Promise<void>((c, e) => {
-		// Use string command to avoid Node.js DEP0190 warning (args + shell: true is deprecated).
-		const child = cp.spawn(prepublish, { cwd, shell: true, stdio: 'inherit' });
-		child.on('exit', code => (code === 0 ? c() : e(`${tool} failed with exit code ${code}`)));
-		child.on('error', e);
-	});
+	await runScript({
+		event: 'vscode:prepublish',
+		path: cwd,
+		stdio: 'inherit'
+	})
 }
 
 async function getPackagePath(cwd: string, manifest: ManifestPackage, options: IPackageOptions = {}): Promise<string> {
@@ -1911,10 +1920,12 @@ async function getPackagePath(cwd: string, manifest: ManifestPackage, options: I
 	}
 }
 
-export async function pack(options: IPackageOptions = {}): Promise<IPackageResult> {
+export async function pack(options: IPackageOptions = {}, pm?: string | null): Promise<IPackageResult> {
 	const cwd = options.cwd || process.cwd();
 	const manifest = await readManifest(cwd);
-	const files = await collect(manifest, options);
+
+	if (pm === undefined) pm = await detectPackageManager(cwd, manifest, options.useYarn, supportedRaw);
+	const files = await collect(manifest, options, pm);
 
 	await printAndValidatePackagedFiles(files, cwd, manifest, options);
 
@@ -1986,10 +1997,12 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
-	await prepublish(cwd, manifest, options.useYarn);
-	await versionBump(options);
+	// cares yarn: only yarn and npm deps are supported
+	const pm = await detectPackageManager(cwd, manifest, options.useYarn)
+	await prepublish(cwd, manifest, !options.prepublish);
 
-	const { packagePath, files } = await pack(options);
+	await versionBump(options, pm);
+	const { packagePath, files } = await pack(options, pm);
 
 	if (options.signTool) {
 		await signPackage(packagePath, options.signTool);
@@ -2015,15 +2028,12 @@ export interface IListFilesOptions {
 /**
  * Lists the files included in the extension's package.
  */
-export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+export async function listFiles(options: IListFilesOptions = {}, pm: string | null): Promise<string[]> {
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = options.manifest ?? await readManifest(cwd);
+	await prepublish(cwd, manifest, !options.prepublish);
 
-	if (options.prepublish) {
-		await prepublish(cwd, manifest, options.useYarn);
-	}
-
-	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath, options.followSymlinks);
+	return await collectFiles(cwd, manifest, await getDependenciesOption(options, pm), options.packagedDependencies, options.ignoreFile, options.readmePath, options.followSymlinks);
 }
 
 interface ILSOptions {
@@ -2043,7 +2053,9 @@ export async function ls(options: ILSOptions = {}): Promise<void> {
 	const cwd = process.cwd();
 	const manifest = await readManifest(cwd);
 
-	const files = await listFiles({ ...options, cwd, manifest });
+	const pm = await detectPackageManager(cwd, manifest, options.useYarn);
+
+	const files = await listFiles({ ...options, cwd, manifest }, pm);
 
 	if (options.tree) {
 		const printableFileStructure = await util.generateFileStructureTree(
