@@ -213,18 +213,25 @@ const MANAGERS = [
 	{ name: 'vlt',  files: ['vlt-lock.json'] },
 	{ name: 'deno', files: ['deno.lock'] },
 	{ name: 'npm', files: ['package-lock.json', 'package.json'] },
+	{ name: 'deno', files: ['deno.json', 'deno.jsonc'] },
 ] as const;
 
 export type ManagerName = (typeof MANAGERS)[number]['name'] | string;
 
 export async function detectPackageManager(cwd: string, manifest: ManifestPackage, useYarn: boolean | undefined, care?: ManagerName[]): Promise<string | null> {
+	function finish(name: string): void {
+		if (process.env['VSCE_DEBUG']) {
+			console.log('Package manager:', name);
+
+		}
+	}
 	const m = useYarn ? YARN : care ? MANAGERS.filter(({name}) => care.includes(name)) : MANAGERS;
 	for (const { name } of m) {
 		if (
 			manifest?.devEngines?.packageManager?.name === name ||
 			manifest?.packageManager?.startsWith(`${name}@`)
 		) {
-			if (process.env['VSCE_DEBUG']) console.log('Package manager:', name);
+			finish(name);
 			return name;
 		}
 	}
@@ -234,18 +241,17 @@ export async function detectPackageManager(cwd: string, manifest: ManifestPackag
 			if (!await exists(path.join(cwd, filename))) {
 				continue;
 			}
-			if (!process.env['VSCE_TESTS']) {
+			if (!process.env['VSCE_TESTS'] && supportedRaw.includes(mgr.name)) {
 				const suffix = mgr.name === 'yarn1' || mgr.name === 'yarn'
-					? " instead of 'npm' (to override this pass '--no-yarn' on the command line)."
-					: ' logic.';
-				log.info(`Detected presence of ${filename}. Using '${mgr.name}'${suffix}`);
+					? "instead of 'npm' (to override this pass '--no-yarn' on the command line)."
+					: 'logic.';
+				log.info(`Detected presence of ${filename}. Using '${mgr.name}' ${suffix}`);
 			}
-			if (process.env['VSCE_DEBUG']) console.log('Package manager:', mgr.name);
+			finish(mgr.name);
 			return mgr.name;
 		}
 	}
-
-	if (process.env['VSCE_DEBUG']) console.log('Package manager: null');
+	finish('null');
 	return null;
 }
 

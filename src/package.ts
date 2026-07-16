@@ -1695,15 +1695,15 @@ async function getDependenciesOption(options: IPackageOptions, pm: string | null
 	const cwd = options.cwd || process.cwd()
 	const isNodeModulesExist = fs.existsSync(path.join(cwd, "node_modules"))
 	if (!isNodeModulesExist) {
+		if (options.dependencies) {
+			util.log.warn("Dependencies are enabled, but node_modules is missing.")
+		}
 		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (node_modules directory does not exist)');
 		return 'none'
 	}
 
 	const isUnsupported = !supportedRaw.includes(pm as any);
-	if (isUnsupported) {
-		if (options.dependencies) {
-			util.log.warn("You are trying to pack node_modules. Disable 'dependencies' while using foreign package managers. See https://code.visualstudio.com/api/working-with-extensions/bundling-extension.")
-		}
+	if (isUnsupported && options.dependencies === undefined) {
 		if (process.env['VSCE_DEBUG']) console.log('Dep option:', 'none (can not include node_modules correctly)');
 		return 'none'
 	};
