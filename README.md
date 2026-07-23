@@ -58,6 +58,31 @@ Or you can also set them in the `package.json`, so that you avoid having to rety
 }
 ```
 
+### Trusted publishing
+
+`vsce publish --oidc` publishes from GitHub Actions without storing a Personal Access Token. Configure a trusted
+publishing policy for the repository and workflow on the Visual Studio Marketplace, then grant the workflow permission
+to request an OIDC token:
+
+```yaml
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx @vscode/vsce publish --oidc
+```
+
+OIDC publishing requests a GitHub Actions token for the `marketplace.visualstudio.com` audience and exchanges it for a
+short-lived Marketplace credential. It does not fall back to a PAT when token acquisition or exchange fails.
+
 ## Development
 
 First clone this repository, then:
