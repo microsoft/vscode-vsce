@@ -62,12 +62,106 @@ async function checkNPM(cancellationToken?: CancellationToken): Promise<void> {
 	}
 }
 
+async function mapSymlinkedDependencies(cwd: string, deps: string[]): Promise<string[]> {
+	// Build two maps:
+	// 1. resolved target → symlink path (for direct symlinks)
+	// 2. resolved target → symlink path (for prefix matching nested deps)
+	const symlinkMap = new Map<string, string>();
+	const targetMap = new Map<string, string>(); // for prefix-based replacement
+	const nodeModulesBase = path.join(cwd, 'node_modules');
+
+	try {
+		// Scan for symlinks at the top level
+		const entries = await fs.promises.readdir(nodeModulesBase, { withFileTypes: true });
+		for (const entry of entries) {
+			const fullPath = path.join(nodeModulesBase, entry.name);
+			
+			// Check scoped packages
+			if (entry.isDirectory() && entry.name.startsWith('@')) {
+				try {
+					const scopedEntries = await fs.promises.readdir(fullPath, { withFileTypes: true });
+					for (const scopedEntry of scopedEntries) {
+						const scopedPath = path.join(fullPath, scopedEntry.name);
+						if (scopedEntry.isSymbolicLink()) {
+							try {
+								const target = await fs.promises.realpath(scopedPath);
+								symlinkMap.set(target, scopedPath);
+								targetMap.set(target, scopedPath);
+							} catch (e) {
+								// ignore broken symlinks
+							}
+						}
+					}
+				} catch (e) {
+					// ignore unreadable scoped dirs
+				}
+			} else if (entry.isSymbolicLink()) {
+				try {
+					const target = await fs.promises.realpath(fullPath);
+					symlinkMap.set(target, fullPath);
+					targetMap.set(target, fullPath);
+				} catch (e) {
+					// ignore broken symlinks
+				}
+			}
+		}
+	} catch (e) {
+		// ignore if node_modules doesn't exist
+	}
+
+	// Map each dependency: check direct symlink match, or prefix match for nested deps
+	const mapped = deps.map(dep => {
+		// Direct match
+		if (symlinkMap.has(dep)) {
+			return symlinkMap.get(dep)!;
+		}
+		
+		// Prefix match: if dep is inside a known symlink target, replace the prefix
+		for (const [target, symlink] of targetMap) {
+			if (dep.startsWith(target + path.sep)) {
+				const suffix = dep.slice((target + path.sep).length);
+				return path.join(symlink, suffix);
+			}
+		}
+		
+		return dep;
+	});
+
+	// Deduplicate: remove dependencies that are nested within another dependency's node_modules
+	// Only apply deduplication if we found symlinks, otherwise return mapped deps as-is
+	if (symlinkMap.size === 0) {
+		return mapped;
+	}
+
+	const sorted = mapped.sort();
+	const result = [];
+	for (const dep of sorted) {
+		// Check if this dep is inside any already-added dependency's node_modules
+		let isNested = false;
+		for (const existing of result) {
+			// Only consider it nested if the existing dep is a package (contains /node_modules/)
+			// and dep is inside that package's node_modules
+			if (existing.includes('/node_modules/') || existing.includes(path.sep + 'node_modules' + path.sep)) {
+				const nestedPath = path.join(existing, 'node_modules');
+				if (dep.startsWith(nestedPath + path.sep)) {
+					isNested = true;
+					break;
+				}
+			}
+		}
+		if (!isNested) {
+			result.push(dep);
+		}
+	}
+	
+	return result;
+}
+
 function getNpmDependencies(cwd: string): Promise<string[]> {
 	return checkNPM()
-		.then(() =>
-			exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 })
-		)
-		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir)));
+		.then(() => exec('npm list --production --parseable --depth=99999 --loglevel=error', { cwd, maxBuffer: 5000 * 1024 }))
+		.then(({ stdout }) => stdout.split(/[\r\n]/).filter(dir => path.isAbsolute(dir)))
+		.then(deps => mapSymlinkedDependencies(cwd, deps));
 }
 
 interface YarnTreeNode {
@@ -192,7 +286,7 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	};
 	deps.forEach(flatten);
 
-	return [...result];
+	return mapSymlinkedDependencies(cwd, [...result]);
 }
 
 export async function detectYarn(cwd: string): Promise<boolean> {

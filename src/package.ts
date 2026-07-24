@@ -1672,11 +1672,13 @@ async function collectAllFiles(
 	followSymlinks: boolean = true
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
-	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
+	const promises = deps.map((dep, index) => {
+		// Always follow symlinks for dependencies (e.g., npm link), but respect
+		// the followSymlinks option for the root package (index 0).
+		return glob('**', { cwd: dep, nodir: true, follow: index > 0 || followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
 			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-		)
-	);
+		);
+	});
 
 	return Promise.all(promises).then(util.flatten);
 }
