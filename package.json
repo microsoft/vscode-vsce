@@ -60,7 +60,6 @@
 		"minimatch": "^10.2.2",
 		"parse-semver": "^1.1.1",
 		"read": "^1.0.7",
-		"secretlint": "^10.1.2",
 		"semver": "^7.5.2",
 		"tmp": "^0.2.3",
 		"typed-rest-client": "^1.8.4",
