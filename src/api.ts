@@ -1,5 +1,5 @@
 import { publish as _publish, IPublishOptions, unpublish as _unpublish, IUnpublishOptions } from './publish';
-import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
+import { packageCommand, listFileEntries as _listFileEntries, listFiles as _listFiles, IListFile, IPackageOptions } from './package';
 
 /**
  * @deprecated prefer IPackageOptions instead
@@ -23,6 +23,7 @@ export type ICreateVSIXOptions = Pick<IPackageOptions, 'cwd' | 'packagePath'> & 
 export enum PackageManager {
 	Npm,
 	Yarn,
+	Pnpm,
 	None,
 }
 
@@ -56,7 +57,7 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export type { IPackageOptions } from './package';
+export type { IListFile, IPackageOptions } from './package';
 
 /**
  * Creates a VSIX from the extension in the current working directory.
@@ -84,6 +85,21 @@ export function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
 	return _listFiles({
 		...options,
 		useYarn: options.packageManager === PackageManager.Yarn,
+		usePnpm: options.packageManager === PackageManager.Pnpm,
+		dependencies: options.packageManager !== PackageManager.None,
+	});
+}
+
+/**
+ * Lists files included in an extension package together with their physical
+ * source paths.
+ * @public
+ */
+export function listFileEntries(options: IListFilesOptions = {}): Promise<IListFile[]> {
+	return _listFileEntries({
+		...options,
+		useYarn: options.packageManager === PackageManager.Yarn,
+		usePnpm: options.packageManager === PackageManager.Pnpm,
 		dependencies: options.packageManager !== PackageManager.None,
 	});
 }

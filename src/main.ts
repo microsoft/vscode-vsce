@@ -70,6 +70,7 @@ module.exports = function (argv: string[]): void {
 		.option('--tree', 'Prints the files in a tree format', false)
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
+		.option('--pnpm', 'Use pnpm instead of npm')
 		.option<string[]>(
 			'--packagedDependencies <path>',
 			'Select packages that should be published only (includes dependencies)',
@@ -78,12 +79,12 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
-		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
+		.option('--dependencies', 'Enable dependency detection via npm, yarn, or pnpm', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm, yarn, or pnpm', undefined)
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
-		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
-			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
+		.action(({ tree, yarn, pnpm, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
+			main(ls({ tree, useYarn: yarn, usePnpm: pnpm, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
 		);
 
 	program
@@ -114,12 +115,13 @@ module.exports = function (argv: string[]): void {
 		.option('--baseImagesUrl <url>', 'Prepend all relative image links in README.md with the specified URL.')
 		.option('--yarn', 'Use yarn instead of npm (default inferred from presence of yarn.lock or .yarnrc)')
 		.option('--no-yarn', 'Use npm instead of yarn (default inferred from absence of yarn.lock or .yarnrc)')
+		.option('--pnpm', 'Use pnpm instead of npm')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
-		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
-		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
+		.option('--dependencies', 'Enable dependency detection via npm, yarn, or pnpm', undefined)
+		.option('--no-dependencies', 'Disable dependency detection via npm, yarn, or pnpm', undefined)
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
 		.option('--allow-missing-repository', 'Allow missing a repository URL in package.json')
@@ -148,6 +150,7 @@ module.exports = function (argv: string[]): void {
 					baseContentUrl,
 					baseImagesUrl,
 					yarn,
+					pnpm,
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
@@ -181,6 +184,7 @@ module.exports = function (argv: string[]): void {
 						baseContentUrl,
 						baseImagesUrl,
 						useYarn: yarn,
+						usePnpm: pnpm,
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,

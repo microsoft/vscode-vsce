@@ -23,7 +23,7 @@ import {
 	validatePublisher,
 	validateExtensionDependencies,
 } from './validation';
-import { detectYarn, getDependencies } from './npm';
+import { DependencyPath, detectPnpm, detectYarn, getDependencies, getPnpmDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
 import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
@@ -150,6 +150,10 @@ export interface IPackageOptions {
 	 * Should use Yarn instead of NPM.
 	 */
 	readonly useYarn?: boolean;
+	/**
+	 * Should use pnpm instead of npm.
+	 */
+	readonly usePnpm?: boolean;
 	readonly dependencyEntryPoints?: string[];
 	readonly ignoreFile?: string;
 	readonly gitHubIssueLinking?: boolean;
@@ -1633,6 +1637,8 @@ export async function toContentTypes(files: IFile[]): Promise<string> {
 const defaultIgnore = [
 	'.vscodeignore',
 	'package-lock.json',
+	'pnpm-lock.yaml',
+	'pnpm-workspace.yaml',
 	'npm-debug.log',
 	'yarn.lock',
 	'yarn-error.log',
@@ -1665,25 +1671,54 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
+interface DependencyFile {
+	path: string;
+	localPath: string;
+}
+
+/** @public */
+export interface IListFile {
+	readonly path: string;
+	readonly localPath: string;
+}
+
 async function collectAllFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: import('./npm').PackageManager | undefined,
 	dependencyEntryPoints?: string[],
 	followSymlinks: boolean = true
-): Promise<string[]> {
-	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
+	): Promise<DependencyFile[]> {
+	let packageManager = dependencies;
+	if (packageManager === undefined) {
+		packageManager = await detectYarn(cwd) ? 'yarn' : await detectPnpm(cwd) ? 'pnpm' : 'npm';
+	}
+	const deps: DependencyPath[] = packageManager === 'pnpm'
+		? await getPnpmDependencies(cwd, dependencyEntryPoints)
+		: (await getDependencies(cwd, packageManager, dependencyEntryPoints)).map(localPath => ({
+			localPath,
+			path: path.relative(cwd, localPath).replace(/\\/g, '/'),
+		}));
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
-			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
+		glob('**', { cwd: dep.localPath, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
+			files.map(file => ({
+				path: path.posix.join(dep.path, file.replace(/\\/g, '/')),
+				localPath: path.join(dep.localPath, file),
+			}))
 		)
 	);
 
 	return Promise.all(promises).then(util.flatten);
 }
 
-function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
+function getDependenciesOption(options: IPackageOptions): import('./npm').PackageManager | undefined {
 	if (options.dependencies === false) {
 		return 'none';
+	}
+	if (options.useYarn && options.usePnpm) {
+		throw new Error('Cannot use both yarn and pnpm.');
+	}
+	if (options.usePnpm) {
+		return 'pnpm';
 	}
 
 	switch (options.useYarn) {
@@ -1698,18 +1733,18 @@ function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none
 
 function collectFiles(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: import('./npm').PackageManager | undefined,
 	dependencyEntryPoints?: string[],
 	ignoreFile?: string,
 	manifestFileIncludes?: string[],
 	readmePath?: string,
 	followSymlinks: boolean = false
-): Promise<string[]> {
+	): Promise<DependencyFile[]> {
 	readmePath = readmePath ?? 'README.md';
 	const notIgnored = ['!package.json', `!${readmePath}`];
 
 	return collectAllFiles(cwd, dependencies, dependencyEntryPoints, followSymlinks).then(files => {
-		files = files.filter(f => !/\r$/m.test(f));
+		files = files.filter(file => !/\r$/m.test(file.path));
 
 		return (
 			fs.promises
@@ -1757,9 +1792,9 @@ function collectFiles(
 				// Filter out files
 				.then(({ ignore, negate }) =>
 					files.filter(
-						f =>
-							!ignore.some(i => minimatch(f, i, minimatchOptions)) ||
-							negate.some(i => minimatch(f, i.substr(1), minimatchOptions))
+						file =>
+							!ignore.some(i => minimatch(file.path, i, minimatchOptions)) ||
+							negate.some(i => minimatch(file.path, i.substr(1), minimatchOptions))
 					)
 				)
 		);
@@ -1816,7 +1851,7 @@ export function collect(manifest: ManifestPackage, options: IPackageOptions = {}
 	const processors = createDefaultProcessors(manifest, options);
 
 	return collectFiles(cwd, getDependenciesOption(options), packagedDependencies, ignoreFile, manifest.files, options.readmePath, options.followSymlinks).then(fileNames => {
-		const files = fileNames.map(f => ({ path: util.filePathToVsixPath(f), localPath: path.join(cwd, f) }));
+		const files = fileNames.map(file => ({ path: util.filePathToVsixPath(file.path), localPath: file.localPath }));
 
 		return processFiles(processors, files);
 	});
@@ -1871,16 +1906,20 @@ function getDefaultPackageName(manifest: ManifestPackage, options: IPackageOptio
 	return `${manifest.name}-${version}.vsix`;
 }
 
-export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean): Promise<void> {
+export async function prepublish(cwd: string, manifest: ManifestPackage, useYarn?: boolean, usePnpm?: boolean): Promise<void> {
 	if (!manifest.scripts || !manifest.scripts['vscode:prepublish']) {
 		return;
 	}
-
-	if (useYarn === undefined) {
-		useYarn = await detectYarn(cwd);
+	if (useYarn && usePnpm) {
+		throw new Error('Cannot use both yarn and pnpm.');
 	}
 
-	const tool = useYarn ? 'yarn' : 'npm';
+	if (useYarn === undefined && usePnpm === undefined) {
+		useYarn = await detectYarn(cwd);
+		usePnpm = !useYarn && await detectPnpm(cwd);
+	}
+
+	const tool = useYarn ? 'yarn' : usePnpm ? 'pnpm' : 'npm';
 	const prepublish = `${tool} run vscode:prepublish`;
 
 	console.log(`Executing prepublish script '${prepublish}'...`);
@@ -1986,7 +2025,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 	const manifest = await readManifest(cwd);
 	util.patchOptionsWithManifest(options, manifest);
 
-	await prepublish(cwd, manifest, options.useYarn);
+	await prepublish(cwd, manifest, options.useYarn, options.usePnpm);
 	await versionBump(options);
 
 	const { packagePath, files } = await pack(options);
@@ -2004,6 +2043,7 @@ export interface IListFilesOptions {
 	readonly cwd?: string;
 	readonly manifest?: ManifestPackage;
 	readonly useYarn?: boolean;
+	readonly usePnpm?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;
@@ -2016,11 +2056,19 @@ export interface IListFilesOptions {
  * Lists the files included in the extension's package.
  */
 export async function listFiles(options: IListFilesOptions = {}): Promise<string[]> {
+	return (await listFileEntries(options)).map(file => file.path);
+}
+
+/**
+ * Lists the files included in the extension's package together with their
+ * physical source paths.
+ */
+export async function listFileEntries(options: IListFilesOptions = {}): Promise<IListFile[]> {
 	const cwd = options.cwd ?? process.cwd();
 	const manifest = options.manifest ?? await readManifest(cwd);
 
 	if (options.prepublish) {
-		await prepublish(cwd, manifest, options.useYarn);
+		await prepublish(cwd, manifest, options.useYarn, options.usePnpm);
 	}
 
 	return await collectFiles(cwd, getDependenciesOption(options), options.packagedDependencies, options.ignoreFile, manifest.files, options.readmePath, options.followSymlinks);
@@ -2029,6 +2077,7 @@ export async function listFiles(options: IListFilesOptions = {}): Promise<string
 interface ILSOptions {
 	readonly tree?: boolean;
 	readonly useYarn?: boolean;
+	readonly usePnpm?: boolean;
 	readonly packagedDependencies?: string[];
 	readonly ignoreFile?: string;
 	readonly dependencies?: boolean;

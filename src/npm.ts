@@ -20,6 +20,8 @@ interface IOptions {
 	killSignal?: string;
 }
 
+export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'none';
+
 function parseStdout({ stdout }: { stdout: string }): string {
 	return stdout.split(/[\r\n]/).filter(line => !!line)[0];
 }
@@ -195,6 +197,79 @@ async function getYarnDependencies(cwd: string, packagedDependencies?: string[])
 	return [...result];
 }
 
+export interface PnpmDependency {
+	name?: string;
+	from?: string;
+	path: string;
+	dependencies?: Record<string, PnpmDependency>;
+}
+
+export interface DependencyPath {
+	localPath: string;
+	path: string;
+}
+
+export function getPnpmDependencyPaths(roots: PnpmDependency[], packagedDependencies?: string[]): DependencyPath[] {
+	if (roots.length !== 1) {
+		throw new Error(`Expected pnpm to return one project, received ${roots.length}.`);
+	}
+
+	const root = roots[0];
+	const result: DependencyPath[] = [{ localPath: root.path, path: '' }];
+	const seen = new Set<string>();
+	const visit = (name: string, dependency: PnpmDependency, destination: string): void => {
+		const dependencyPath = path.posix.join(destination, 'node_modules', name);
+		const key = `${dependency.path}\0${dependencyPath}`;
+		if (seen.has(key)) {
+			return;
+		}
+		seen.add(key);
+		result.push({ localPath: dependency.path, path: dependencyPath });
+		for (const [childName, child] of Object.entries(dependency.dependencies ?? {})) {
+			visit(childName, child, dependencyPath);
+		}
+	};
+
+	if (packagedDependencies) {
+		for (const name of packagedDependencies) {
+			const dependency = root.dependencies?.[name];
+			if (!dependency) {
+				throw new Error(`Could not find dependency: ${name}`);
+			}
+			visit(name, dependency, '');
+		}
+	} else {
+		for (const [name, dependency] of Object.entries(root.dependencies ?? {})) {
+			visit(name, dependency, '');
+		}
+	}
+
+	return [...result];
+}
+
+export async function getPnpmDependencies(cwd: string, packagedDependencies?: string[]): Promise<DependencyPath[]> {
+	const args = ['list', '--prod', '--json', '--depth', 'Infinity', '--filter', '.'];
+	let result = cp.spawnSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', args, {
+		cwd,
+		encoding: 'utf8',
+		maxBuffer: 5000 * 1024,
+	});
+	if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
+		result = cp.spawnSync(process.platform === 'win32' ? 'corepack.cmd' : 'corepack', ['pnpm', ...args], {
+			cwd,
+			encoding: 'utf8',
+			maxBuffer: 5000 * 1024,
+		});
+	}
+	if (result.error) {
+		throw result.error;
+	}
+	if (result.status !== 0) {
+		throw new Error(`pnpm list failed with exit code ${result.status}: ${result.stderr}`);
+	}
+	return getPnpmDependencyPaths(JSON.parse(result.stdout) as PnpmDependency[], packagedDependencies);
+}
+
 export async function detectYarn(cwd: string): Promise<boolean> {
 	for (const name of ['yarn.lock', '.yarnrc', '.yarnrc.yaml', '.pnp.cjs', '.yarn']) {
 		if (await exists(path.join(cwd, name))) {
@@ -209,9 +284,13 @@ export async function detectYarn(cwd: string): Promise<boolean> {
 	return false;
 }
 
+export async function detectPnpm(cwd: string): Promise<boolean> {
+	return await exists(path.join(cwd, 'pnpm-lock.yaml'));
+}
+
 export async function getDependencies(
 	cwd: string,
-	dependencies: 'npm' | 'yarn' | 'none' | undefined,
+	dependencies: Exclude<PackageManager, 'pnpm'> | undefined,
 	packagedDependencies?: string[]
 ): Promise<string[]> {
 	if (dependencies === 'none') {
