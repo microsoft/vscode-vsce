@@ -108,6 +108,11 @@ export interface ManifestPackage {
 	private?: boolean;
 	pricing?: string;
 	files?: string[];
+	packageManager?: string;
+	devEngines?: { packageManager?: {
+		name?: string; version?: string;
+		onFail: "error" | "warn" | "ignore"
+	} };
 
 	// vsce
 	vsce?: any;
