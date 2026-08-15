@@ -211,6 +211,11 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
+		.addOption(
+			new Option('--oidc', 'Use OpenID Connect trusted publishing for authentication')
+				.conflicts(['pat', 'azureCredential'])
+				.hideHelp(true)
+		)
 		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
@@ -263,6 +268,7 @@ module.exports = function (argv: string[]): void {
 				{
 					pat,
 					azureCredential,
+					oidc,
 					target,
 					ignoreOtherTargetFolders,
 					readmePath,
@@ -301,8 +307,9 @@ module.exports = function (argv: string[]): void {
 			) =>
 				main(
 					publish({
-						pat,
+						pat: oidc ? undefined : pat,
 						azureCredential,
+						oidc,
 						version,
 						targets: target,
 						ignoreOtherTargetFolders,

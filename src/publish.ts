@@ -4,7 +4,7 @@ import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump, prepublish, signPackage, createSignatureArchive } from './package';
 import * as tmp from 'tmp';
-import { IVerifyPatOptions, getPublisher } from './store';
+import { getPublisher } from './store';
 import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
 import { ManifestPackage, ManifestPublish } from './manifest';
 import { readVSIXPackage } from './zip';
@@ -15,6 +15,7 @@ import { basename } from 'path';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
 import { detectPackageManager } from './npm';
+import { getOIDCCredential } from './oidc';
 
 const tmpName = promisify(tmp.tmpName);
 
@@ -72,6 +73,10 @@ export interface IPublishOptions {
 	 */
 	readonly pat?: string;
 	readonly azureCredential?: boolean;
+	/**
+	 * Use OpenID Connect trusted publishing to acquire a short-lived Marketplace credential.
+	 */
+	readonly oidc?: boolean;
 	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
@@ -93,7 +98,11 @@ export interface IPublishOptions {
 	readonly signTool?: string;
 }
 
+type AuthenticationOptions = Pick<IPublishOptions, 'pat' | 'azureCredential' | 'oidc'>;
+
 export async function publish(options: IPublishOptions = {}): Promise<any> {
+	validateAuthenticationOptions(options);
+
 	if (options.packagePath) {
 		if (options.version) {
 			throw new Error(`Both options not supported simultaneously: 'packagePath' and 'version'.`);
@@ -188,6 +197,8 @@ export async function publish(options: IPublishOptions = {}): Promise<any> {
 export interface IInternalPublishOptions {
 	readonly target?: string;
 	readonly pat?: string;
+	readonly azureCredential?: boolean;
+	readonly oidc?: boolean;
 	readonly allowProposedApi?: boolean;
 	readonly noVerify?: boolean;
 	readonly allowProposedApis?: string[];
@@ -359,7 +370,13 @@ function validateManifestForPublishing(manifest: ManifestPackage, options: IInte
 	return { ...manifest, publisher: validatePublisher(manifest.publisher) };
 }
 
-export async function getPAT(publisher: string, options: IPublishOptions | IUnpublishOptions | IVerifyPatOptions): Promise<string> {
+export async function getPAT(publisher: string, options: AuthenticationOptions): Promise<string> {
+	validateAuthenticationOptions(options);
+
+	if (options.oidc) {
+		return await getOIDCCredential(publisher);
+	}
+
 	if (options.pat) {
 		return options.pat;
 	}
@@ -369,4 +386,18 @@ export async function getPAT(publisher: string, options: IPublishOptions | IUnpu
 	}
 
 	return (await getPublisher(publisher)).pat;
+}
+
+function validateAuthenticationOptions(options: AuthenticationOptions): void {
+	if (!options.oidc) {
+		return;
+	}
+
+	if (options.pat) {
+		throw new Error(`The '--oidc' and '--pat' options cannot be used together.`);
+	}
+
+	if (options.azureCredential) {
+		throw new Error(`The '--oidc' and '--azure-credential' options cannot be used together.`);
+	}
 }
