@@ -35,12 +35,12 @@ See https://code.visualstudio.com/api/working-with-extensions/publishing-extensi
 	process.exit(1);
 }
 
-function main(task: Promise<any>): void {
+function main(task: Promise<any>, showNewVersionWarning: boolean): void {
 	let latestVersion: string | null = null;
 
 	const token = new CancellationToken();
 
-	if (isatty(1)) {
+	if (showNewVersionWarning && isatty(1)) {
 		getLatestVersion(pkg.name, token)
 			.then(version => (latestVersion = version))
 			.catch(_ => {
@@ -62,7 +62,12 @@ const ValidTargets = [...Targets].join(', ');
 module.exports = function (argv: string[]): void {
 	const program = new Command();
 
-	program.version(pkg.version).usage('<command>');
+	program
+		.version(pkg.version)
+		.usage('<command>')
+		.option('--no-new-version-warning', 'Suppress the warning when a newer version of vsce is available');
+
+	const run = (task: Promise<any>): void => main(task, program.opts<{ newVersionWarning: boolean }>().newVersionWarning);
 
 	program
 		.command('ls')
@@ -83,7 +88,7 @@ module.exports = function (argv: string[]): void {
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
 		.action(({ tree, yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }) =>
-			main(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
+			run(ls({ tree, useYarn: yarn, packagedDependencies, ignoreFile, dependencies, readmePath, followSymlinks }))
 		);
 
 	program
@@ -164,7 +169,7 @@ module.exports = function (argv: string[]): void {
 					followSymlinks,
 				}
 			) =>
-				main(
+				run(
 					packageCommand({
 						packagePath: out,
 						version,
@@ -300,7 +305,7 @@ module.exports = function (argv: string[]): void {
 					followSymlinks,
 				}
 			) =>
-				main(
+				run(
 					publish({
 						pat: oidc ? undefined : pat,
 						azureCredential,
@@ -348,14 +353,14 @@ module.exports = function (argv: string[]): void {
 		.option('-p, --pat <token>', 'Personal Access Token')
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
 		.option('-f, --force', 'Skip confirmation prompt when unpublishing an extension')
-		.action((id, { pat, azureCredential, force }) => main(unpublish({ id, pat, azureCredential, force })));
+		.action((id, { pat, azureCredential, force }) => run(unpublish({ id, pat, azureCredential, force })));
 
 	program
 		.command('generate-manifest')
 		.description('Generates the extension manifest from the provided VSIX package.')
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.option('-o, --out <path>', 'Output the extension manifest to <path> location (defaults to <packagename>.manifest)')
-		.action(({ packagePath, out }) => main(generateManifest(packagePath, out)));
+		.action(({ packagePath, out }) => run(generateManifest(packagePath, out)));
 
 	program
 		.command('verify-signature')
@@ -363,27 +368,27 @@ module.exports = function (argv: string[]): void {
 		.requiredOption('-i, --packagePath <path>', 'Path to the VSIX package')
 		.requiredOption('-m, --manifestPath <path>', 'Path to the Manifest file')
 		.requiredOption('-s, --signaturePath <path>', 'Path to the Signature file')
-		.action(({ packagePath, manifestPath, signaturePath }) => main(verifySignature(packagePath, manifestPath, signaturePath)));
+		.action(({ packagePath, manifestPath, signaturePath }) => run(verifySignature(packagePath, manifestPath, signaturePath)));
 
 	program
 		.command('ls-publishers')
 		.description('Lists all known publishers')
-		.action(() => main(listPublishers()));
+		.action(() => run(listPublishers()));
 
 	program
 		.command('delete-publisher <publisher>')
 		.description('Deletes a publisher from marketplace')
-		.action(publisher => main(deletePublisher(publisher)));
+		.action(publisher => run(deletePublisher(publisher)));
 
 	program
 		.command('login <publisher>')
 		.description('Adds a publisher to the list of known publishers')
-		.action(name => main(loginPublisher(name)));
+		.action(name => run(loginPublisher(name)));
 
 	program
 		.command('logout <publisher>')
 		.description('Removes a publisher from the list of known publishers')
-		.action(name => main(logoutPublisher(name)));
+		.action(name => run(logoutPublisher(name)));
 
 	program
 		.command('verify-pat [publisher]')
@@ -394,13 +399,13 @@ module.exports = function (argv: string[]): void {
 			process.env['VSCE_PAT']
 		)
 		.option('--azure-credential', 'Use Microsoft Entra ID for authentication')
-		.action((publisherName, { pat, azureCredential }) => main(verifyPat({ publisherName, pat, azureCredential })));
+		.action((publisherName, { pat, azureCredential }) => run(verifyPat({ publisherName, pat, azureCredential })));
 
 	program
 		.command('show <extensionid>')
 		.description(`Shows an extension's metadata`)
 		.option('--json', 'Outputs data in json format', false)
-		.action((extensionid, { json }) => main(show(extensionid, json)));
+		.action((extensionid, { json }) => run(show(extensionid, json)));
 
 	program
 		.command('search <text>')
@@ -408,7 +413,7 @@ module.exports = function (argv: string[]): void {
 		.option('--json', 'Output results in json format', false)
 		.option('--stats', 'Shows extensions rating and download count', false)
 		.option('-p, --pagesize [value]', 'Number of results to return', '100')
-		.action((text, { json, pagesize, stats }) => main(search(text, json, parseInt(pagesize), stats)));
+		.action((text, { json, pagesize, stats }) => run(search(text, json, parseInt(pagesize), stats)));
 
 	program.on('command:*', ([cmd]: string) => {
 		if (cmd === 'create-publisher') {
