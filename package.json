@@ -41,7 +41,6 @@
 	"dependencies": {
 		"@azure/identity": "^4.1.0",
 		"@secretlint/node": "^10.1.2",
-		"@secretlint/secretlint-formatter-sarif": "^10.1.2",
 		"@secretlint/secretlint-rule-no-dotenv": "^10.1.2",
 		"@secretlint/secretlint-rule-preset-recommend": "^10.1.2",
 		"@vscode/vsce-sign": "^2.0.0",
