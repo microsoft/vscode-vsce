@@ -9,7 +9,7 @@ import * as util from './util';
 import { glob } from 'glob';
 import { minimatch, MinimatchOptions } from 'minimatch';
 import markdownit from 'markdown-it';
-import * as cheerio from 'cheerio';
+import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 import * as url from 'url';
 import mime from 'mime';
 import * as semver from 'semver';
@@ -890,11 +890,36 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		}
 
 		const html = markdownit({ html: true }).render(contents);
-		const $ = cheerio.load(html);
+		const document = parse(html);
+		const images: DefaultTreeAdapterTypes.Element[] = [];
+		let hasSvg = false;
+		const nodes: DefaultTreeAdapterTypes.Node[] = [document];
+
+		while (nodes.length > 0) {
+			const node = nodes.pop()!;
+
+			if ('tagName' in node) {
+				if (node.tagName === 'img') {
+					images.push(node);
+				} else if (node.tagName === 'svg') {
+					hasSvg = true;
+				}
+			}
+
+			const children = 'content' in node
+				? node.content.childNodes
+				: 'childNodes' in node
+					? node.childNodes
+					: [];
+
+			for (let index = children.length - 1; index >= 0; index--) {
+				nodes.push(children[index]);
+			}
+		}
 
 		if (this.rewriteRelativeLinks) {
-			$('img').each((_, img) => {
-				const rawSrc = $(img).attr('src');
+			for (const image of images) {
+				const rawSrc = image.attrs.find(attribute => attribute.name === 'src')?.value;
 
 				if (!rawSrc) {
 					throw new Error(`Images in ${this.name} must have a source.`);
@@ -922,12 +947,12 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 						`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`
 					);
 				}
-			});
+			}
 		}
 
-		$('svg').each(() => {
+		if (hasSvg) {
 			throw new Error(`SVG tags are not allowed in ${this.name}.`);
-		});
+		}
 
 		return {
 			path: file.path,
