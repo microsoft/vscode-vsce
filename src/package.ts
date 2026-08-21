@@ -8,8 +8,8 @@ import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
 import { glob } from 'glob';
 import { minimatch, MinimatchOptions } from 'minimatch';
-import markdownit from 'markdown-it';
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { marked } from 'marked';
 import * as url from 'url';
 import mime from 'mime';
 import * as semver from 'semver';
@@ -889,7 +889,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 			}
 		}
 
-		const html = markdownit({ html: true }).render(contents);
+		const html = marked.parse(contents, { async: false });
 		const document = parse(html);
 		const images: DefaultTreeAdapterTypes.Element[] = [];
 		let hasSvg = false;
