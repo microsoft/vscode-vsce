@@ -70,8 +70,6 @@
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.33.7",
-		"@types/cheerio": "^0.22.29",
-		"@types/glob": "^8.1.0",
 		"@types/hosted-git-info": "^3.0.2",
 		"@types/markdown-it": "^0.0.2",
 		"@types/mime": "^1",
