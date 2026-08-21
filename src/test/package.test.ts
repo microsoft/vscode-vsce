@@ -19,9 +19,8 @@ import {
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as fsp from 'fs/promises';
 import * as assert from 'assert';
-import * as tmp from 'tmp';
+import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 import { XMLManifest, parseXmlManifest, parseContentTypes } from '../xml';
 import { flatten, log } from '../util';
@@ -182,17 +181,17 @@ async function processExitNotExpected(fn: () => Promise<any>, errorMessage: stri
 describe('collect', function () {
 	this.timeout(60000);
 
-	let testDir: tmp.DirResult;
+	let testDir: string;
 	before(() => {
-		testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixture('') });
+		testDir = fs.mkdtempSync(path.join(fixture(''), 'vsce-test-'));
 	});
 	after(() => {
-		testDir.removeCallback();
+		fs.rmSync(testDir, { recursive: true, force: true });
 	});
 
 	function getVisxOutputPath() {
 		const randomValue = Math.random().toString(36).substring(2, 15);
-		return path.join(testDir.name, `extension-${randomValue}.vsix`);
+		return path.join(testDir, `extension-${randomValue}.vsix`);
 	}
 
 	it('should catch all files', () => {
@@ -3288,15 +3287,15 @@ describe('LicenseProcessor', () => {
 describe('version', function () {
 	this.timeout(5000);
 
-	let dir: tmp.DirResult;
+	let dir: string;
 	const fixtureFolder = fixture('vsixmanifest');
 	let cwd: string;
 
 	const git = (args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf-8', shell: true });
 
 	beforeEach(() => {
-		dir = tmp.dirSync({ unsafeCleanup: true });
-		cwd = dir.name;
+		dir = fs.mkdtempSync(path.join(tmpdir(), 'vsce-test-'));
+		cwd = dir;
 		fs.copyFileSync(path.join(fixtureFolder, 'package.json'), path.join(cwd, 'package.json'));
 		git(['init']);
 		git(['config', '--local', 'user.name', 'Sample Name']);
@@ -3304,7 +3303,7 @@ describe('version', function () {
 	});
 
 	afterEach(() => {
-		dir.removeCallback();
+		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
 	it('should bump patch version', async () => {
@@ -3383,8 +3382,8 @@ describe('writeVsix', function () {
 		const exampleProject = fixture('manifestFiles');
 		const fixtureDir = fixture('');
 
-		const testDir = tmp.dirSync({ unsafeCleanup: true, tmpdir: fixtureDir });
-		const cwd = testDir.name;
+		const testDir = fs.mkdtempSync(path.join(fixtureDir, 'vsce-test-'));
+		const cwd = testDir;
 
 		try {
 			fs.cpSync(exampleProject, cwd, { recursive: true });
@@ -3394,9 +3393,9 @@ describe('writeVsix', function () {
 				await pack({ cwd, packagePath: vsixPath });
 			}
 
-			const vsix1 = testDir.name + '/vsix1.vsix';
-			const vsix2 = testDir.name + '/vsix2.vsix';
-			const vsix3 = testDir.name + '/vsix3.vsix';
+			const vsix1 = path.join(testDir, 'vsix1.vsix');
+			const vsix2 = path.join(testDir, 'vsix2.vsix');
+			const vsix3 = path.join(testDir, 'vsix3.vsix');
 
 			await createVsix(vsix1, 1000000000);
 			await createVsix(vsix2, 1000000000);
@@ -3410,11 +3409,7 @@ describe('writeVsix', function () {
 			assert.notDeepStrictEqual(vsix1bytes, vsix3bytes);
 
 		} finally {
-			try {
-				await fsp.rm(testDir.name, { recursive: true, force: true });
-			} catch (e) {
-				testDir.removeCallback();
-			}
+			await fs.promises.rm(testDir, { recursive: true, force: true });
 		}
 	});
 });
