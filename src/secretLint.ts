@@ -1,5 +1,6 @@
 import chalk from "chalk";
-import { Convert, Location, Region, Result, Level } from "./typings/secret-lint-types";
+import * as path from "path";
+import { pathToFileURL } from "url";
 import { log } from "./util";
 
 interface SecretLintEngineResult {
@@ -7,9 +8,43 @@ interface SecretLintEngineResult {
 	output: string;
 }
 
+type SecretLintSeverity = "error" | "warning" | "info";
+
+interface SecretLintPosition {
+	line: number | null;
+	column: number | null;
+}
+
+interface SecretLintMessage {
+	message: string;
+	ruleId: string;
+	ruleParentId?: string;
+	loc: {
+		start: SecretLintPosition;
+		end: SecretLintPosition;
+	};
+	severity: SecretLintSeverity;
+}
+
+interface SecretLintFileResult {
+	filePath: string;
+	messages: SecretLintMessage[];
+}
+
+interface SecretLintFinding {
+	message: string;
+	ruleId: string;
+	level: "error" | "warning" | "note";
+	filePath: string;
+	startLine?: number;
+	startColumn?: number;
+	endLine?: number;
+	endColumn?: number;
+}
+
 interface SecretLintResult {
 	ok: boolean;
-	results: Result[];
+	results: SecretLintFinding[];
 }
 
 const secretsScanningRules = [
@@ -49,11 +84,8 @@ const dotEnvRules = [
 	}
 ];
 
-// Helper function to dynamically import the createEngine function
 async function getEngine(scanSecrets: boolean, scanDotEnv: boolean) {
-	// Use a raw dynamic import that will not be transformed
-	// This is necessary because @secretlint/node is an ESM module
-	const secretlintModule = await eval('import("@secretlint/node")');
+	const { createEngine } = require("@secretlint/node") as typeof import("@secretlint/node");
 
 	const rules = [];
 	if (scanSecrets) {
@@ -65,12 +97,12 @@ async function getEngine(scanSecrets: boolean, scanDotEnv: boolean) {
 
 	const lintOptions = {
 		configFileJSON: { rules: rules },
-		formatter: "@secretlint/secretlint-formatter-sarif", // checkstyle, compact, jslint-xml, junit, pretty-error, stylish, tap, unix, json, mask-result, table
+		formatter: "json",
 		color: true,
 		maskSecrets: false
 	};
 
-	const engine = await secretlintModule.createEngine(lintOptions);
+	const engine = await createEngine(lintOptions);
 	return engine;
 }
 
@@ -116,9 +148,63 @@ export async function lintText(
 }
 
 function parseResult(result: SecretLintEngineResult): SecretLintResult {
-	const output = Convert.toSecretLintOutput(result.output);
-	const results = output.runs.at(0)?.results ?? [];
+	const output: unknown = JSON.parse(result.output);
+	if (!Array.isArray(output) || !output.every(isSecretLintFileResult)) {
+		throw new Error("Unexpected output from secretlint");
+	}
+
+	const results = output.flatMap(fileResult =>
+		fileResult.messages.map((message): SecretLintFinding => ({
+			message: message.message,
+			ruleId: message.ruleParentId ? `${message.ruleParentId} > ${message.ruleId}` : message.ruleId,
+			level: message.severity === "info" ? "note" : message.severity,
+			filePath: process.env.SARIF_URI_ABSOLUTE
+				? pathToFileURL(fileResult.filePath).toString()
+				: path.relative(process.cwd(), fileResult.filePath),
+			startLine: fixLine(message.loc.start.line),
+			startColumn: fixColumn(message.loc.start.column),
+			endLine: fixLine(message.loc.end.line),
+			endColumn: fixColumn(message.loc.end.column)
+		}))
+	);
+
 	return { ok: result.ok, results };
+}
+
+function isSecretLintFileResult(value: unknown): value is SecretLintFileResult {
+	return isRecord(value)
+		&& typeof value.filePath === "string"
+		&& Array.isArray(value.messages)
+		&& value.messages.every(isSecretLintMessage);
+}
+
+function isSecretLintMessage(value: unknown): value is SecretLintMessage {
+	return isRecord(value)
+		&& typeof value.message === "string"
+		&& typeof value.ruleId === "string"
+		&& (value.ruleParentId === undefined || typeof value.ruleParentId === "string")
+		&& isRecord(value.loc)
+		&& isSecretLintPosition(value.loc.start)
+		&& isSecretLintPosition(value.loc.end)
+		&& (value.severity === "error" || value.severity === "warning" || value.severity === "info");
+}
+
+function isSecretLintPosition(value: unknown): value is SecretLintPosition {
+	return isRecord(value)
+		&& (value.line === null || typeof value.line === "number")
+		&& (value.column === null || typeof value.column === "number");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function fixLine(value: number | null): number | undefined {
+	return value === null ? undefined : value === 0 ? 1 : value;
+}
+
+function fixColumn(value: number | null): number | undefined {
+	return value === null ? undefined : value === 0 ? 1 : value + 1;
 }
 
 export function getRuleNameFromRuleId(ruleId: string): string {
@@ -126,36 +212,20 @@ export function getRuleNameFromRuleId(ruleId: string): string {
 	return parts[parts.length - 1];
 }
 
-export function prettyPrintLintResult(result: Result): string {
-	if (!result.message.text) {
-		return JSON.stringify(result);
-	}
-
-	const text = result.message.text;
-	const titleColor = result.level === undefined || result.level === Level.Error ? chalk.bold.red : chalk.bold.yellow;
+export function prettyPrintLintResult(result: SecretLintFinding): string {
+	const text = result.message;
+	const titleColor = result.level === "error" ? chalk.bold.red : chalk.bold.yellow;
 	const title = text.length > 54 ? text.slice(0, 50) + '...' : text;
-	const ruleName = result.ruleId ? getRuleNameFromRuleId(result.ruleId) : 'unknown';
+	const ruleName = getRuleNameFromRuleId(result.ruleId);
 
 	let output = `\t${titleColor(title)} [${ruleName}]\n`;
-
-	if (result.locations) {
-		result.locations.forEach(location => {
-			output += `\t${prettyPrintLocation(location)}\n`;
-		});
-	}
+	output += `\t${prettyPrintLocation(result)}\n`;
 	return output;
 }
 
-function prettyPrintLocation(location: Location): string {
-	if (!location.physicalLocation) { return JSON.stringify(location); }
-
-	const uri = location.physicalLocation.artifactLocation?.uri;
-	if (!uri) { return JSON.stringify(location); }
-
-	let output = uri;
-
-	const region = location.physicalLocation.region;
-	const regionStringified = region ? prettyPrintRegion(region) : undefined;
+function prettyPrintLocation(result: SecretLintFinding): string {
+	let output = result.filePath;
+	const regionStringified = prettyPrintRegion(result);
 	if (regionStringified) {
 		output += `#${regionStringified}`;
 	}
@@ -163,9 +233,9 @@ function prettyPrintLocation(location: Location): string {
 	return output;
 }
 
-function prettyPrintRegion(region: Region): string | undefined {
-	const startPosition = prettyPrintPosition(region.startLine, region.startColumn);
-	const endPosition = prettyPrintPosition(region.endLine, region.endColumn);
+function prettyPrintRegion(result: SecretLintFinding): string | undefined {
+	const startPosition = prettyPrintPosition(result.startLine, result.startColumn);
+	const endPosition = prettyPrintPosition(result.endLine, result.endColumn);
 
 	if (!startPosition) {
 		return undefined;
