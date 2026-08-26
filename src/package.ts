@@ -6,7 +6,7 @@ import * as yazl from 'yazl';
 import { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import { glob } from 'glob';
+import { glob, type FileSystemAdapter } from 'tinyglobby';
 import { minimatch, MinimatchOptions } from 'minimatch';
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 import { marked } from 'marked';
@@ -1690,6 +1690,43 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
+/**
+ * `tinyglobby` skips symbolic links altogether when `followSymbolicLinks` is disabled, while
+ * vsce treats them as regular files instead (see the `--follow-symlinks` option). Presenting
+ * symbolic links to the crawler as regular files keeps them in the result without recursing
+ * into symlinked directories.
+ */
+const symlinksAsFilesFileSystem = {
+	readdir: (
+		dir: string,
+		options: { withFileTypes: true },
+		callback: (err: NodeJS.ErrnoException | null, entries: fs.Dirent[]) => void
+	) => fs.readdir(dir, options, (err, entries) => callback(err, err ? entries : entries.map(asFile))),
+	readdirSync: (dir: string, options: { withFileTypes: true }) => fs.readdirSync(dir, options).map(asFile),
+} as unknown as FileSystemAdapter;
+
+function asFile(entry: fs.Dirent): fs.Dirent {
+	if (!entry.isSymbolicLink()) {
+		return entry;
+	}
+
+	return Object.create(entry, {
+		isFile: { value: () => true },
+		isDirectory: { value: () => false },
+		isSymbolicLink: { value: () => false },
+	}) as fs.Dirent;
+}
+
+/**
+ * `glob` matched patterns case-insensitively on Windows and macOS and case-sensitively
+ * everywhere else, based on `process.platform` rather than on the actual filesystem.
+ * `tinyglobby` always matches case-sensitively, so this keeps the previous behaviour, which
+ * matters for the `node_modules` folder being ignored regardless of how it is cased on disk.
+ * Keep this keyed off the platform: probing the filesystem instead would change what is
+ * packaged on case-sensitive macOS volumes and case-insensitive Linux mounts.
+ */
+const caseSensitiveMatch = process.platform !== 'win32' && process.platform !== 'darwin';
+
 async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none' | undefined,
@@ -1698,9 +1735,15 @@ async function collectAllFiles(
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: 'node_modules/**' }).then(files =>
-			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-		)
+		glob('**', {
+			cwd: dep,
+			onlyFiles: true,
+			followSymbolicLinks: followSymlinks,
+			fs: followSymlinks ? undefined : symlinksAsFilesFileSystem,
+			caseSensitiveMatch,
+			dot: true,
+			ignore: ['node_modules/**'],
+		}).then(files => files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/')))
 	);
 
 	return Promise.all(promises).then(util.flatten);
