@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 RUN apk add --update-cache \
     libsecret \
   && rm -rf /var/cache/apk/*
