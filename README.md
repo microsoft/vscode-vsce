@@ -98,3 +98,7 @@ $ npm test
 ```
 
 > **Note:** [Yarn](https://www.npmjs.com/package/yarn) is required to run the tests.
+
+## Maintainers
+
+- BeniBenj
