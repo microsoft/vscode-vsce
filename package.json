@@ -89,6 +89,7 @@
 			"ts-node/register"
 		],
 		"watch-files": "src/**",
+		"watch-ignore": "src/test/fixtures/vsce-test-*",
 		"spec": "src/test/**/*.ts"
 	},
 	"overrides": {
