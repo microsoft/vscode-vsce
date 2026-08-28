@@ -48,7 +48,6 @@
 		"@secretlint/types": "^10.1.2",
 		"@vscode/vsce-sign": "^2.0.0",
 		"azure-devops-node-api": "^12.5.0",
-		"chalk": "^4.1.2",
 		"cockatiel": "^3.1.2",
 		"commander": "^12.1.0",
 		"form-data": "^4.0.0",

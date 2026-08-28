@@ -1,9 +1,8 @@
-import { promisify } from 'util';
+import { promisify, styleText } from 'util';
 import * as fs from 'fs';
 import _read from 'read';
 import { WebApi, getBasicHandler } from 'azure-devops-node-api/WebApi';
 import { IGalleryApi, GalleryApi } from 'azure-devops-node-api/GalleryApi';
-import chalk from 'chalk';
 import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { ManifestPackage } from './manifest';
@@ -125,10 +124,10 @@ enum LogMessageType {
 }
 
 const LogPrefix = {
-	[LogMessageType.DONE]: chalk.bgGreen.black(' DONE '),
-	[LogMessageType.INFO]: chalk.bgBlueBright.black(' INFO '),
-	[LogMessageType.WARNING]: chalk.bgYellow.black(' WARNING '),
-	[LogMessageType.ERROR]: chalk.bgRed.black(' ERROR '),
+	[LogMessageType.DONE]: styleText(['bgGreen', 'black'], ' DONE '),
+	[LogMessageType.INFO]: styleText(['bgBlueBright', 'black'], ' INFO '),
+	[LogMessageType.WARNING]: styleText(['bgYellow', 'black'], ' WARNING '),
+	[LogMessageType.ERROR]: styleText(['bgRed', 'black'], ' ERROR '),
 };
 
 function _log(type: LogMessageType, msg: any, ...args: any[]): void {
@@ -298,12 +297,12 @@ export async function generateFileStructureTree(rootFolder: string, filePaths: {
 	});
 
 	let output: string[] = [];
-	output.push(chalk.bold(rootFolder));
+	output.push(styleText('bold', rootFolder));
 	output.push(...createTreeOutput(folderTree, maxDepth, totalFileSizes));
 
 	for (const [size, filePath] of fileSizes) {
 		if (size > FILE_SIZE_WARNING_THRESHOLD * totalFileSizes) {
-			output.push(`\nThe file ${filePath} is ${chalk.red('large')} (${bytesToString(size)})`);
+			output.push(`\nThe file ${filePath} is ${styleText('red', 'large')} (${bytesToString(size)})`);
 			break;
 		}
 	}
@@ -315,11 +314,11 @@ function createTreeOutput(fileSystem: any, maxDepth: number, totalFileSizes: num
 
 	const getColorFromSize = (size: number) => {
 		if (size > FILE_SIZE_WARNING_THRESHOLD * totalFileSizes) {
-			return chalk.red;
+			return 'red' as const;
 		} else if (size > FILE_SIZE_LARGE_THRESHOLD * totalFileSizes) {
-			return chalk.yellow;
+			return 'yellow' as const;
 		} else {
-			return chalk.grey;
+			return 'gray' as const;
 		}
 	};
 
@@ -327,7 +326,7 @@ function createTreeOutput(fileSystem: any, maxDepth: number, totalFileSizes: num
 		let fileSizeColored = '';
 		if (fileSize > 0) {
 			const fileSizeString = `[${bytesToString(fileSize)}]`;
-			fileSizeColored = getColorFromSize(fileSize)(fileSizeString);
+			fileSizeColored = styleText(getColorFromSize(fileSize), fileSizeString);
 		}
 		return `${prefix}${fileName} ${fileSizeColored}`;
 	}
@@ -336,15 +335,15 @@ function createTreeOutput(fileSystem: any, maxDepth: number, totalFileSizes: num
 		if (depth < maxDepth) {
 			// Max depth is not reached, print only the folder
 			// as children will be printed
-			return prefix + chalk.bold(`${folderName}/`);
+			return prefix + styleText('bold', `${folderName}/`);
 		}
 
 		// Max depth is reached, print the folder name and additional metadata
 		// as children will not be printed
 		const folderSizeString = bytesToString(folderSize);
-		const folder = chalk.bold(`${folderName}/`);
-		const numFilesString = chalk.green(`(${filesCount} ${filesCount === 1 ? 'file' : 'files'})`);
-		const folderSizeColored = getColorFromSize(folderSize)(`[${folderSizeString}]`);
+		const folder = styleText('bold', `${folderName}/`);
+		const numFilesString = styleText('green', `(${filesCount} ${filesCount === 1 ? 'file' : 'files'})`);
+		const folderSizeColored = styleText(getColorFromSize(folderSize), `[${folderSizeString}]`);
 		return `${prefix}${folder} ${numFilesString} ${folderSizeColored}`;
 	}
 
