@@ -66,7 +66,7 @@ module.exports = function (argv: string[]): void {
 	program
 		.version(pkg.version)
 		.usage('<command>')
-		.option('--no-new-version-warning', 'Do not show a warning when a newer version is available');
+		.option('--no-new-version-warning', 'Suppress the warning shown when a newer version of vsce is available');
 
 	program
 		.command('ls')
