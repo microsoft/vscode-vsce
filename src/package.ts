@@ -25,10 +25,10 @@ import {
 } from './validation';
 import { detectYarn, getDependencies } from './npm';
 import * as GitHost from 'hosted-git-info';
-import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
+import { parsePackageSpec } from './packageSpec';
 
 const minimatchOptions: MinimatchOptions = { dot: true };
 
@@ -494,10 +494,10 @@ export class ManifestProcessor extends BaseProcessor {
 		const preRelease = options.preRelease;
 
 		if (target || preRelease) {
-			let engineSemver: ReturnType<typeof parseSemver>;
+			let engineSemver: ReturnType<typeof parsePackageSpec>;
 
 			try {
-				engineSemver = parseSemver(`vscode@${manifest.engines.vscode}`);
+				engineSemver = parsePackageSpec(`vscode@${manifest.engines.vscode}`);
 			} catch (err) {
 				throw new Error('Failed to parse semver of engines.vscode');
 			}
@@ -1365,7 +1365,7 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 
 	let parsedEngineVersion: string;
 	try {
-		const engineSemver = parseSemver(`vscode@${engines.vscode}`);
+		const engineSemver = parsePackageSpec(`vscode@${engines.vscode}`);
 		parsedEngineVersion = engineSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode');
