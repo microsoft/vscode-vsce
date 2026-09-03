@@ -8,29 +8,9 @@ import { getLatestVersion } from './npm';
 import { CancellationToken, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
+import { findSimilar } from './similar';
 
 const pkg = require('../package.json');
-
-function editDistance(left: string, right: string): number {
-	const distances = Array.from({ length: left.length + 1 }, (_, index) => index);
-
-	for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
-		let diagonal = distances[0];
-		distances[0] = rightIndex;
-
-		for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
-			const above = distances[leftIndex];
-			distances[leftIndex] = Math.min(
-				above + 1,
-				distances[leftIndex - 1] + 1,
-				diagonal + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1)
-			);
-			diagonal = above;
-		}
-	}
-
-	return distances[left.length];
-}
 
 function fatal(message: any, ...args: any[]): void {
 	if (message instanceof Error) {
@@ -441,7 +421,7 @@ module.exports = function (argv: string[]): void {
 
 		program.outputHelp(help => {
 			const availableCommands = program.commands.map(c => c.name());
-			const suggestion = availableCommands.find(c => editDistance(c, cmd) < c.length * 0.4);
+			const suggestion = findSimilar(cmd, availableCommands);
 
 			help = `${help}\n Unknown command '${cmd}'`;
 
