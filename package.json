@@ -53,7 +53,6 @@
 		"form-data": "^4.0.6",
 		"hosted-git-info": "^4.1.0",
 		"jsonc-parser": "^3.3.1",
-		"leven": "^3.1.0",
 		"marked": "^18.0.11",
 		"mime": "^1.6.0",
 		"minimatch": "^10.2.6",
