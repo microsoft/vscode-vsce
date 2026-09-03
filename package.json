@@ -93,6 +93,7 @@
 	},
 	"overrides": {
 		"serialize-javascript": "7.x",
-		"diff": "^9.0.0"
+		"diff": "^9.0.0",
+		"@azure/msal-common": "16.14.0"
 	}
 }
