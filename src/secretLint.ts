@@ -1,35 +1,14 @@
 import chalk from "chalk";
+import * as os from "os";
 import * as path from "path";
 import { pathToFileURL } from "url";
+import type {
+	SecretLintCoreConfig,
+	SecretLintCoreResult,
+	SecretLintRuleCreator,
+	SecretLintRulePresetCreator
+} from "@secretlint/types";
 import { log } from "./util";
-
-interface SecretLintEngineResult {
-	ok: boolean;
-	output: string;
-}
-
-type SecretLintSeverity = "error" | "warning" | "info";
-
-interface SecretLintPosition {
-	line: number | null;
-	column: number | null;
-}
-
-interface SecretLintMessage {
-	message: string;
-	ruleId: string;
-	ruleParentId?: string;
-	loc: {
-		start: SecretLintPosition;
-		end: SecretLintPosition;
-	};
-	severity: SecretLintSeverity;
-}
-
-interface SecretLintFileResult {
-	filePath: string;
-	messages: SecretLintMessage[];
-}
 
 interface SecretLintFinding {
 	message: string;
@@ -84,26 +63,46 @@ const dotEnvRules = [
 	}
 ];
 
-async function getEngine(scanSecrets: boolean, scanDotEnv: boolean) {
-	const { createEngine } = require("@secretlint/node") as typeof import("@secretlint/node");
-
-	const rules = [];
+async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<SecretLintCoreConfig> {
+	const [{ creator: recommend }, { creator: noDotenv }] = await Promise.all([
+		importSecretLintRule<SecretLintRulePresetCreator>("@secretlint/secretlint-rule-preset-recommend"),
+		importSecretLintRule<SecretLintRuleCreator>("@secretlint/secretlint-rule-no-dotenv")
+	]);
+	const rules: SecretLintCoreConfig["rules"] = [];
 	if (scanSecrets) {
-		rules.push(...secretsScanningRules);
+		rules.push({
+			...secretsScanningRules[0],
+			rule: recommend
+		});
 	}
 	if (scanDotEnv) {
-		rules.push(...dotEnvRules);
+		rules.push({
+			...dotEnvRules[0],
+			rule: noDotenv
+		});
 	}
 
-	const lintOptions = {
-		configFileJSON: { rules: rules },
-		formatter: "json",
-		color: true,
-		maskSecrets: false
-	};
+	return { rules };
+}
 
-	const engine = await createEngine(lintOptions);
-	return engine;
+function importSecretLintRule<T>(packageName: string): Promise<{ creator: T }> {
+	return import(packageName);
+}
+
+async function mapConcurrently<T, U>(values: T[], mapper: (value: T) => Promise<U>): Promise<U[]> {
+	const results = new Array<U>(values.length);
+	let nextIndex = 0;
+
+	async function worker() {
+		while (nextIndex < values.length) {
+			const index = nextIndex++;
+			results[index] = await mapper(values[index]);
+		}
+	}
+
+	const workerCount = Math.min(os.availableParallelism(), values.length);
+	await Promise.all(Array.from({ length: workerCount }, worker));
+	return results;
 }
 
 export async function lintFiles(
@@ -111,19 +110,28 @@ export async function lintFiles(
 	scanSecrets: boolean,
 	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine(scanSecrets, scanDotEnv);
-
-	let engineResult;
+	let results;
 	try {
-		engineResult = await engine.executeOnFiles({
-			filePathList: filePaths
-		});
+		const [{ lintSource }, { createRawSource }, config] = await Promise.all([
+			import("@secretlint/core"),
+			import("@secretlint/source-creator"),
+			getConfig(scanSecrets, scanDotEnv)
+		]);
+		results = await mapConcurrently(filePaths, async filePath =>
+			lintSource({
+				source: await createRawSource(filePath),
+				options: {
+					config,
+					maskSecrets: false
+				}
+			})
+		);
 	} catch (error) {
 		log.error('Error occurred while scanning secrets (files):', error);
 		process.exit(1);
 	}
 
-	return parseResult(engineResult);
+	return parseResult(results);
 }
 
 export async function lintText(
@@ -132,28 +140,33 @@ export async function lintText(
 	scanSecrets: boolean,
 	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine(scanSecrets, scanDotEnv);
-
-	let engineResult;
+	let result;
 	try {
-		engineResult = await engine.executeOnContent({
-			content,
-			filePath: fileName
+		const [{ lintSource }, config] = await Promise.all([
+			import("@secretlint/core"),
+			getConfig(scanSecrets, scanDotEnv)
+		]);
+		result = await lintSource({
+			source: {
+				content,
+				filePath: fileName,
+				ext: path.extname(fileName),
+				contentType: "text"
+			},
+			options: {
+				config,
+				maskSecrets: false
+			}
 		});
 	} catch (error) {
 		log.error('Error occurred while scanning secrets (content):', error);
 		process.exit(1);
 	}
-	return parseResult(engineResult);
+	return parseResult([result]);
 }
 
-function parseResult(result: SecretLintEngineResult): SecretLintResult {
-	const output: unknown = JSON.parse(result.output);
-	if (!Array.isArray(output) || !output.every(isSecretLintFileResult)) {
-		throw new Error("Unexpected output from secretlint");
-	}
-
-	const results = output.flatMap(fileResult =>
+function parseResult(fileResults: SecretLintCoreResult[]): SecretLintResult {
+	const results = fileResults.flatMap(fileResult =>
 		fileResult.messages.map((message): SecretLintFinding => ({
 			message: message.message,
 			ruleId: message.ruleParentId ? `${message.ruleParentId} > ${message.ruleId}` : message.ruleId,
@@ -168,35 +181,10 @@ function parseResult(result: SecretLintEngineResult): SecretLintResult {
 		}))
 	);
 
-	return { ok: result.ok, results };
-}
-
-function isSecretLintFileResult(value: unknown): value is SecretLintFileResult {
-	return isRecord(value)
-		&& typeof value.filePath === "string"
-		&& Array.isArray(value.messages)
-		&& value.messages.every(isSecretLintMessage);
-}
-
-function isSecretLintMessage(value: unknown): value is SecretLintMessage {
-	return isRecord(value)
-		&& typeof value.message === "string"
-		&& typeof value.ruleId === "string"
-		&& (value.ruleParentId === undefined || typeof value.ruleParentId === "string")
-		&& isRecord(value.loc)
-		&& isSecretLintPosition(value.loc.start)
-		&& isSecretLintPosition(value.loc.end)
-		&& (value.severity === "error" || value.severity === "warning" || value.severity === "info");
-}
-
-function isSecretLintPosition(value: unknown): value is SecretLintPosition {
-	return isRecord(value)
-		&& (value.line === null || typeof value.line === "number")
-		&& (value.column === null || typeof value.column === "number");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
+	return {
+		ok: !fileResults.some(fileResult => fileResult.messages.some(message => message.severity === "error")),
+		results
+	};
 }
 
 function fixLine(value: number | null): number | undefined {

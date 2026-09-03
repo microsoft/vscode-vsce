@@ -413,6 +413,21 @@ describe('collect', function () {
 		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
 	});
 
+	it('should scan files when CPU information is unavailable', async function () {
+		const os = require('os') as typeof import('os');
+		const cpusDescriptor = Object.getOwnPropertyDescriptor(os, 'cpus');
+		assert.ok(cpusDescriptor);
+		Object.defineProperty(os, 'cpus', { ...cpusDescriptor, value: () => [] });
+
+		try {
+			const cwd = fixture('secrets');
+			const ignoreFile = path.join(cwd, 'secret1Ignore');
+			await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected secret scanning to run without CPU information');
+		} finally {
+			Object.defineProperty(os, 'cpus', cpusDescriptor);
+		}
+	});
+
 	it('allow packaging file which has a private key with --allow-package-secrets', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret1Ignore');
