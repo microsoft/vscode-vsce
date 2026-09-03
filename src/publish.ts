@@ -8,12 +8,12 @@ import { ManifestPackage, ManifestPublish } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
-import FormData from 'form-data';
 import { basename, join } from 'path';
 import { tmpdir } from 'os';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
 import { getOIDCCredential } from './oidc';
+import { createMultipartStream } from './multipart';
 
 async function withTemporaryPackage<T>(fn: (packagePath: string) => Promise<T>): Promise<T> {
 	const directory = await fs.promises.mkdtemp(join(tmpdir(), 'vsce-'));
@@ -297,15 +297,13 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 
 async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: ManifestPublish) {
 	const extensionType = 'Visual Studio Code';
-	const form = new FormData();
-	const lineBreak = '\r\n';
-	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
-	form.append('vsix', packageStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=vsix; filename=\"${packageName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
-	});
-	form.append('sigzip', sigzipStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=\"${sigzipName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
-	});
+	const form = createMultipartStream(
+		[
+			{ name: 'vsix', filename: packageName, stream: packageStream },
+			{ name: 'sigzip', filename: sigzipName, stream: sigzipStream },
+		],
+		'0f411892-ef48-488f-89d3-4f0546e84723'
+	);
 
 	const publishWithRetry = retry(handleWhen(err => err.message.includes('timeout')), {
 		maxAttempts: 3,

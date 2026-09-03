@@ -50,7 +50,6 @@
 		"azure-devops-node-api": "^12.5.0",
 		"cockatiel": "^3.2.1",
 		"commander": "^12.1.0",
-		"form-data": "^4.0.6",
 		"hosted-git-info": "^4.1.0",
 		"jsonc-parser": "^3.3.1",
 		"leven": "^3.1.0",
