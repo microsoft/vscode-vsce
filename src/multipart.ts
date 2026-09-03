@@ -32,3 +32,25 @@ export function createMultipartStream(parts: readonly MultipartPart[], boundary:
 		})()
 	);
 }
+
+export function runWithStreamError<T>(stream: Readable, operation: () => Promise<T>): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const cleanup = () => stream.off('error', onStreamError);
+		const onStreamError = (error: Error) => {
+			cleanup();
+			reject(error);
+		};
+
+		stream.once('error', onStreamError);
+		Promise.resolve().then(operation).then(
+			result => {
+				cleanup();
+				resolve(result);
+			},
+			error => {
+				cleanup();
+				reject(error);
+			}
+		);
+	});
+}

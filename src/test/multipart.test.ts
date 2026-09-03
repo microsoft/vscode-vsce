@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { Readable } from 'stream';
-import { createMultipartStream } from '../multipart';
+import { createMultipartStream, runWithStreamError } from '../multipart';
 
 describe('createMultipartStream', () => {
 	it('creates a multipart stream', async () => {
@@ -54,6 +54,28 @@ describe('createMultipartStream', () => {
 				for await (const _ of stream) {
 				}
 			},
+			actual => actual === error
+		);
+	});
+
+	it('rejects an operation when the multipart stream errors', async () => {
+		const error = new Error('failed to read');
+		const failedStream = Readable.from(
+			(async function* () {
+				yield 'partial contents';
+				throw error;
+			})()
+		);
+		const stream = createMultipartStream(
+			[{ name: 'part', filename: 'part.bin', stream: failedStream }],
+			'boundary'
+		);
+
+		await assert.rejects(
+			runWithStreamError(stream, async () => {
+				stream.resume();
+				return await new Promise<never>(() => {});
+			}),
 			actual => actual === error
 		);
 	});
