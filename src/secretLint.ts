@@ -1,6 +1,6 @@
-import chalk from "chalk";
 import * as os from "os";
 import * as path from "path";
+import { styleText } from "util";
 import { pathToFileURL } from "url";
 import type {
 	SecretLintCoreConfig,
@@ -202,11 +202,10 @@ export function getRuleNameFromRuleId(ruleId: string): string {
 
 export function prettyPrintLintResult(result: SecretLintFinding): string {
 	const text = result.message;
-	const titleColor = result.level === "error" ? chalk.bold.red : chalk.bold.yellow;
 	const title = text.length > 54 ? text.slice(0, 50) + '...' : text;
 	const ruleName = getRuleNameFromRuleId(result.ruleId);
 
-	let output = `\t${titleColor(title)} [${ruleName}]\n`;
+	let output = `\t${styleText(['bold', result.level === "error" ? 'red' : 'yellow'], title)} [${ruleName}]\n`;
 	output += `\t${prettyPrintLocation(result)}\n`;
 	return output;
 }
