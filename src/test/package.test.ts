@@ -2572,6 +2572,32 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should infer base URLs from a repository directory', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: {
+				type: 'git',
+				url: 'https://github.com/username/repository.git',
+				directory: 'extensions/example',
+			},
+		};
+
+		const root = fixture('readme');
+		const processor = new ReadmeProcessor(manifest, {});
+		const file = await processor.onFile({
+			path: 'extension/readme.md',
+			localPath: path.join(root, 'readme.md'),
+		});
+		const actual = await read(file);
+
+		assert.ok(actual.includes('https://github.com/username/repository/blob/HEAD/extensions/example/monkey'));
+		assert.ok(actual.includes('https://github.com/username/repository/raw/HEAD/extensions/example/images/SpellMDDemo1.gif'));
+	});
+
 	it('should replace relative links with GitHub URLs while respecting githubBranch', () => {
 		const manifest = {
 			name: 'test',

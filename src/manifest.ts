@@ -101,7 +101,7 @@ export interface ManifestPackage {
 	contributors?: string | Person[];
 	main?: string;
 	browser?: string;
-	repository?: string | { type?: string; url?: string };
+	repository?: string | { type?: string; url?: string; directory?: string };
 	scripts?: { [name: string]: string };
 	dependencies?: { [name: string]: string };
 	devDependencies?: { [name: string]: string };

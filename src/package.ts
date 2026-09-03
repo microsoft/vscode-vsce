@@ -989,16 +989,18 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 
 		const project = match.groups.project.replace(/\.git$/i, '');
 		const branchName = githostBranch ? githostBranch : 'HEAD';
+		const directory: string =
+			typeof this.manifest.repository === 'object' ? this.manifest.repository.directory : undefined;
 
 		if (/^github/.test(match.groups.domain)) {
 			return {
-				content: `https://github.com/${project}/blob/${branchName}`,
+				content: `https://github.com/${project}/blob/${branchName}/${directory}`,
 				images: `https://github.com/${project}/raw/${branchName}`,
 				repository: `https://github.com/${project}`,
 			};
 		} else if (/^gitlab/.test(match.groups.domain)) {
 			return {
-				content: `https://gitlab.com/${project}/-/blob/${branchName}`,
+				content: `https://gitlab.com/${project}/-/blob/${branchName}/${directory}`,
 				images: `https://gitlab.com/${project}/-/raw/${branchName}`,
 				repository: `https://gitlab.com/${project}`,
 			};
