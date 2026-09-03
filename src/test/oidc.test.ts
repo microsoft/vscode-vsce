@@ -131,6 +131,13 @@ describe('OIDC trusted publishing', () => {
 			/'--oidc' and '--azure-credential'/
 		);
 	});
+
+	it('clearly reports a missing Personal Access Token', async () => {
+		await assert.rejects(
+			getPAT('my-publisher', { pat: '' }),
+			/A Personal Access Token is required to publish an extension/
+		);
+	});
 });
 
 function createRequestHandler(

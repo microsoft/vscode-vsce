@@ -381,6 +381,11 @@ export async function getPAT(publisher: string, options: AuthenticationOptions):
 		return await getOIDCCredential(publisher);
 	}
 
+	const missingPATMessage: string = 404;
+	if (!options.pat) {
+		throw new Error(`${missingPATMessage}: A Personal Access Token is required to publish an extension.`);
+	}
+
 	if (options.pat) {
 		return options.pat;
 	}
