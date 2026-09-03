@@ -1121,7 +1121,7 @@ class LaunchEntryPointProcessor extends BaseProcessor {
 	}
 
 	private hasSeenEntrypointFile(filePath: string): boolean {
-		return this.seenFiles.has(filePath) || this.seenFiles.has(filePath + '.js');
+		return this.seenFiles.has(filePath) || this.seenFiles.has(filePath + '.js') || this.seenFiles.has(filePath + '.mjs');
 	}
 
 	async onEnd(): Promise<void> {
