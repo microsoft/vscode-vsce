@@ -100,7 +100,7 @@ async function mapConcurrently<T, U>(values: T[], mapper: (value: T) => Promise<
 		}
 	}
 
-	const workerCount = Math.min(os.cpus().length, values.length);
+	const workerCount = Math.min(os.availableParallelism(), values.length);
 	await Promise.all(Array.from({ length: workerCount }, worker));
 	return results;
 }
