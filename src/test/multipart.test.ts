@@ -35,4 +35,26 @@ describe('createMultipartStream', () => {
 			].join('\r\n')
 		);
 	});
+
+	it('propagates errors emitted before a part is consumed', async () => {
+		const error = new Error('failed to read');
+		const failedStream = new Readable({ read() {} });
+		const stream = createMultipartStream(
+			[
+				{ name: 'first', filename: 'first.bin', stream: Readable.from(['first contents']) },
+				{ name: 'second', filename: 'second.bin', stream: failedStream },
+			],
+			'boundary'
+		);
+
+		failedStream.destroy(error);
+
+		await assert.rejects(
+			async () => {
+				for await (const _ of stream) {
+				}
+			},
+			actual => actual === error
+		);
+	});
 });

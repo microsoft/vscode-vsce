@@ -13,6 +13,11 @@ function escapeHeaderParameter(value: string): string {
 export function createMultipartStream(parts: readonly MultipartPart[], boundary: string): Readable {
 	const lineBreak = '\r\n';
 
+	for (const part of parts) {
+		// Readable's async iterator will rethrow stored errors when this part is consumed.
+		part.stream.on('error', () => {});
+	}
+
 	return Readable.from(
 		(async function* () {
 			for (const part of parts) {
