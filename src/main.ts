@@ -1,12 +1,11 @@
 import { Command, Option } from 'commander';
-import leven from 'leven';
 import { packageCommand, ls, Targets, generateManifest, verifySignature } from './package';
 import { publish, unpublish } from './publish';
 import { show } from './show';
 import { search } from './search';
 import { listPublishers, deletePublisher, loginPublisher, logoutPublisher, verifyPat } from './store';
 import { getLatestVersion } from './npm';
-import { CancellationToken, log } from './util';
+import { CancellationToken, findSimilar, log } from './util';
 import * as semver from 'semver';
 import { isatty } from 'tty';
 
@@ -421,7 +420,7 @@ module.exports = function (argv: string[]): void {
 
 		program.outputHelp(help => {
 			const availableCommands = program.commands.map(c => c.name());
-			const suggestion = availableCommands.find(c => leven(c, cmd) < c.length * 0.4);
+			const suggestion = findSimilar(cmd, availableCommands);
 
 			help = `${help}\n Unknown command '${cmd}'`;
 
