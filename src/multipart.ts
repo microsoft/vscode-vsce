@@ -14,43 +14,52 @@ export function createMultipartStream(parts: readonly MultipartPart[], boundary:
 	const lineBreak = '\r\n';
 
 	for (const part of parts) {
-		// Readable's async iterator will rethrow stored errors when this part is consumed.
+		// A part can fail before it is reached. Readable stores the error and its async iterator
+		// rethrows it when the part is consumed; this listener just keeps it from being unhandled.
 		part.stream.on('error', () => {});
 	}
 
-	return Readable.from(
-		(async function* () {
-			for (const part of parts) {
-				yield `--${boundary}${lineBreak}`;
-				yield `Content-Disposition: attachment; name=${escapeHeaderParameter(part.name)}; filename="${escapeHeaderParameter(part.filename)}"${lineBreak}`;
-				yield `Content-Type: application/octet-stream${lineBreak}${lineBreak}`;
-				yield* part.stream;
-				yield lineBreak;
-			}
+	const destroyParts = () => {
+		for (const part of parts) {
+			part.stream.destroy();
+		}
+	};
 
-			yield `--${boundary}--${lineBreak}`;
-		})()
+	const stream = Readable.from(
+		(async function* () {
+			try {
+				for (const part of parts) {
+					yield `--${boundary}${lineBreak}` +
+						`Content-Disposition: attachment; name=${escapeHeaderParameter(part.name)}; filename="${escapeHeaderParameter(part.filename)}"${lineBreak}` +
+						`Content-Type: application/octet-stream${lineBreak}${lineBreak}`;
+					yield* part.stream;
+					yield lineBreak;
+				}
+
+				yield `--${boundary}--${lineBreak}`;
+			} finally {
+				// Parts after a failed or abandoned one are never consumed, so release them here.
+				destroyParts();
+			}
+		})(),
+		// Without this the stream emits 'close' once it ends, which makes consumers that treat
+		// 'close' as "the body is complete" end the underlying request a second time.
+		{ autoDestroy: false }
 	);
+
+	// The generator body, and therefore its `finally`, never runs if the stream is destroyed
+	// before anything is read from it.
+	stream.on('close', destroyParts);
+
+	return stream;
 }
 
 export function runWithStreamError<T>(stream: Readable, operation: () => Promise<T>): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
-		const cleanup = () => stream.off('error', onStreamError);
-		const onStreamError = (error: Error) => {
-			cleanup();
-			reject(error);
-		};
-
-		stream.once('error', onStreamError);
-		Promise.resolve().then(operation).then(
-			result => {
-				cleanup();
-				resolve(result);
-			},
-			error => {
-				cleanup();
-				reject(error);
-			}
-		);
+		// This listener is deliberately never removed. An error arriving after the operation has
+		// settled would otherwise be an unhandled 'error' event, which terminates the process.
+		// Settling a promise more than once is a no-op, so the first outcome wins.
+		stream.on('error', reject);
+		Promise.resolve().then(operation).then(resolve, reject);
 	});
 }

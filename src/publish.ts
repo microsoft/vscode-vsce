@@ -311,9 +311,17 @@ async function _publishSignedPackage(api: GalleryApi, packagePath: string, sigzi
 			'0f411892-ef48-488f-89d3-4f0546e84723'
 		);
 
-		return await runWithStreamError(form, () =>
-			api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType)
-		);
+		try {
+			return await runWithStreamError(form, () =>
+				api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType)
+			);
+		} finally {
+			// Release the file handles when the request did not consume the whole form, which
+			// otherwise keeps the package locked until the process exits.
+			if (!form.readableEnded) {
+				form.destroy();
+			}
+		}
 	});
 }
 
