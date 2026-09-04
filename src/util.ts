@@ -74,6 +74,61 @@ export function nonnull<T>(arg: T | null | undefined): arg is T {
 	return !!arg;
 }
 
+/**
+ * Computes the Levenshtein distance between `a` and `b`, ie. the minimum number of
+ * single character insertions, deletions or substitutions needed to turn one into the
+ * other. Comparison happens on UTF-16 code units.
+ */
+export function levenshtein(a: string, b: string): number {
+	if (a === b) {
+		return 0;
+	}
+
+	// The distance is symmetric, so keep the shorter string in `b` to bound the row size.
+	if (b.length > a.length) {
+		[a, b] = [b, a];
+	}
+
+	// A single row of the edit distance matrix, seeded with the distance between the
+	// empty prefix of `a` and every prefix of `b`.
+	const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+
+	for (let i = 1; i <= a.length; i++) {
+		// The value of `row[j - 1]` before this row started being overwritten.
+		let diagonal = row[0];
+		row[0] = i;
+
+		for (let j = 1; j <= b.length; j++) {
+			const above = row[j];
+			row[j] = Math.min(row[j - 1] + 1, above + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+			diagonal = above;
+		}
+	}
+
+	return row[b.length];
+}
+
+/**
+ * Returns the candidate closest to `target`, or `undefined` when none of them is a
+ * plausible correction of it. A candidate qualifies when fewer than 40% of the characters
+ * of `target` have to be edited to reach it; ties are broken by iteration order.
+ */
+export function findSimilar(target: string, candidates: Iterable<string>): string | undefined {
+	let best: string | undefined;
+	let bestDistance = Math.ceil(target.length * 0.4);
+
+	for (const candidate of candidates) {
+		const distance = levenshtein(candidate, target);
+
+		if (distance < bestDistance) {
+			best = candidate;
+			bestDistance = distance;
+		}
+	}
+
+	return best;
+}
+
 const CancelledError = 'Cancelled';
 
 export function isCancelledError(error: any) {
