@@ -8,12 +8,12 @@ import { ManifestPackage, ManifestPublish } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
-import FormData from 'form-data';
 import { basename, join } from 'path';
 import { tmpdir } from 'os';
 import { IterableBackoff, handleWhen, retry } from 'cockatiel';
 import { getAzureCredentialAccessToken } from './auth';
 import { getOIDCCredential } from './oidc';
+import { createMultipartStream, runWithStreamError } from './multipart';
 
 async function withTemporaryPackage<T>(fn: (packagePath: string) => Promise<T>): Promise<T> {
 	const directory = await fs.promises.mkdtemp(join(tmpdir(), 'vsce-'));
@@ -213,7 +213,6 @@ export interface IInternalPublishOptions {
 async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: ManifestPublish, options: IInternalPublishOptions) {
 	const pat = await getPAT(manifest.publisher, options);
 	const api = await getGalleryAPI(pat);
-	const packageStream = fs.createReadStream(packagePath);
 	const name = `${manifest.publisher}.${manifest.name}`;
 	const description = options.target
 		? `${name} (${options.target}) v${manifest.version}`
@@ -254,10 +253,10 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 			}
 
 			if (sigzipPath) {
-				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
+				await _publishSignedPackage(api, packagePath, sigzipPath, manifest);
 			} else {
 				try {
-					await api.updateExtension(undefined, packageStream, manifest.publisher, manifest.name);
+					await api.updateExtension(undefined, fs.createReadStream(packagePath), manifest.publisher, manifest.name);
 				} catch (err: any) {
 					if (err.statusCode === 409) {
 						if (options.skipDuplicate) {
@@ -273,9 +272,9 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 			}
 		} else {
 			if (sigzipPath) {
-				await _publishSignedPackage(api, basename(packagePath), packageStream, basename(sigzipPath), fs.createReadStream(sigzipPath), manifest);
+				await _publishSignedPackage(api, packagePath, sigzipPath, manifest);
 			} else {
-				await api.createExtension(undefined, packageStream);
+				await api.createExtension(undefined, fs.createReadStream(packagePath));
 			}
 		}
 	} catch (err: any) {
@@ -295,17 +294,8 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 	log.done(`Published ${description}.`);
 }
 
-async function _publishSignedPackage(api: GalleryApi, packageName: string, packageStream: fs.ReadStream, sigzipName: string, sigzipStream: fs.ReadStream, manifest: ManifestPublish) {
+async function _publishSignedPackage(api: GalleryApi, packagePath: string, sigzipPath: string, manifest: ManifestPublish) {
 	const extensionType = 'Visual Studio Code';
-	const form = new FormData();
-	const lineBreak = '\r\n';
-	form.setBoundary('0f411892-ef48-488f-89d3-4f0546e84723');
-	form.append('vsix', packageStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=vsix; filename=\"${packageName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
-	});
-	form.append('sigzip', sigzipStream, {
-		header: `--${form.getBoundary()}${lineBreak}Content-Disposition: attachment; name=sigzip; filename=\"${sigzipName}\"${lineBreak}Content-Type: application/octet-stream${lineBreak}${lineBreak}`
-	});
 
 	const publishWithRetry = retry(handleWhen(err => err.message.includes('timeout')), {
 		maxAttempts: 3,
@@ -313,7 +303,25 @@ async function _publishSignedPackage(api: GalleryApi, packageName: string, packa
 	});
 
 	return await publishWithRetry.execute(async () => {
-		return await api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType);
+		const form = createMultipartStream(
+			[
+				{ name: 'vsix', filename: basename(packagePath), stream: fs.createReadStream(packagePath) },
+				{ name: 'sigzip', filename: basename(sigzipPath), stream: fs.createReadStream(sigzipPath) },
+			],
+			'0f411892-ef48-488f-89d3-4f0546e84723'
+		);
+
+		try {
+			return await runWithStreamError(form, () =>
+				api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType)
+			);
+		} finally {
+			// Release the file handles when the request did not consume the whole form, which
+			// otherwise keeps the package locked until the process exits.
+			if (!form.readableEnded) {
+				form.destroy();
+			}
+		}
 	});
 }
 
