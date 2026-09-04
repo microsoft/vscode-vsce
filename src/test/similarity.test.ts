@@ -534,16 +534,24 @@ describe('findSimilar', () => {
 describe('unknown command help', () => {
 	const runVsce = require('../main') as (argv: string[]) => void;
 
-	/** Runs `vsce <command>` in process, capturing what it prints and the exit code. */
+	/**
+	 * Runs `vsce <command>` in process, capturing what it prints and the exit code. Both
+	 * streams are captured because `log.error` writes to stdout under GitHub Actions and to
+	 * `console.error` everywhere else.
+	 */
 	function runUnknownCommand(command: string): { output: string; exitCode: number | undefined } {
 		const chunks: string[] = [];
 		const originalWrite = process.stdout.write;
+		const originalError = console.error;
 		const originalExit = process.exit;
 		let exitCode: number | undefined;
 
 		(process.stdout as any).write = (chunk: any) => {
 			chunks.push(String(chunk));
 			return true;
+		};
+		console.error = (...args: any[]) => {
+			chunks.push(`${args.join(' ')}\n`);
 		};
 		(process as any).exit = (code?: number) => {
 			exitCode = code;
@@ -558,6 +566,7 @@ describe('unknown command help', () => {
 			}
 		} finally {
 			(process.stdout as any).write = originalWrite;
+			console.error = originalError;
 			(process as any).exit = originalExit;
 		}
 
@@ -601,32 +610,9 @@ describe('unknown command help', () => {
 	});
 
 	it('keeps the create-publisher message', () => {
-		const errors: string[] = [];
-		const originalError = console.error;
-		const originalExit = process.exit;
-		let exitCode: number | undefined;
-
-		console.error = (...args: any[]) => errors.push(args.join(' '));
-		(process as any).exit = (code?: number) => {
-			exitCode = code;
-			throw new ProcessExited();
-		};
-
-		try {
-			runVsce(['node', 'vsce', 'create-publisher']);
-		} catch (error) {
-			if (!(error instanceof ProcessExited)) {
-				throw error;
-			}
-		} finally {
-			console.error = originalError;
-			(process as any).exit = originalExit;
-		}
+		const { output, exitCode } = runUnknownCommand('create-publisher');
 
 		assert.strictEqual(exitCode, 1);
-		assert.ok(
-			errors.join('\n').includes(`The 'create-publisher' command is no longer available`),
-			errors.join('\n')
-		);
+		assert.ok(output.includes(`The 'create-publisher' command is no longer available`), output.slice(-200));
 	});
 });
