@@ -2601,6 +2601,35 @@ describe('MarkdownProcessor', () => {
 			});
 	});
 
+	it('should include the repository directory in inferred GitHub URLs', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			description: 'test extension',
+			engines: Object.create(null),
+			repository: {
+				url: 'https://github.com/username/repository',
+				directory: 'extensions/test',
+			},
+		};
+
+		const processor = new ReadmeProcessor(manifest, { githubBranch: 'main' });
+		const readme = {
+			path: 'extension/readme.md',
+			contents: '[Documentation](docs.md)\n\n![Demo](images/demo.gif)\n\nFixes #123',
+		};
+
+		const actual = await read(await processor.onFile(readme));
+
+		assert.strictEqual(
+			actual,
+			'[Documentation](https://github.com/username/repository/blob/main/extensions/test/docs.md)\n\n' +
+				'![Demo](https://github.com/username/repository/raw/main/extensions/test/images/demo.gif)\n\n' +
+				'Fixes [#123](https://github.com/username/repository/issues/123)'
+		);
+	});
+
 	it('should override image URLs with baseImagesUrl while also respecting githubBranch', () => {
 		const manifest = {
 			name: 'test',

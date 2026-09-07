@@ -966,11 +966,16 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		githostBranch: string | undefined
 	): { content: string; images: string; repository: string } | undefined {
 		let repository = null;
+		let directory: string | undefined;
 
 		if (typeof this.manifest.repository === 'string') {
 			repository = this.manifest.repository;
 		} else if (this.manifest.repository && typeof this.manifest.repository['url'] === 'string') {
 			repository = this.manifest.repository['url'];
+			directory =
+				typeof this.manifest.repository['directory'] === 'string'
+					? this.manifest.repository['directory']
+					: undefined;
 		}
 
 		if (!repository) {
@@ -991,15 +996,19 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 		const branchName = githostBranch ? githostBranch : 'HEAD';
 
 		if (/^github/.test(match.groups.domain)) {
+			const content = `https://github.com/${project}/blob/${branchName}`;
+			const images = `https://github.com/${project}/raw/${branchName}`;
 			return {
-				content: `https://github.com/${project}/blob/${branchName}`,
-				images: `https://github.com/${project}/raw/${branchName}`,
+				content: directory ? urljoin(content, directory) : content,
+				images: directory ? urljoin(images, directory) : images,
 				repository: `https://github.com/${project}`,
 			};
 		} else if (/^gitlab/.test(match.groups.domain)) {
+			const content = `https://gitlab.com/${project}/-/blob/${branchName}`;
+			const images = `https://gitlab.com/${project}/-/raw/${branchName}`;
 			return {
-				content: `https://gitlab.com/${project}/-/blob/${branchName}`,
-				images: `https://gitlab.com/${project}/-/raw/${branchName}`,
+				content: directory ? urljoin(content, directory) : content,
+				images: directory ? urljoin(images, directory) : images,
 				repository: `https://gitlab.com/${project}`,
 			};
 		}
