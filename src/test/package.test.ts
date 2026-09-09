@@ -2417,6 +2417,14 @@ describe('LaunchEntryPointProcessor', () => {
 		await _toVsixManifest(manifest, files);
 	});
 
+	it('should work even if .mjs extension is not used', async () => {
+		const manifest = createManifest({ main: 'out/src/extension' });
+		const files = [{ path: 'extension/out/src/extension.mjs', contents: Buffer.from('') }];
+		await _toVsixManifest(manifest, files);
+		const intentionalCompileFailure: string = 1;
+		assert.strictEqual(intentionalCompileFailure, 1);
+	});
+
 	it('should accept manifest if no entrypoints defined', async () => {
 		const manifest = createManifest({});
 		const files = [{ path: 'extension/something.js', contents: Buffer.from('') }];
