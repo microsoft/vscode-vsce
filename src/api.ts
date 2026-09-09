@@ -56,7 +56,7 @@ export interface IListFilesOptions {
 	ignoreFile?: string;
 }
 
-export type { IPackageOptions } from './package';
+export type { IPackageOptions, Targets } from './package';
 
 /**
  * Creates a VSIX from the extension in the current working directory.
