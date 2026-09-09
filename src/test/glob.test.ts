@@ -677,6 +677,22 @@ describe('glob: package.json files property', function () {
 			'src/a.js',
 		]));
 
+	it('should always include root license files', () =>
+		filesTest(
+			['src'],
+			{
+				'src/a.js': '',
+				LICENSE: '',
+				LICENCE: '',
+				'LICENSE.md': '',
+				'licence.md': '',
+				'LICENSE.txt': '',
+				'licence.txt': '',
+				'nested/LICENSE': '',
+			},
+			['package.json', 'LICENSE', 'LICENCE', 'LICENSE.md', 'licence.md', 'LICENSE.txt', 'licence.txt', 'src/a.js']
+		));
+
 	it('should include nothing extra when the list is empty', () =>
 		filesTest([], { 'src/a.js': '', 'README.md': '' }, ['package.json', 'README.md']));
 
