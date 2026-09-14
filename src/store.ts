@@ -5,6 +5,7 @@ import { read, getGalleryAPI, getSecurityRolesAPI, log, getMarketplaceUrl } from
 import { validatePublisher } from './validation';
 import { readManifest } from './package';
 import { getPAT } from './publish';
+import { LegacyCredentialMigration } from './keytarMigration';
 
 export interface IPublisher {
 	readonly name: string;
@@ -16,6 +17,7 @@ export interface IStore extends Iterable<IPublisher> {
 	get(name: string): IPublisher | undefined;
 	add(publisher: IPublisher): Promise<void>;
 	delete(name: string): Promise<void>;
+	tryMigratePublisher?(name: string): Promise<IPublisher | undefined>;
 }
 
 export interface IKeytar {
@@ -80,8 +82,10 @@ export class FileStore implements IStore {
 }
 
 export class KeytarStore implements IStore {
-	static async open(serviceName = 'vscode-vsce'): Promise<KeytarStore> {
-		const keytar = await import('keytar').then(module => module.default);
+	static async open(
+		serviceName = 'vscode-vsce',
+		keytar: IKeytar = require('@napi-rs/keyring/keytar.js') as IKeytar
+	): Promise<KeytarStore> {
 		const creds = await keytar.findCredentials(serviceName);
 
 		return new KeytarStore(
@@ -101,18 +105,20 @@ export class KeytarStore implements IStore {
 		private publishers: IPublisher[]
 	) { }
 
-	get(name: string): IPublisher {
+	get(name: string): IPublisher | undefined {
 		return this.publishers.filter(p => p.name === name)[0];
 	}
 
 	async add(publisher: IPublisher): Promise<void> {
-		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
 		await this.keytar.setPassword(this.serviceName, publisher.name, publisher.pat);
+		this.publishers = [...this.publishers.filter(p => p.name !== publisher.name), publisher];
 	}
 
 	async delete(name: string): Promise<void> {
+		if (!await this.keytar.deletePassword(this.serviceName, name)) {
+			throw new Error(`Could not remove the saved PAT for publisher '${name}'.`);
+		}
 		this.publishers = this.publishers.filter(p => p.name !== name);
-		await this.keytar.deletePassword(this.serviceName, name);
 	}
 
 	[Symbol.iterator](): Iterator<IPublisher, any, undefined> {
@@ -169,6 +175,7 @@ async function openDefaultStore(): Promise<IStore> {
 		return store;
 	}
 
+	keytarStore = LegacyCredentialMigration.wrap(keytarStore, () => KeytarStore.open());
 	const fileStore = await FileStore.open();
 
 	// migrate from file store
@@ -188,7 +195,7 @@ export async function getPublisher(publisherName: string): Promise<IPublisher> {
 	validatePublisher(publisherName);
 
 	const store = await openDefaultStore();
-	let publisher = store.get(publisherName);
+	let publisher = store.get(publisherName) ?? await store.tryMigratePublisher?.(publisherName);
 
 	if (publisher) {
 		return publisher;
@@ -213,6 +220,11 @@ export async function loginPublisher(publisherName: string): Promise<IPublisher>
 
 		if (!/^y$/i.test(answer)) {
 			throw new Error('Aborted');
+		}
+	} else {
+		publisher = await store.tryMigratePublisher?.(publisherName);
+		if (publisher) {
+			return publisher;
 		}
 	}
 

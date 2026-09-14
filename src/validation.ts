@@ -1,6 +1,6 @@
 import * as semver from 'semver';
-import parseSemver from 'parse-semver';
 import { log } from './util';
+import { parsePackageSpec } from './packageSpec';
 
 const nameRegex = /^[a-z0-9][a-z0-9\-]*$/i;
 
@@ -74,14 +74,14 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 	let plainEngineVersion: string, plainTypeVersion: string;
 
 	try {
-		const engineSemver = parseSemver(`vscode@${engineVersion}`);
+		const engineSemver = parsePackageSpec(`vscode@${engineVersion}`);
 		plainEngineVersion = engineSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode');
 	}
 
 	try {
-		const typeSemver = parseSemver(`@types/vscode@${typeVersion}`);
+		const typeSemver = parsePackageSpec(`@types/vscode@${typeVersion}`);
 		plainTypeVersion = typeSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of @types/vscode');

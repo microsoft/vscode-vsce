@@ -6,16 +6,16 @@ import * as yazl from 'yazl';
 import type { ExtensionKind, ManifestPackage, UnverifiedManifest } from './manifest';
 import { ITranslations, patchNLS } from './nls';
 import * as util from './util';
-import { glob } from 'glob';
+import { glob, type FileSystemAdapter } from 'tinyglobby';
 import { minimatch, MinimatchOptions } from 'minimatch';
-import markdownit from 'markdown-it';
-import * as cheerio from 'cheerio';
+import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { marked } from 'marked';
 import * as url from 'url';
+import { styleText } from 'util';
 import mime from 'mime';
 import * as semver from 'semver';
 import libnpmversion from 'libnpmversion';
 import urljoin from 'url-join';
-import chalk from 'chalk';
 import {
 	validateExtensionName,
 	validateVersion,
@@ -31,10 +31,10 @@ import {
 } from './npm';
 import * as GitHost from 'hosted-git-info';
 import runScript from '@npmcli/run-script';
-import parseSemver from 'parse-semver';
 import * as jsonc from 'jsonc-parser';
 import * as vsceSign from '@vscode/vsce-sign';
 import { getRuleNameFromRuleId, lintFiles, lintText, prettyPrintLintResult } from './secretLint';
+import { parsePackageSpec } from './packageSpec';
 
 const minimatchOptions: MinimatchOptions = { dot: true };
 
@@ -499,10 +499,10 @@ export class ManifestProcessor extends BaseProcessor {
 		const preRelease = options.preRelease;
 
 		if (target || preRelease) {
-			let engineSemver: ReturnType<typeof parseSemver>;
+			let engineSemver: ReturnType<typeof parsePackageSpec>;
 
 			try {
-				engineSemver = parseSemver(`vscode@${manifest.engines.vscode}`);
+				engineSemver = parsePackageSpec(`vscode@${manifest.engines.vscode}`);
 			} catch (err) {
 				throw new Error('Failed to parse semver of engines.vscode');
 			}
@@ -894,12 +894,37 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 			}
 		}
 
-		const html = markdownit({ html: true }).render(contents);
-		const $ = cheerio.load(html);
+		const html = marked.parse(contents, { async: false });
+		const document = parse(html);
+		const images: DefaultTreeAdapterTypes.Element[] = [];
+		let hasSvg = false;
+		const nodes: DefaultTreeAdapterTypes.Node[] = [document];
+
+		while (nodes.length > 0) {
+			const node = nodes.pop()!;
+
+			if ('tagName' in node) {
+				if (node.tagName === 'img') {
+					images.push(node);
+				} else if (node.tagName === 'svg') {
+					hasSvg = true;
+				}
+			}
+
+			const children = 'content' in node
+				? node.content.childNodes
+				: 'childNodes' in node
+					? node.childNodes
+					: [];
+
+			for (let index = children.length - 1; index >= 0; index--) {
+				nodes.push(children[index]);
+			}
+		}
 
 		if (this.rewriteRelativeLinks) {
-			$('img').each((_, img) => {
-				const rawSrc = $(img).attr('src');
+			for (const image of images) {
+				const rawSrc = image.attrs.find(attribute => attribute.name === 'src')?.value;
 
 				if (!rawSrc) {
 					throw new Error(`Images in ${this.name} must have a source.`);
@@ -927,12 +952,12 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 						`SVGs are restricted in ${this.name}; please use other file image formats, such as PNG: ${src}`
 					);
 				}
-			});
+			}
 		}
 
-		$('svg').each(() => {
+		if (hasSvg) {
 			throw new Error(`SVG tags are not allowed in ${this.name}.`);
-		});
+		}
 
 		return {
 			path: file.path,
@@ -1345,7 +1370,7 @@ export function validateManifestForPackaging(manifest: UnverifiedManifest): Mani
 
 	let parsedEngineVersion: string;
 	try {
-		const engineSemver = parseSemver(`vscode@${engines.vscode}`);
+		const engineSemver = parsePackageSpec(`vscode@${engines.vscode}`);
 		parsedEngineVersion = engineSemver.version;
 	} catch (err) {
 		throw new Error('Failed to parse semver of engines.vscode');
@@ -1670,6 +1695,43 @@ const defaultIgnore = [
 	'**/.vscode-test-web/**',
 ];
 
+/**
+ * `tinyglobby` skips symbolic links altogether when `followSymbolicLinks` is disabled, while
+ * vsce treats them as regular files instead (see the `--follow-symlinks` option). Presenting
+ * symbolic links to the crawler as regular files keeps them in the result without recursing
+ * into symlinked directories.
+ */
+const symlinksAsFilesFileSystem = {
+	readdir: (
+		dir: string,
+		options: { withFileTypes: true },
+		callback: (err: NodeJS.ErrnoException | null, entries: fs.Dirent[]) => void
+	) => fs.readdir(dir, options, (err, entries) => callback(err, err ? entries : entries.map(asFile))),
+	readdirSync: (dir: string, options: { withFileTypes: true }) => fs.readdirSync(dir, options).map(asFile),
+} as unknown as FileSystemAdapter;
+
+function asFile(entry: fs.Dirent): fs.Dirent {
+	if (!entry.isSymbolicLink()) {
+		return entry;
+	}
+
+	return Object.create(entry, {
+		isFile: { value: () => true },
+		isDirectory: { value: () => false },
+		isSymbolicLink: { value: () => false },
+	}) as fs.Dirent;
+}
+
+/**
+ * `glob` matched patterns case-insensitively on Windows and macOS and case-sensitively
+ * everywhere else, based on `process.platform` rather than on the actual filesystem.
+ * `tinyglobby` always matches case-sensitively, so this keeps the previous behaviour, which
+ * matters for the `node_modules` folder being ignored regardless of how it is cased on disk.
+ * Keep this keyed off the platform: probing the filesystem instead would change what is
+ * packaged on case-sensitive macOS volumes and case-insensitive Linux mounts.
+ */
+const caseSensitiveMatch = process.platform !== 'win32' && process.platform !== 'darwin';
+
 async function collectAllFiles(
 	cwd: string,
 	dependencies: 'npm' | 'yarn' | 'none',
@@ -1678,9 +1740,15 @@ async function collectAllFiles(
 ): Promise<string[]> {
 	const deps = await getDependencies(cwd, dependencies, dependencyEntryPoints);
 	const promises = deps.map(dep =>
-		glob('**', { cwd: dep, nodir: true, follow: followSymlinks, dot: true, ignore: ['node_modules/**', ".git/**"] }).then(files =>
-			files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/'))
-		)
+		glob('**', {
+			cwd: dep,
+			onlyFiles: true,
+			followSymbolicLinks: followSymlinks,
+			fs: followSymlinks ? undefined : symlinksAsFilesFileSystem,
+			caseSensitiveMatch,
+			dot: true,
+			ignore: ['node_modules/**', '.git/**'],
+		}).then(files => files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/')))
 	);
 	const files = (await Promise.all(promises)).flat();
 	return files;
@@ -2010,7 +2078,7 @@ export async function packageCommand(options: IPackageOptions = {}): Promise<any
 
 	const stats = await fs.promises.stat(packagePath);
 	const packageSize = util.bytesToString(stats.size);
-	util.log.done(`Packaged: ${packagePath} ` + chalk.bold(`(${files.length} files, ${packageSize})`));
+	util.log.done(`Packaged: ${packagePath} ` + styleText('bold', `(${files.length} files, ${packageSize})`));
 }
 
 export interface IListFilesOptions {
@@ -2076,9 +2144,9 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	const jsFiles = files.filter(f => /\.js$/i.test(f.path));
 	if (files.length > 5000 || jsFiles.length > 100) {
 		let message = '';
-		message += `This extension consists of ${chalk.bold(String(files.length))} files, out of which ${chalk.bold(String(jsFiles.length))} are JavaScript files. `;
-		message += `For performance reasons, you should bundle your extension: ${chalk.underline('https://aka.ms/vscode-bundle-extension')}. `;
-		message += `You should also exclude unnecessary files by adding them to your .vscodeignore: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}.\n`;
+		message += `This extension consists of ${styleText('bold', String(files.length))} files, out of which ${styleText('bold', String(jsFiles.length))} are JavaScript files. `;
+		message += `For performance reasons, you should bundle your extension: ${styleText('underline', 'https://aka.ms/vscode-bundle-extension')}. `;
+		message += `You should also exclude unnecessary files by adding them to your .vscodeignore: ${styleText('underline', 'https://aka.ms/vscode-vscodeignore')}.\n`;
 		util.log.warn(message);
 	}
 
@@ -2086,17 +2154,17 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	const hasIgnoreFile = fs.existsSync(options.ignoreFile ?? path.join(cwd, '.vscodeignore'));
 	if (!hasIgnoreFile && !manifest.files) {
 		let message = '';
-		message += `Neither a ${chalk.bold('.vscodeignore')} file nor a ${chalk.bold('"files"')} property in package.json was found. `;
+		message += `Neither a ${styleText('bold', '.vscodeignore')} file nor a ${styleText('bold', '"files"')} property in package.json was found. `;
 		message += `To ensure only necessary files are included in your extension, `;
-		message += `add a .vscodeignore file or specify the "files" property in package.json. More info: ${chalk.underline('https://aka.ms/vscode-vscodeignore')}\n`;
+		message += `add a .vscodeignore file or specify the "files" property in package.json. More info: ${styleText('underline', 'https://aka.ms/vscode-vscodeignore')}\n`;
 		util.log.warn(message);
 	}
 	// Throw an error if the extension uses both a .vscodeignore file and the files property in package.json
 	else if (hasIgnoreFile && manifest.files !== undefined && manifest.files.length > 0) {
 		let message = '';
-		message += `Both a ${chalk.bold('.vscodeignore')} file and a ${chalk.bold('"files"')} property in package.json were found. `;
+		message += `Both a ${styleText('bold', '.vscodeignore')} file and a ${styleText('bold', '"files"')} property in package.json were found. `;
 		message += `VSCE does not support combining both strategies. `;
-		message += `Either remove the ${chalk.bold('.vscodeignore')} file or the ${chalk.bold('"files"')} property in package.json.`;
+		message += `Either remove the ${styleText('bold', '.vscodeignore')} file or the ${styleText('bold', '"files"')} property in package.json.`;
 		util.log.error(message);
 		process.exit(1);
 	}
@@ -2123,11 +2191,11 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 
 		if (unusedIncludePatterns.length > 0) {
 			let message = '';
-			message += `The following include patterns in the ${chalk.bold('"files"')} property in package.json do not match any files packaged in the extension:\n`;
+			message += `The following include patterns in the ${styleText('bold', '"files"')} property in package.json do not match any files packaged in the extension:\n`;
 			message += unusedIncludePatterns.map(p => `  - ${p.relative}`).join('\n');
 			message += '\nRemove any include pattern which is not needed.\n';
-			message += `\n=> Run ${chalk.bold('vsce ls --tree')} to see all included files.\n`;
-			message += `=> Use ${chalk.bold('--allow-unused-files-pattern')} to skip this check`;
+			message += `\n=> Run ${styleText('bold', 'vsce ls --tree')} to see all included files.\n`;
+			message += `=> Use ${styleText('bold', '--allow-unused-files-pattern')} to skip this check`;
 			util.log.error(message);
 			process.exit(1);
 		}
@@ -2146,12 +2214,12 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 	);
 
 	let message = '';
-	message += chalk.bold.blue(`Files included in the VSIX:\n`);
+	message += styleText(['bold', 'blue'], `Files included in the VSIX:\n`);
 	message += printableFileStructure.join('\n');
 
 	// If not all files have been printed, mention how all files can be printed
 	if (files.length + 1 > printableFileStructure.length) {
-		message += `\n\n=> Run ${chalk.bold('vsce ls --tree')} to see all included files.`;
+		message += `\n\n=> Run ${styleText('bold', 'vsce ls --tree')} to see all included files.`;
 	}
 
 	message += '\n';
@@ -2198,7 +2266,7 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 		const uniqueSecretIds = new Set<string>(noneDotEnvSecretsFound.map(result => result.ruleId!));
 		const secretsFoundRuleNames = Array.from(uniqueSecretIds).map(getRuleNameFromRuleId);
 
-		let errorMessage = `${chalk.bold('Potential security issue detected:')}`;
+		let errorMessage = `${styleText('bold', 'Potential security issue detected:')}`;
 		errorMessage += ` Your extension package contains sensitive information that should not be published.`;
 		errorMessage += ` Please remove these secrets before packaging.`;
 		errorMessage += `\n` + noneDotEnvSecretsFound.map(prettyPrintLintResult).join('\n');
@@ -2207,27 +2275,27 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 		hintMessage += secretsFoundRuleNames.map(name => `--allow-package-secrets ${name}`).join(' ');
 		hintMessage += ` or use --allow-package-all-secrets to skip this check entirely (not recommended).`;
 
-		util.log.error(errorMessage + chalk.italic(hintMessage));
+		util.log.error(errorMessage + styleText('italic', hintMessage));
 		process.exit(1);
 	}
 
 	// .env file found
 	const allRuleIds = new Set(secretsFound.map(result => result.ruleId).filter(Boolean));
 	if (!options.allowPackageEnvFile && allRuleIds.has('@secretlint/secretlint-rule-no-dotenv')) {
-		let errorMessage = `${chalk.bold.red('.env')} files should not be packaged.`;
+		let errorMessage = `${styleText(['bold', 'red'], '.env')} files should not be packaged.`;
 
 		switch (fileExclusion) {
 			case FileExclusionType.None:
-				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')} or exclude it from the package.json ${chalk.bold('files')} property.`; break;
+				errorMessage += ` Ignore the file in your ${styleText('bold', '.vscodeignore')} or exclude it from the package.json ${styleText('bold', 'files')} property.`; break;
 			case FileExclusionType.VSCodeIgnore:
-				errorMessage += ` Ignore the file in your ${chalk.bold('.vscodeignore')}.`; break;
+				errorMessage += ` Ignore the file in your ${styleText('bold', '.vscodeignore')}.`; break;
 			case FileExclusionType.PackageFiles:
-				errorMessage += ` Do not include the file in your package.json ${chalk.bold('files')} property.`; break;
+				errorMessage += ` Do not include the file in your package.json ${styleText('bold', 'files')} property.`; break;
 		}
 
 		const hintMessage = `\nTo ignore this check, you can use --allow-package-env-file (not recommended).`;
 
-		util.log.error(errorMessage + chalk.italic(hintMessage));
+		util.log.error(errorMessage + styleText('italic', hintMessage));
 		process.exit(1);
 	}
 

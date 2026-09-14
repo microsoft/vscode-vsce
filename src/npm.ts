@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import parseSemver from 'parse-semver';
 import { CancellationToken, log, nonnull } from './util';
+import { parsePackageSpec } from './packageSpec';
 import type { ManifestPackage } from './manifest';
 
 const exists = (file: string) =>
@@ -90,7 +90,7 @@ function asYarnDependency(prefix: string, tree: YarnTreeNode, prune: boolean): Y
 	let name: string;
 
 	try {
-		const parseResult = parseSemver(tree.name);
+		const parseResult = parsePackageSpec(tree.name);
 		name = parseResult.name;
 	} catch (err) {
 		name = tree.name.replace(/^([^@+])@.*$/, '$1');

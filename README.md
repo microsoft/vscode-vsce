@@ -15,14 +15,27 @@ Read the [**Documentation**](https://code.visualstudio.com/api/working-with-exte
 
 ### Linux
 
-In order to save credentials safely, this project uses [`keytar`](https://www.npmjs.com/package/keytar) which uses `libsecret`, which you may need to install before publishing extensions. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using `keytar`.
+In order to save credentials safely, this project uses [`@napi-rs/keyring`](https://www.npmjs.com/package/@napi-rs/keyring), which uses the system Secret Service and falls back to the Linux kernel keyring. Setting the `VSCE_STORE=file` environment variable will revert back to the file credential store. Using the `VSCE_PAT` environment variable will also avoid using the system credential store.
 
-Depending on your distribution, you will need to run the following command:
+### Upgrading saved PATs
 
-- Debian/Ubuntu: `sudo apt-get install libsecret-1-dev`
-- Alpine: `apk add libsecret`
-- Red Hat-based: `sudo yum install libsecret-devel`
-- Arch Linux: `sudo pacman -S libsecret`
+When a command needs a saved Personal Access Token and the publisher has none in the current native credential store, `vsce` checks for that publisher's old `keytar` credential. If one is found in an interactive terminal, it offers:
+
+```text
+A saved PAT for publisher 'your-publisher' was found in the previous credential store. Copy it to the new store? [y/N]
+```
+
+Enter `Y` to copy just that publisher's PAT and continue without re-entering it. Enter `N` (or press Enter) to continue to the normal PAT prompt without copying anything. Migration is skipped in non-interactive runs such as CI.
+
+- **Windows:** reads the requested Windows Credential Manager entry using the built-in Windows PowerShell. No `keytar` installation is needed.
+- **Linux:** requires `secret-tool` (`libsecret-tools` on Debian/Ubuntu) and access to the same desktop Secret Service used previously. You may be prompted to unlock the keyring.
+- **macOS:** existing Keychain entries are already compatible; no copying is necessary.
+
+Existing PATs in the new store take precedence; migration does not run while listing publishers or logging out. Each copied PAT is read back before it is used. **Old keytar entries are never modified or deleted**, so older `vsce` versions can still use them. Declining or logging out does not permanently suppress the offer: the old PAT can be offered again when needed, but copying always requires fresh consent. Logout removes only the new entry and does not revoke the PAT.
+
+Credential writes are serialized across `vsce` processes, and the destination is checked again after confirmation to avoid overwriting a newer PAT. The non-secret lock lives under `~/.vsce-keytar-migration`; no PATs or consent decisions are stored there. A command waits up to 30 seconds for the lock; a lock abandoned by a crashed process can be recovered after two minutes.
+
+If legacy lookup or copying fails, `vsce` displays a warning and continues to the normal PAT prompt. Install the required helper/unlock the keyring and retry, or enter a PAT to save it normally. Migration helpers time out after 30 seconds. Using `VSCE_STORE=file`, `VSCE_PAT`, or `--pat` does not trigger this native-store migration; the existing plaintext-file migration is unchanged.
 
 ## Usage
 

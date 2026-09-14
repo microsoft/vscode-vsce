@@ -1,15 +1,29 @@
-import chalk from "chalk";
-import { Convert, Location, Region, Result, Level } from "./typings/secret-lint-types";
+import * as os from "os";
+import * as path from "path";
+import { styleText } from "util";
+import { pathToFileURL } from "url";
+import type {
+	SecretLintCoreConfig,
+	SecretLintCoreResult,
+	SecretLintRuleCreator,
+	SecretLintRulePresetCreator
+} from "@secretlint/types";
 import { log } from "./util";
 
-interface SecretLintEngineResult {
-	ok: boolean;
-	output: string;
+interface SecretLintFinding {
+	message: string;
+	ruleId: string;
+	level: "error" | "warning" | "note";
+	filePath: string;
+	startLine?: number;
+	startColumn?: number;
+	endLine?: number;
+	endColumn?: number;
 }
 
 interface SecretLintResult {
 	ok: boolean;
-	results: Result[];
+	results: SecretLintFinding[];
 }
 
 const secretsScanningRules = [
@@ -49,29 +63,46 @@ const dotEnvRules = [
 	}
 ];
 
-// Helper function to dynamically import the createEngine function
-async function getEngine(scanSecrets: boolean, scanDotEnv: boolean) {
-	// Use a raw dynamic import that will not be transformed
-	// This is necessary because @secretlint/node is an ESM module
-	const secretlintModule = await eval('import("@secretlint/node")');
-
-	const rules = [];
+async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<SecretLintCoreConfig> {
+	const [{ creator: recommend }, { creator: noDotenv }] = await Promise.all([
+		importSecretLintRule<SecretLintRulePresetCreator>("@secretlint/secretlint-rule-preset-recommend"),
+		importSecretLintRule<SecretLintRuleCreator>("@secretlint/secretlint-rule-no-dotenv")
+	]);
+	const rules: SecretLintCoreConfig["rules"] = [];
 	if (scanSecrets) {
-		rules.push(...secretsScanningRules);
+		rules.push({
+			...secretsScanningRules[0],
+			rule: recommend
+		});
 	}
 	if (scanDotEnv) {
-		rules.push(...dotEnvRules);
+		rules.push({
+			...dotEnvRules[0],
+			rule: noDotenv
+		});
 	}
 
-	const lintOptions = {
-		configFileJSON: { rules: rules },
-		formatter: "@secretlint/secretlint-formatter-sarif", // checkstyle, compact, jslint-xml, junit, pretty-error, stylish, tap, unix, json, mask-result, table
-		color: true,
-		maskSecrets: false
-	};
+	return { rules };
+}
 
-	const engine = await secretlintModule.createEngine(lintOptions);
-	return engine;
+function importSecretLintRule<T>(packageName: string): Promise<{ creator: T }> {
+	return import(packageName);
+}
+
+async function mapConcurrently<T, U>(values: T[], mapper: (value: T) => Promise<U>): Promise<U[]> {
+	const results = new Array<U>(values.length);
+	let nextIndex = 0;
+
+	async function worker() {
+		while (nextIndex < values.length) {
+			const index = nextIndex++;
+			results[index] = await mapper(values[index]);
+		}
+	}
+
+	const workerCount = Math.min(os.availableParallelism(), values.length);
+	await Promise.all(Array.from({ length: workerCount }, worker));
+	return results;
 }
 
 export async function lintFiles(
@@ -79,19 +110,28 @@ export async function lintFiles(
 	scanSecrets: boolean,
 	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine(scanSecrets, scanDotEnv);
-
-	let engineResult;
+	let results;
 	try {
-		engineResult = await engine.executeOnFiles({
-			filePathList: filePaths
-		});
+		const [{ lintSource }, { createRawSource }, config] = await Promise.all([
+			import("@secretlint/core"),
+			import("@secretlint/source-creator"),
+			getConfig(scanSecrets, scanDotEnv)
+		]);
+		results = await mapConcurrently(filePaths, async filePath =>
+			lintSource({
+				source: await createRawSource(filePath),
+				options: {
+					config,
+					maskSecrets: false
+				}
+			})
+		);
 	} catch (error) {
 		log.error('Error occurred while scanning secrets (files):', error);
 		process.exit(1);
 	}
 
-	return parseResult(engineResult);
+	return parseResult(results);
 }
 
 export async function lintText(
@@ -100,25 +140,59 @@ export async function lintText(
 	scanSecrets: boolean,
 	scanDotEnv: boolean
 ): Promise<SecretLintResult> {
-	const engine = await getEngine(scanSecrets, scanDotEnv);
-
-	let engineResult;
+	let result;
 	try {
-		engineResult = await engine.executeOnContent({
-			content,
-			filePath: fileName
+		const [{ lintSource }, config] = await Promise.all([
+			import("@secretlint/core"),
+			getConfig(scanSecrets, scanDotEnv)
+		]);
+		result = await lintSource({
+			source: {
+				content,
+				filePath: fileName,
+				ext: path.extname(fileName),
+				contentType: "text"
+			},
+			options: {
+				config,
+				maskSecrets: false
+			}
 		});
 	} catch (error) {
 		log.error('Error occurred while scanning secrets (content):', error);
 		process.exit(1);
 	}
-	return parseResult(engineResult);
+	return parseResult([result]);
 }
 
-function parseResult(result: SecretLintEngineResult): SecretLintResult {
-	const output = Convert.toSecretLintOutput(result.output);
-	const results = output.runs.at(0)?.results ?? [];
-	return { ok: result.ok, results };
+function parseResult(fileResults: SecretLintCoreResult[]): SecretLintResult {
+	const results = fileResults.flatMap(fileResult =>
+		fileResult.messages.map((message): SecretLintFinding => ({
+			message: message.message,
+			ruleId: message.ruleParentId ? `${message.ruleParentId} > ${message.ruleId}` : message.ruleId,
+			level: message.severity === "info" ? "note" : message.severity,
+			filePath: process.env.SARIF_URI_ABSOLUTE
+				? pathToFileURL(fileResult.filePath).toString()
+				: path.relative(process.cwd(), fileResult.filePath),
+			startLine: fixLine(message.loc.start.line),
+			startColumn: fixColumn(message.loc.start.column),
+			endLine: fixLine(message.loc.end.line),
+			endColumn: fixColumn(message.loc.end.column)
+		}))
+	);
+
+	return {
+		ok: !fileResults.some(fileResult => fileResult.messages.some(message => message.severity === "error")),
+		results
+	};
+}
+
+function fixLine(value: number | null): number | undefined {
+	return value === null ? undefined : value === 0 ? 1 : value;
+}
+
+function fixColumn(value: number | null): number | undefined {
+	return value === null ? undefined : value === 0 ? 1 : value + 1;
 }
 
 export function getRuleNameFromRuleId(ruleId: string): string {
@@ -126,36 +200,19 @@ export function getRuleNameFromRuleId(ruleId: string): string {
 	return parts[parts.length - 1];
 }
 
-export function prettyPrintLintResult(result: Result): string {
-	if (!result.message.text) {
-		return JSON.stringify(result);
-	}
-
-	const text = result.message.text;
-	const titleColor = result.level === undefined || result.level === Level.Error ? chalk.bold.red : chalk.bold.yellow;
+export function prettyPrintLintResult(result: SecretLintFinding): string {
+	const text = result.message;
 	const title = text.length > 54 ? text.slice(0, 50) + '...' : text;
-	const ruleName = result.ruleId ? getRuleNameFromRuleId(result.ruleId) : 'unknown';
+	const ruleName = getRuleNameFromRuleId(result.ruleId);
 
-	let output = `\t${titleColor(title)} [${ruleName}]\n`;
-
-	if (result.locations) {
-		result.locations.forEach(location => {
-			output += `\t${prettyPrintLocation(location)}\n`;
-		});
-	}
+	let output = `\t${styleText(['bold', result.level === "error" ? 'red' : 'yellow'], title)} [${ruleName}]\n`;
+	output += `\t${prettyPrintLocation(result)}\n`;
 	return output;
 }
 
-function prettyPrintLocation(location: Location): string {
-	if (!location.physicalLocation) { return JSON.stringify(location); }
-
-	const uri = location.physicalLocation.artifactLocation?.uri;
-	if (!uri) { return JSON.stringify(location); }
-
-	let output = uri;
-
-	const region = location.physicalLocation.region;
-	const regionStringified = region ? prettyPrintRegion(region) : undefined;
+function prettyPrintLocation(result: SecretLintFinding): string {
+	let output = result.filePath;
+	const regionStringified = prettyPrintRegion(result);
 	if (regionStringified) {
 		output += `#${regionStringified}`;
 	}
@@ -163,9 +220,9 @@ function prettyPrintLocation(location: Location): string {
 	return output;
 }
 
-function prettyPrintRegion(region: Region): string | undefined {
-	const startPosition = prettyPrintPosition(region.startLine, region.startColumn);
-	const endPosition = prettyPrintPosition(region.endLine, region.endColumn);
+function prettyPrintRegion(result: SecretLintFinding): string | undefined {
+	const startPosition = prettyPrintPosition(result.startLine, result.startColumn);
+	const endPosition = prettyPrintPosition(result.endLine, result.endColumn);
 
 	if (!startPosition) {
 		return undefined;
