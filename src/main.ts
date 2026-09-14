@@ -77,7 +77,7 @@ module.exports = function (argv: string[]): void {
 		)
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
-		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--dependencies', 'Enable dependency detection via npm or yarn. Never enable this option if you are bundling your extension', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--readme-path <path>', 'Path to README file (defaults to README.md)')
 		.option('--follow-symlinks', 'Recurse into symlinked directories instead of treating them as files')
@@ -116,8 +116,9 @@ module.exports = function (argv: string[]): void {
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
 		.option('--no-gitHubIssueLinking', 'Disable automatic expansion of GitHub-style issue syntax into links')
 		.option('--no-gitLabIssueLinking', 'Disable automatic expansion of GitLab-style issue syntax into links')
+		.option('--no-prepublish', 'Do not run the prepublish script before packaging')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
-		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--dependencies', 'Enable dependency detection via npm or yarn. Never enable this option if you are bundling your extension', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
@@ -150,6 +151,7 @@ module.exports = function (argv: string[]): void {
 					ignoreFile,
 					gitHubIssueLinking,
 					gitLabIssueLinking,
+					prepublish,
 					dependencies,
 					preRelease,
 					allowStarActivation,
@@ -183,6 +185,7 @@ module.exports = function (argv: string[]): void {
 						ignoreFile,
 						gitHubIssueLinking,
 						gitLabIssueLinking,
+						prepublish,
 						dependencies,
 						preRelease,
 						allowStarActivation,
@@ -247,8 +250,9 @@ module.exports = function (argv: string[]): void {
 		.option('--allow-package-all-secrets', 'Allow to package all kinds of secrets')
 		.option('--allow-package-env-file', 'Allow packaging .env files')
 		.option('--ignoreFile <path>', 'Indicate alternative .vscodeignore')
+		.option('--no-prepublish', 'Do not run the prepublish script before packaging')
 		// default must remain undefined for dependencies or we will fail to load defaults from package.json
-		.option('--dependencies', 'Enable dependency detection via npm or yarn', undefined)
+		.option('--dependencies', 'Enable dependency detection via npm or yarn. Never enable this option if you are bundling your extension', undefined)
 		.option('--no-dependencies', 'Disable dependency detection via npm or yarn', undefined)
 		.option('--pre-release', 'Mark this package as a pre-release')
 		.option('--allow-star-activation', 'Allow using * in activation events')
@@ -288,6 +292,7 @@ module.exports = function (argv: string[]): void {
 					allowPackageAllSecrets,
 					allowPackageEnvFile,
 					ignoreFile,
+					prepublish,
 					dependencies,
 					preRelease,
 					allowStarActivation,
@@ -328,6 +333,7 @@ module.exports = function (argv: string[]): void {
 						allowPackageAllSecrets,
 						allowPackageEnvFile,
 						ignoreFile,
+						prepublish,
 						dependencies,
 						preRelease,
 						allowStarActivation,
