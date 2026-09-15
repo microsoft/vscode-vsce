@@ -1,3 +1,6 @@
+import type { IPackageOptions } from "./package";
+import type { IPublishOptions } from "./publish";
+
 export interface Person {
 	name: string;
 	url?: string;
@@ -110,7 +113,7 @@ export interface ManifestPackage {
 	files?: string[];
 
 	// vsce
-	vsce?: any;
+	vsce?: Partial<IPackageOptions & IPublishOptions>;
 
 	// not supported (npm)
 	// bin
