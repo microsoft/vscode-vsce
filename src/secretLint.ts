@@ -8,7 +8,6 @@ import type {
 	SecretLintRuleCreator,
 	SecretLintRulePresetCreator
 } from "@secretlint/types";
-import { log } from "./util";
 
 interface SecretLintFinding {
 	message: string;
@@ -127,8 +126,7 @@ export async function lintFiles(
 			})
 		);
 	} catch (error) {
-		log.error('Error occurred while scanning secrets (files):', error);
-		process.exit(1);
+		throw new Error('Error occurred while scanning secrets (files)', { cause: error });
 	}
 
 	return parseResult(results);
@@ -159,8 +157,7 @@ export async function lintText(
 			}
 		});
 	} catch (error) {
-		log.error('Error occurred while scanning secrets (content):', error);
-		process.exit(1);
+		throw new Error('Error occurred while scanning secrets (content)', { cause: error });
 	}
 	return parseResult([result]);
 }

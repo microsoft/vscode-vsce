@@ -1026,8 +1026,7 @@ export class ReadmeProcessor extends MarkdownProcessor {
 
 	override async onEnd(): Promise<void> {
 		if (this.options.readmePath && this.filesProcessed === 0) {
-			util.log.error(`The provided readme file (${this.options.readmePath}) could not be found.`);
-			process.exit(1);
+			throw new Error(`The provided readme file (${this.options.readmePath}) could not be found.`);
 		}
 	}
 }
@@ -1050,8 +1049,7 @@ export class ChangelogProcessor extends MarkdownProcessor {
 
 	override async onEnd(): Promise<void> {
 		if (this.options.changelogPath && this.filesProcessed === 0) {
-			util.log.error(`The provided changelog file (${this.options.changelogPath}) could not be found.`);
-			process.exit(1);
+			throw new Error(`The provided changelog file (${this.options.changelogPath}) could not be found.`);
 		}
 	}
 }
@@ -2153,8 +2151,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 		message += `Both a ${styleText('bold', '.vscodeignore')} file and a ${styleText('bold', '"files"')} property in package.json were found. `;
 		message += `VSCE does not support combining both strategies. `;
 		message += `Either remove the ${styleText('bold', '.vscodeignore')} file or the ${styleText('bold', '"files"')} property in package.json.`;
-		util.log.error(message);
-		process.exit(1);
+		throw new Error(message);
 	}
 	// Throw an error if the extension uses the files property in package.json and
 	// the package does not include at least one file for each include pattern
@@ -2184,8 +2181,7 @@ export async function printAndValidatePackagedFiles(files: IFile[], cwd: string,
 			message += '\nRemove any include pattern which is not needed.\n';
 			message += `\n=> Run ${styleText('bold', 'vsce ls --tree')} to see all included files.\n`;
 			message += `=> Use ${styleText('bold', '--allow-unused-files-pattern')} to skip this check`;
-			util.log.error(message);
-			process.exit(1);
+			throw new Error(message);
 		}
 	}
 
@@ -2263,8 +2259,7 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 		hintMessage += secretsFoundRuleNames.map(name => `--allow-package-secrets ${name}`).join(' ');
 		hintMessage += ` or use --allow-package-all-secrets to skip this check entirely (not recommended).`;
 
-		util.log.error(errorMessage + styleText('italic', hintMessage));
-		process.exit(1);
+		throw new Error(errorMessage + styleText('italic', hintMessage));
 	}
 
 	// .env file found
@@ -2283,8 +2278,7 @@ export async function scanFilesForSecrets(files: IFile[], fileExclusion: FileExc
 
 		const hintMessage = `\nTo ignore this check, you can use --allow-package-env-file (not recommended).`;
 
-		util.log.error(errorMessage + styleText('italic', hintMessage));
-		process.exit(1);
+		throw new Error(errorMessage + styleText('italic', hintMessage));
 	}
 
 }

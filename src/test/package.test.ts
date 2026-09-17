@@ -16,6 +16,7 @@ import {
 	LicenseProcessor,
 	printAndValidatePackagedFiles, pack
 } from '../package';
+import { createVSIX } from '../api';
 import { ManifestPackage } from '../manifest';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -91,38 +92,28 @@ function createManifest(extra: Partial<ManifestPackage> = {}): ManifestPackage {
 
 const PROCESS_ERROR_MESSAGE = 'PROCESS ERROR';
 async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, manifest: ManifestPackage, options: IPackageOptions, errorExpected: boolean, warningExpected: boolean): Promise<void> {
-	const originalLogError = log.error;
 	const originalLogWarn = log.warn;
 	const originalProcessExit = process.exit;
 	const warns: string[] = [];
-	const errors: string[] = [];
 	let exited = false;
-	let errorThrown: string | undefined;
-	log.error = (message: string) => errors.push(message);
+	let errorThrown: Error | undefined;
 	log.warn = (message: string) => warns.push(message);
 	process.exit = (() => { exited = true; throw Error(PROCESS_ERROR_MESSAGE); }) as () => never;
 
 	try {
 		await printAndValidatePackagedFiles(files, cwd, manifest, options);
 	} catch (e: any) {
-		if (e instanceof Error && e.message !== PROCESS_ERROR_MESSAGE) {
-			errorThrown = e.message + '\n' + e.stack;
-		}
+		errorThrown = e;
 	} finally {
 		process.exit = originalProcessExit;
-		log.error = originalLogError;
 		log.warn = originalLogWarn;
 	}
 
 	// Validate that the correct number of errors and warnings were thrown
 	const messages = [];
 
-	if (errorExpected !== !!errors.length) {
-		if (errors.length) {
-			messages.push(...errors);
-		} else {
-			messages.push('Expected an error');
-		}
+	if (errorExpected !== !!errorThrown) {
+		messages.push(errorThrown ? `Unexpected error: ${errorThrown.stack}` : 'Expected an error');
 	}
 
 	if (warningExpected !== !!warns.length) {
@@ -133,12 +124,8 @@ async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, ma
 		}
 	}
 
-	if (!errorExpected && exited) {
+	if (exited) {
 		messages.push('Process exited');
-	}
-
-	if (!errorExpected && !!errorThrown && !exited) {
-		messages.push('Error thrown: ' + errorThrown);
 	}
 
 	if (messages.length) {
@@ -146,7 +133,7 @@ async function testPrintAndValidatePackagedFiles(files: IFile[], cwd: string, ma
 	}
 }
 
-async function processExitExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+async function rejectionExpected(fn: () => Promise<any>, errorMessage: string): Promise<void> {
 	const originalExit = process.exit;
 	let exitCalled = false;
 
@@ -156,10 +143,8 @@ async function processExitExpected(fn: () => Promise<any>, errorMessage: string)
 			throw new Error('Process exit was called');
 		}) as any;
 
-		await fn();
-		assert.fail(errorMessage);
-	} catch (error) {
-		assert.ok(exitCalled, errorMessage);
+		await assert.rejects(fn, errorMessage);
+		assert.strictEqual(exitCalled, false, 'Process exit was called');
 	} finally {
 		process.exit = originalExit;
 	}
@@ -286,6 +271,16 @@ describe('collect', function () {
 		await testPrintAndValidatePackagedFiles(files, cwd, manifestCopy, {}, false, false);
 	});
 
+	it('createVSIX rejects instead of exiting the process when package validation fails', async () => {
+		const cwd = fixture('manifestFiles');
+		const ignoreFile = path.join(cwd, 'README.md');
+
+		await rejectionExpected(
+			() => createVSIX({ cwd, ignoreFile, packagePath: getVisxOutputPath() }),
+			'Expected createVSIX to reject when both an ignore file and package.json files are used'
+		);
+	});
+
 	it('should ignore devDependencies', () => {
 		const cwd = fixture('devDependencies');
 		return readManifest(cwd)
@@ -399,7 +394,7 @@ describe('collect', function () {
 
 	it('should not package .env file', async function () {
 		const cwd = fixture('env');
-		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
+		await rejectionExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath() }), 'Expected package to throw: .env file should not be packaged');
 	});
 
 	it('allow packaging .env file with --allow-package-env-file', async function () {
@@ -410,7 +405,7 @@ describe('collect', function () {
 	it('should not package file which has a private key', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret1Ignore');
-		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
+		await rejectionExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: file which has a private key should not be packaged');
 	});
 
 	it('should scan files when CPU information is unavailable', async function () {
@@ -422,7 +417,7 @@ describe('collect', function () {
 		try {
 			const cwd = fixture('secrets');
 			const ignoreFile = path.join(cwd, 'secret1Ignore');
-			await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected secret scanning to run without CPU information');
+			await rejectionExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected secret scanning to run without CPU information');
 		} finally {
 			Object.defineProperty(os, 'cpus', cpusDescriptor);
 		}
@@ -455,7 +450,7 @@ describe('collect', function () {
 	it('should not package npm token', async function () {
 		const cwd = fixture('secrets');
 		const ignoreFile = path.join(cwd, 'secret2Ignore');
-		await processExitExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: should not package npm token');
+		await rejectionExpected(async () => await pack({ cwd, packagePath: getVisxOutputPath(), ignoreFile }), 'Expected package to throw: should not package npm token');
 	});
 
 	it('npm token false positive 1', async function () {
