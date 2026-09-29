@@ -100,13 +100,13 @@ async function exchangeOIDCToken(
 ): Promise<string> {
 	const result = await requestJSON(
 		'Marketplace OIDC token exchange',
-		`${marketplaceUrl.replace(/\/$/, '')}/_apis/gallery/token`,
+		`${marketplaceUrl.replace(/\/$/, '')}/_apis/gallery/token?api-version=7.2-preview.1`,
 		request,
 		{
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',
-				Authorization: `Bearer ${oidcToken}`,
+				Authorization: `FederatedToken ${oidcToken}`,
 				'Content-Type': 'application/json',
 				'User-Agent': 'vsce',
 			},

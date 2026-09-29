@@ -3,7 +3,6 @@ import {
 	getOIDCCredential,
 	IOIDCHttpRequest,
 	IOIDCHttpResponse,
-	OIDC_AUDIENCE,
 	OIDCHttpRequestHandler,
 } from '../oidc';
 import { getPAT } from '../publish';
@@ -14,54 +13,63 @@ interface RecordedRequest {
 }
 
 describe('OIDC trusted publishing', () => {
-	it('requests a GitHub Actions token and exchanges it for a Marketplace credential', async () => {
-		const requests: RecordedRequest[] = [];
-		const request = createRequestHandler(
-			requests,
-			response({ value: 'github-oidc-token' }),
-			response({
-				credential: 'marketplace-session-token',
-				expires: '2026-05-22T16:30:00Z',
-				publisherName: 'my-publisher',
-			})
-		);
+	for (const marketplaceUrl of [
+		'https://marketplace.visualstudio.com',
+		'https://marketplace.example',
+		'https://marketplace.example/',
+	]) {
+		it(`requests a GitHub Actions token and exchanges it at ${marketplaceUrl}`, async () => {
+			const requests: RecordedRequest[] = [];
+			const request = createRequestHandler(
+				requests,
+				response({ value: 'github-oidc-token' }),
+				response({
+					credential: 'marketplace-session-token',
+					expires: '2026-05-22T16:30:00Z',
+					publisherName: 'my-publisher',
+				})
+			);
 
-		const credential = await getOIDCCredential('my-publisher', {
-			environment: {
-				GITHUB_ACTIONS: 'true',
-				ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.example/id-token?api-version=1',
-				ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-runtime-token',
-			},
-			marketplaceUrl: 'https://marketplace.example',
-			request,
+			const credential = await getOIDCCredential('my-publisher', {
+				environment: {
+					GITHUB_ACTIONS: 'true',
+					ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.example/id-token?api-version=1',
+					ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-runtime-token',
+				},
+				marketplaceUrl,
+				request,
+			});
+
+			assert.strictEqual(credential, 'marketplace-session-token');
+			assert.strictEqual(requests.length, 2);
+
+			const githubRequestUrl = new URL(requests[0].url);
+			assert.strictEqual(githubRequestUrl.searchParams.get('api-version'), '1');
+			assert.strictEqual(githubRequestUrl.searchParams.get('audience'), 'marketplace.visualstudio.com');
+			assert.deepStrictEqual(requests[0].request, {
+				method: 'GET',
+				headers: {
+					Accept: 'application/json',
+					Authorization: 'Bearer github-runtime-token',
+				},
+			});
+
+			assert.strictEqual(
+				requests[1].url,
+				`${new URL(marketplaceUrl).origin}/_apis/gallery/token?api-version=7.2-preview.1`
+			);
+			assert.deepStrictEqual(requests[1].request, {
+				method: 'POST',
+				headers: {
+					Accept: 'application/json',
+					Authorization: 'FederatedToken github-oidc-token',
+					'Content-Type': 'application/json',
+					'User-Agent': 'vsce',
+				},
+				body: JSON.stringify({ publisherName: 'my-publisher' }),
+			});
 		});
-
-		assert.strictEqual(credential, 'marketplace-session-token');
-		assert.strictEqual(requests.length, 2);
-
-		const githubRequestUrl = new URL(requests[0].url);
-		assert.strictEqual(githubRequestUrl.searchParams.get('api-version'), '1');
-		assert.strictEqual(githubRequestUrl.searchParams.get('audience'), OIDC_AUDIENCE);
-		assert.deepStrictEqual(requests[0].request, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				Authorization: 'Bearer github-runtime-token',
-			},
-		});
-
-		assert.strictEqual(requests[1].url, 'https://marketplace.example/_apis/gallery/token');
-		assert.deepStrictEqual(requests[1].request, {
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				Authorization: 'Bearer github-oidc-token',
-				'Content-Type': 'application/json',
-				'User-Agent': 'vsce',
-			},
-			body: JSON.stringify({ publisherName: 'my-publisher' }),
-		});
-	});
+	}
 
 	it('explains how to enable GitHub Actions OIDC token requests', async () => {
 		await assert.rejects(

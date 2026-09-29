@@ -94,7 +94,10 @@ jobs:
 ```
 
 OIDC publishing requests a GitHub Actions token for the `marketplace.visualstudio.com` audience and exchanges it for a
-short-lived Marketplace credential. It does not fall back to a PAT when token acquisition or exchange fails.
+Marketplace session token valid for up to 15 minutes. The exchange uses
+`POST /_apis/gallery/token?api-version=7.2-preview.1` with `Authorization: FederatedToken <GitHub OIDC JWT>` and a JSON
+body containing `publisherName`. The session token is then used in place of a PAT for publishing. It does not fall back
+to a PAT when token acquisition or exchange fails.
 
 ## Development
 
