@@ -1,5 +1,6 @@
 import { publish as _publish, IPublishOptions, unpublish as _unpublish, IUnpublishOptions } from './publish';
 import { packageCommand, listFiles as _listFiles, IPackageOptions } from './package';
+import { verifyPat as _verifyPat, IVerifyPatOptions } from './store';
 
 /**
  * @deprecated prefer IPackageOptions instead
@@ -119,4 +120,14 @@ export type IUnpublishVSIXOptions = IPublishOptions & Pick<IUnpublishOptions, 'i
  */
 export function unpublishVSIX(options: IUnpublishVSIXOptions = {}): Promise<any> {
 	return _unpublish({ force: true, ...options });
+}
+
+export type { IVerifyPatOptions } from './store';
+
+/**
+ * Verifies a Personal Access Token (PAT) for a publisher.
+ * @public
+ */
+export function verifyPat(options: IVerifyPatOptions = {}): Promise<void> {
+	return _verifyPat(options);
 }
