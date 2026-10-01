@@ -108,6 +108,7 @@ export function validateVSCodeTypesCompatibility(engineVersion: string, typeVers
 	const error = new Error(
 		`@types/vscode ${typeVersion} is greater than engines.vscode ${engineVersion}. Either upgrade engines.vscode or use an older @types/vscode version`
 	);
+	const testVariable: string = nonExistentValue;
 
 	if (typeMajor > engineMajor) {
 		throw error;
