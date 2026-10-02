@@ -1,4 +1,3 @@
-import { HttpClient, HttpClientResponse } from 'typed-rest-client/HttpClient';
 import {
 	PublishedExtension,
 	ExtensionQueryFlags,
@@ -6,7 +5,6 @@ import {
 	ExtensionQueryFilterType,
 	TypeInfo,
 } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
-import { IHeaders } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
 import { ContractSerializer } from 'azure-devops-node-api/Serialization';
 
 export interface ExtensionQuery {
@@ -22,12 +20,15 @@ interface VSCodePublishedExtension extends PublishedExtension {
 }
 
 export class PublicGalleryAPI {
-	private readonly client = new HttpClient('vsce');
-
 	constructor(private baseUrl: string, private apiVersion = '3.0-preview.1') {}
 
-	private post(url: string, data: string, additionalHeaders?: IHeaders): Promise<HttpClientResponse> {
-		return this.client.post(`${this.baseUrl}/_apis/public${url}`, data, additionalHeaders);
+	private post(url: string, data: string, additionalHeaders?: Record<string, string>): Promise<Response> {
+		return fetch(`${this.baseUrl}/_apis/public${url}`, {
+			method: 'POST',
+			// typed-rest-client's HttpClient('vsce') sent this user agent
+			headers: { 'User-Agent': 'vsce', ...additionalHeaders },
+			body: data,
+		});
 	}
 
 	async extensionQuery({
@@ -47,7 +48,20 @@ export class PublicGalleryAPI {
 			Accept: `application/json;api-version=${this.apiVersion}`,
 			'Content-Type': 'application/json',
 		});
-		const raw = JSON.parse(await res.readBody());
+		const body = await res.text();
+
+		if (!res.ok) {
+			// Prefer the gallery's own error message when the body carries one
+			let message: string | undefined;
+			try {
+				message = JSON.parse(body).message;
+			} catch {
+				// non-JSON error body
+			}
+			throw new Error(message ?? `Gallery request failed: ${res.status} ${res.statusText}`);
+		}
+
+		const raw = JSON.parse(body);
 
 		if (raw.errorCode !== undefined) {
 			throw new Error(raw.message);
