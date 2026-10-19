@@ -31,10 +31,21 @@ export function getHubUrl(publisher: string, name: string): string {
 	return `${marketplaceUrl}/manage/publishers/${publisher}/extensions/${name}/hub`;
 }
 
-export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
+/**
+ * Socket idle timeout for uploads. Large platform-specific packages can take longer than
+ * azure-devops-node-api's default 3 minutes to be accepted by the Marketplace.
+ */
+export const GALLERY_UPLOAD_SOCKET_TIMEOUT_MS = 10 * 60_000;
+
+/**
+ * Socket idle timeout for lookups, which are retried, so a hanging request fails fast.
+ */
+export const GALLERY_LOOKUP_SOCKET_TIMEOUT_MS = 60_000;
+
+export async function getGalleryAPI(pat: string, socketTimeout: number = GALLERY_UPLOAD_SOCKET_TIMEOUT_MS): Promise<IGalleryApi> {
 	// from https://github.com/Microsoft/tfs-cli/blob/master/app/exec/extension/default.ts#L287-L292
 	const authHandler = getBasicHandler('OAuth', pat);
-	return new GalleryApi(marketplaceUrl, [authHandler]);
+	return new GalleryApi(marketplaceUrl, [authHandler], { socketTimeout });
 
 	// const vsoapi = new WebApi(marketplaceUrl, authHandler);
 	// return await vsoapi.getGalleryApi();
