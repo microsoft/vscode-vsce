@@ -1,4 +1,5 @@
 import { getMarketplaceUrl } from './util';
+import { isGitHubActions } from './ciProvider';
 
 export const OIDC_AUDIENCE = 'marketplace.visualstudio.com';
 
@@ -31,7 +32,7 @@ class GitHubActionsOIDCTokenProvider implements IOIDCTokenProvider {
 	readonly name = 'GitHub Actions';
 
 	isAvailable(environment: NodeJS.ProcessEnv): boolean {
-		return environment['GITHUB_ACTIONS']?.toLowerCase() === 'true';
+		return isGitHubActions(environment);
 	}
 
 	async getToken(audience: string, { environment, request }: IOIDCTokenProviderContext): Promise<string> {
