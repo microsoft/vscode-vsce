@@ -7,6 +7,7 @@ import { PublicGalleryAPI } from './publicgalleryapi';
 import { ISecurityRolesApi } from 'azure-devops-node-api/SecurityRolesApi';
 import { ManifestPackage } from './manifest';
 import { EOL } from 'os';
+import { CIProviderRequestHandler, isGitHubActions } from './ciProvider';
 
 const __read = promisify<_read.Options, string>(_read);
 export function read(prompt: string, options: _read.Options = {}): Promise<string> {
@@ -34,7 +35,7 @@ export function getHubUrl(publisher: string, name: string): string {
 export async function getGalleryAPI(pat: string): Promise<IGalleryApi> {
 	// from https://github.com/Microsoft/tfs-cli/blob/master/app/exec/extension/default.ts#L287-L292
 	const authHandler = getBasicHandler('OAuth', pat);
-	return new GalleryApi(marketplaceUrl, [authHandler]);
+	return new GalleryApi(marketplaceUrl, [authHandler, new CIProviderRequestHandler()]);
 
 	// const vsoapi = new WebApi(marketplaceUrl, authHandler);
 	// return await vsoapi.getGalleryApi();
@@ -187,13 +188,14 @@ const LogPrefix = {
 
 function _log(type: LogMessageType, msg: any, ...args: any[]): void {
 	args = [LogPrefix[type], msg, ...args];
+	const githubActions = isGitHubActions();
 
 	if (type === LogMessageType.WARNING) {
-		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('warning', msg) : console.warn(...args);
+		githubActions ? logToGitHubActions('warning', msg) : console.warn(...args);
 	} else if (type === LogMessageType.ERROR) {
-		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('error', msg) : console.error(...args);
+		githubActions ? logToGitHubActions('error', msg) : console.error(...args);
 	} else {
-		process.env['GITHUB_ACTIONS'] ? logToGitHubActions('info', msg) : console.log(...args);
+		githubActions ? logToGitHubActions('info', msg) : console.log(...args);
 	}
 }
 
