@@ -256,6 +256,19 @@ describe('collect', function () {
 		]);
 	});
 
+	it('manifest.files includes root license files by default', async () => {
+		const cwd = fixture('manifestFiles');
+		const manifest = await readManifest(cwd);
+		const manifestCopy = { ...manifest, files: manifest.files?.filter(file => file !== 'LICENSE') };
+		const options = { cwd, dependencies: false };
+		const files = await collect(manifestCopy, options);
+		const names = files.map(f => f.path).sort();
+
+		await testPrintAndValidatePackagedFiles(files, cwd, manifestCopy, options, false, false);
+
+		assert.ok(names.includes('extension/LICENSE.txt'));
+	});
+
 	it('manifest.files unused-files-patterns check 1', async () => {
 		const cwd = fixture('manifestFiles');
 		const manifest = await readManifest(cwd);

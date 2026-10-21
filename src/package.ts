@@ -1789,8 +1789,13 @@ function collectFiles(
 							Promise.reject(err) :
 							// No .vscodeignore file exists
 							manifestFileIncludes ?
-								// include all files in manifestFileIncludes and ignore the rest
-								Promise.resolve(manifestFileIncludes.map(file => `!${file}`).concat(['**']).join('\n\r')) :
+								// include all files in manifestFileIncludes, npm's default license files, and ignore the rest
+								Promise.resolve(
+									manifestFileIncludes
+										.map(file => `!${file}`)
+										.concat(files.filter(file => /^licen[cs]e(\.(md|txt))?$/i.test(file)).map(file => `!${file}`), ['**'])
+										.join('\n\r')
+								) :
 								// "files" property not used in package.json
 								Promise.resolve('')
 				)
