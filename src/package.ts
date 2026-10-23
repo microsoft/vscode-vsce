@@ -1746,7 +1746,7 @@ async function collectAllFiles(
 		}).then(files => files.map(f => path.relative(cwd, path.join(dep, f))).map(f => f.replace(/\\/g, '/')))
 	);
 
-	return Promise.all(promises).then(util.flatten);
+	return Promise.all(promises).then(util.flatten).then((files)=> Array.from(new Set(files)));
 }
 
 function getDependenciesOption(options: IPackageOptions): 'npm' | 'yarn' | 'none' | undefined {
