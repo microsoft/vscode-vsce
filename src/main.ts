@@ -210,7 +210,6 @@ module.exports = function (argv: string[]): void {
 		.addOption(
 			new Option('--oidc', 'Use OpenID Connect trusted publishing for authentication')
 				.conflicts(['pat', 'azureCredential'])
-				.hideHelp(true)
 		)
 		.option('-t, --target <targets...>', `Target architectures. Valid targets: ${ValidTargets}`)
 		.option('--ignore-other-target-folders', `Ignore other target folders. Valid only when --target <target> is provided.`)
