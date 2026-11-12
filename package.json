@@ -46,7 +46,7 @@
 		"@secretlint/secretlint-rule-preset-recommend": "^10.2.2",
 		"@secretlint/source-creator": "^10.2.2",
 		"@secretlint/types": "^10.2.2",
-		"@vscode/vsce-sign": "^2.1.0",
+		"@vscode/vsce-sign": "^2.1.1",
 		"azure-devops-node-api": "^12.5.0",
 		"cockatiel": "^3.2.1",
 		"commander": "^12.1.0",
@@ -95,5 +95,8 @@
 		"serialize-javascript": "7.x",
 		"diff": "^9.0.0",
 		"@azure/msal-common": "16.14.0"
+	},
+	"allowScripts": {
+		"@vscode/vsce-sign": true
 	}
 }
