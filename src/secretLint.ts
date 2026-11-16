@@ -26,6 +26,12 @@ interface SecretLintResult {
 	results: SecretLintFinding[];
 }
 
+interface SecretLintProfilerModule {
+	secretLintProfiler: {
+		setEnabled(enabled: boolean): void;
+	};
+}
+
 const secretsScanningRules = [
 	{
 		id: "@secretlint/secretlint-rule-preset-recommend",
@@ -65,8 +71,8 @@ const dotEnvRules = [
 
 async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<SecretLintCoreConfig> {
 	const [{ creator: recommend }, { creator: noDotenv }] = await Promise.all([
-		importSecretLintRule<SecretLintRulePresetCreator>("@secretlint/secretlint-rule-preset-recommend"),
-		importSecretLintRule<SecretLintRuleCreator>("@secretlint/secretlint-rule-no-dotenv")
+		importSecretLintModule<{ creator: SecretLintRulePresetCreator }>("@secretlint/secretlint-rule-preset-recommend"),
+		importSecretLintModule<{ creator: SecretLintRuleCreator }>("@secretlint/secretlint-rule-no-dotenv")
 	]);
 	const rules: SecretLintCoreConfig["rules"] = [];
 	if (scanSecrets) {
@@ -85,8 +91,18 @@ async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<Sec
 	return { rules };
 }
 
-function importSecretLintRule<T>(packageName: string): Promise<{ creator: T }> {
+function importSecretLintModule<T>(packageName: string): Promise<T> {
 	return import(packageName);
+}
+
+async function importSecretLintCore(): Promise<typeof import("@secretlint/core")> {
+	const [core, { secretLintProfiler }] = await Promise.all([
+		import("@secretlint/core"),
+		importSecretLintModule<SecretLintProfilerModule>("@secretlint/profiler")
+	]);
+	// VSCE does not consume profiling results, so avoid collecting marks for every rule and file.
+	secretLintProfiler.setEnabled(false);
+	return core;
 }
 
 async function mapConcurrently<T, U>(values: T[], mapper: (value: T) => Promise<U>): Promise<U[]> {
@@ -113,7 +129,7 @@ export async function lintFiles(
 	let results;
 	try {
 		const [{ lintSource }, { createRawSource }, config] = await Promise.all([
-			import("@secretlint/core"),
+			importSecretLintCore(),
 			import("@secretlint/source-creator"),
 			getConfig(scanSecrets, scanDotEnv)
 		]);
@@ -143,7 +159,7 @@ export async function lintText(
 	let result;
 	try {
 		const [{ lintSource }, config] = await Promise.all([
-			import("@secretlint/core"),
+			importSecretLintCore(),
 			getConfig(scanSecrets, scanDotEnv)
 		]);
 		result = await lintSource({
