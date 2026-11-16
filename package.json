@@ -47,7 +47,7 @@
 		"@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
 		"@secretlint/source-creator": "^13.1.0",
 		"@secretlint/types": "^13.1.0",
-		"@vscode/vsce-sign": "^2.1.0",
+		"@vscode/vsce-sign": "^2.1.1",
 		"azure-devops-node-api": "^12.5.0",
 		"cockatiel": "^3.2.1",
 		"commander": "^12.1.0",
@@ -55,7 +55,7 @@
 		"jsonc-parser": "^3.3.1",
 		"marked": "^18.0.11",
 		"mime": "^1.6.0",
-		"minimatch": "^10.2.6",
+		"minimatch": "^11.0.1",
 		"parse5": "^8.0.1",
 		"proper-lockfile": "^4.1.2",
 		"read": "^1.0.7",
@@ -96,5 +96,8 @@
 		"serialize-javascript": "7.x",
 		"diff": "^9.0.0",
 		"@azure/msal-common": "16.14.0"
+	},
+	"allowScripts": {
+		"@vscode/vsce-sign": true
 	}
 }
