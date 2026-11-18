@@ -3,14 +3,22 @@ import * as semver from 'semver';
 import { ExtensionQueryFlags, PublishedExtension } from 'azure-devops-node-api/interfaces/GalleryInterfaces';
 import { pack, readManifest, versionBump, prepublish, signPackage, createSignatureArchive } from './package';
 import { getPublisher } from './store';
-import { getGalleryAPI, read, getPublishedUrl, log, getHubUrl, patchOptionsWithManifest } from './util';
+import {
+	getGalleryAPI,
+	read,
+	getPublishedUrl,
+	log,
+	getHubUrl,
+	patchOptionsWithManifest,
+	GALLERY_LOOKUP_SOCKET_TIMEOUT_MS,
+} from './util';
 import { ManifestPackage, ManifestPublish } from './manifest';
 import { readVSIXPackage } from './zip';
 import { validatePublisher } from './validation';
 import { GalleryApi } from 'azure-devops-node-api/GalleryApi';
 import { basename, join } from 'path';
 import { tmpdir } from 'os';
-import { IterableBackoff, handleWhen, retry } from 'cockatiel';
+import { UploadResult, uploadWithRetry, withRetry } from './publishRetry';
 import { getAzureCredentialAccessToken } from './auth';
 import { getOIDCCredential } from './oidc';
 import { createMultipartStream, runWithStreamError } from './multipart';
@@ -213,6 +221,7 @@ export interface IInternalPublishOptions {
 async function _publish(packagePath: string, sigzipPath: string | undefined, manifest: ManifestPublish, options: IInternalPublishOptions) {
 	const pat = await getPAT(manifest.publisher, options);
 	const api = await getGalleryAPI(pat);
+	const lookupApi = await getGalleryAPI(pat, GALLERY_LOOKUP_SOCKET_TIMEOUT_MS);
 	const name = `${manifest.publisher}.${manifest.name}`;
 	const description = options.target
 		? `${name} (${options.target}) v${manifest.version}`
@@ -220,11 +229,9 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 
 	log.info(`Publishing '${description}'...`);
 
-	let extension: PublishedExtension | null = null;
-
-	try {
+	const getPublishedExtension = async (): Promise<PublishedExtension | null> => {
 		try {
-			extension = await api.getExtension(
+			return await lookupApi.getExtension(
 				null,
 				manifest.publisher,
 				manifest.name,
@@ -232,50 +239,53 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 				ExtensionQueryFlags.IncludeVersions
 			);
 		} catch (err: any) {
-			if (err.statusCode !== 404) {
-				throw err;
+			if (err.statusCode === 404) {
+				return null;
 			}
+
+			throw err;
+		}
+	};
+
+	const isVersionPublished = (extension: PublishedExtension | null) =>
+		!!extension?.versions?.some(v => v.version === manifest.version && v.targetPlatform === options.target);
+
+	const skipOrThrowDuplicate = () => {
+		if (options.skipDuplicate) {
+			log.done(`Version ${manifest.version} is already published. Skipping publish.`);
+		} else {
+			throw new Error(`${description} already exists.`);
+		}
+	};
+
+	try {
+		const extension = await withRetry(`Looking up '${name}'`, getPublishedExtension);
+
+		if (isVersionPublished(extension)) {
+			return skipOrThrowDuplicate();
 		}
 
-		if (extension && extension.versions) {
-			const versionExists = extension.versions.some(v =>
-				(v.version === manifest.version) &&
-				(v.targetPlatform === options.target));
+		const upload = sigzipPath
+			? () => _publishSignedPackage(api, packagePath, sigzipPath, manifest)
+			: extension
+				? () => uploadPackageStream(packagePath, stream => api.updateExtension(undefined, stream, manifest.publisher, manifest.name))
+				: () => uploadPackageStream(packagePath, stream => api.createExtension(undefined, stream));
 
-			if (versionExists) {
-				if (options.skipDuplicate) {
-					log.done(`Version ${manifest.version} is already published. Skipping publish.`);
-					return;
-				} else {
-					throw new Error(`${description} already exists.`);
-				}
+		let result: UploadResult;
 
+		try {
+			result = await uploadWithRetry(description, upload, async () => isVersionPublished(await getPublishedExtension()));
+		} catch (err: any) {
+			// A conflict on the first attempt means the version was published since the lookup above.
+			if (extension && err.statusCode === 409) {
+				return skipOrThrowDuplicate();
 			}
 
-			if (sigzipPath) {
-				await _publishSignedPackage(api, packagePath, sigzipPath, manifest);
-			} else {
-				try {
-					await api.updateExtension(undefined, fs.createReadStream(packagePath), manifest.publisher, manifest.name);
-				} catch (err: any) {
-					if (err.statusCode === 409) {
-						if (options.skipDuplicate) {
-							log.done(`Version ${manifest.version} is already published. Skipping publish.`);
-							return;
-						} else {
-							throw new Error(`${description} already exists.`);
-						}
-					} else {
-						throw err;
-					}
-				}
-			}
-		} else {
-			if (sigzipPath) {
-				await _publishSignedPackage(api, packagePath, sigzipPath, manifest);
-			} else {
-				await api.createExtension(undefined, fs.createReadStream(packagePath));
-			}
+			throw err;
+		}
+
+		if (result === 'alreadyPublished') {
+			log.info(`A previous attempt to publish '${description}' was accepted by the Marketplace.`);
 		}
 	} catch (err: any) {
 		const message = (err && err.message) || '';
@@ -297,32 +307,39 @@ async function _publish(packagePath: string, sigzipPath: string | undefined, man
 async function _publishSignedPackage(api: GalleryApi, packagePath: string, sigzipPath: string, manifest: ManifestPublish) {
 	const extensionType = 'Visual Studio Code';
 
-	const publishWithRetry = retry(handleWhen(err => err.message.includes('timeout')), {
-		maxAttempts: 3,
-		backoff: new IterableBackoff([5_000, 10_000, 20_000])
-	});
+	const form = createMultipartStream(
+		[
+			{ name: 'vsix', filename: basename(packagePath), stream: fs.createReadStream(packagePath) },
+			{ name: 'sigzip', filename: basename(sigzipPath), stream: fs.createReadStream(sigzipPath) },
+		],
+		'0f411892-ef48-488f-89d3-4f0546e84723'
+	);
 
-	return await publishWithRetry.execute(async () => {
-		const form = createMultipartStream(
-			[
-				{ name: 'vsix', filename: basename(packagePath), stream: fs.createReadStream(packagePath) },
-				{ name: 'sigzip', filename: basename(sigzipPath), stream: fs.createReadStream(sigzipPath) },
-			],
-			'0f411892-ef48-488f-89d3-4f0546e84723'
+	try {
+		return await runWithStreamError(form, () =>
+			api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType)
 		);
-
-		try {
-			return await runWithStreamError(form, () =>
-				api.publishExtensionWithPublisherSignature(undefined, form, manifest.publisher, manifest.name, extensionType)
-			);
-		} finally {
-			// Release the file handles when the request did not consume the whole form, which
-			// otherwise keeps the package locked until the process exits.
-			if (!form.readableEnded) {
-				form.destroy();
-			}
+	} finally {
+		// Release the file handles when the request did not consume the whole form, which
+		// otherwise keeps the package locked until the process exits.
+		if (!form.readableEnded) {
+			form.destroy();
 		}
-	});
+	}
+}
+
+async function uploadPackageStream<T>(packagePath: string, fn: (stream: fs.ReadStream) => Promise<T>): Promise<T> {
+	const stream = fs.createReadStream(packagePath);
+
+	try {
+		return await fn(stream);
+	} finally {
+		// A failed or timed out request may leave the stream unconsumed; close it so a
+		// retry (or the temporary package cleanup) does not race an open file handle.
+		if (!stream.readableEnded) {
+			stream.destroy();
+		}
+	}
 }
 
 /**
