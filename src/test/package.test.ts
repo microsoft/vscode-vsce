@@ -3246,6 +3246,28 @@ describe('MarkdownProcessor', () => {
 		assert.ok(file);
 	});
 
+	it('should rewrite relative img sources containing characters other than word characters', async () => {
+		const manifest = {
+			name: 'test',
+			publisher: 'mocha',
+			version: '0.0.1',
+			engines: Object.create(null),
+			repository: 'https://github.com/username/repository',
+		};
+		const sources = ['images/logo@2x.png', 'images/a+b.png', 'images/~a.png', 'images/a,b.png', 'images/a.png?raw=true'];
+		const contents = sources.map(src => `<img src="${src}" />`).join('\n');
+		const processor = new ReadmeProcessor(manifest, {});
+		const readme = { path: 'extension/readme.md', contents };
+
+		const file = await processor.onFile(readme);
+		const actual = await read(file);
+		const expected = sources
+			.map(src => `<img src="https://github.com/username/repository/raw/HEAD/${src}" />`)
+			.join('\n');
+
+		assert.strictEqual(actual, expected);
+	});
+
 	it('should catch an unchanged README.md', async () => {
 		const manifest = {
 			name: 'test',
