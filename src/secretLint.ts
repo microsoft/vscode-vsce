@@ -10,6 +10,7 @@ import type {
 	SecretLintRulePresetCreator
 } from "@secretlint/types";
 import { log } from "./util";
+import { privateKeyRule } from "./secretLintPrivateKeyRule";
 
 interface SecretLintFinding {
 	message: string;
@@ -59,6 +60,16 @@ const secretsScanningRules = [
 						"/^(?!(?:npm_[0-9A-Za-z]{36})$).+$/"
 					]
 				}
+			}, {
+				id: "@secretlint/secretlint-rule-database-connection-string",
+				options: {
+					allows: [
+						// Placeholders in documentation and templates, such as <password>
+						"/<[^>]*>/",
+						// Example credentials for local development databases
+						"/@(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(?:[:/?]|$)/"
+					]
+				}
 			}
 		]
 	}
@@ -80,6 +91,10 @@ async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<Sec
 		rules.push({
 			...secretsScanningRules[0],
 			rule: recommend
+		});
+		rules.push({
+			id: privateKeyRule.meta.id,
+			rule: privateKeyRule
 		});
 	}
 	if (scanDotEnv) {

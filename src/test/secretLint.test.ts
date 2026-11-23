@@ -7,7 +7,7 @@ import * as path from 'path';
 import { performance, PerformanceObserver } from 'perf_hooks';
 import { setImmediate } from 'timers/promises';
 import { pathToFileURL } from 'url';
-import { lintFiles, lintText } from '../secretLint';
+import { getRuleNameFromRuleId, lintFiles, lintText } from '../secretLint';
 
 const { privateKey } = generateKeyPairSync('ec', {
 	namedCurve: 'prime256v1',
@@ -49,6 +49,50 @@ async function assertNoProfiling(scan: () => Promise<void>): Promise<void> {
 }
 
 describe('Secret scanning', () => {
+	it('ignores placeholder private keys and malformed npm tokens', async () => {
+		const placeholder = `-----BEGIN RSA PRIVATE KEY-----\n${'A'.repeat(64)}\n-----END RSA PRIVATE KEY-----`;
+		for (const content of [placeholder, `npm_${'A'.repeat(41)}`]) {
+			assert.deepStrictEqual(await lintText(content, 'fixture.txt', true, true), { ok: true, results: [] });
+		}
+	});
+
+	it('detects newly recommended secret types unless secret scanning is disabled', async () => {
+		const stripeKey = `sk_test_${'A'.repeat(24)}`;
+		const result = await lintText(stripeKey, 'fixture.txt', true, false);
+		assert.strictEqual(result.ok, false);
+		assert.deepStrictEqual(result.results.map(finding => finding.ruleId), [
+			'@secretlint/secretlint-rule-preset-recommend > @secretlint/secretlint-rule-stripe',
+		]);
+		assert.deepStrictEqual(await lintText(stripeKey, 'fixture.txt', false, false), { ok: true, results: [] });
+	});
+
+	it('detects each private key once, including formats the recommended rules skip', async () => {
+		const publicKeyEncoding = { type: 'spki', format: 'pem' } as const;
+		const keys = {
+			'RSA PKCS#8': generateKeyPairSync('rsa', { modulusLength: 2048, publicKeyEncoding, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } }).privateKey,
+			'EC SEC1': generateKeyPairSync('ec', { namedCurve: 'prime256v1', publicKeyEncoding, privateKeyEncoding: { type: 'sec1', format: 'pem' } }).privateKey,
+			'Ed25519 PKCS#8': generateKeyPairSync('ed25519', { publicKeyEncoding, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } }).privateKey,
+			'encrypted PKCS#8': generateKeyPairSync('ec', { namedCurve: 'prime256v1', publicKeyEncoding, privateKeyEncoding: { type: 'pkcs8', format: 'pem', cipher: 'aes-256-cbc', passphrase: 'fixture' } }).privateKey,
+		};
+		for (const [name, key] of Object.entries(keys)) {
+			const result = await lintText(key, 'fixture.pem', true, false);
+			assert.strictEqual(result.ok, false, name);
+			assert.deepStrictEqual(result.results.map(finding => getRuleNameFromRuleId(finding.ruleId)), ['privatekey'], name);
+		}
+	});
+
+	it('allows placeholder and local database URLs', async () => {
+		for (const content of [
+			'mysql://[<user>[:<password>]@]<host>[:<port>]/[<db>]',
+			'mongodb+srv://myUser:<db_password>@cluster0.example.mongodb.net/',
+			'postgres://postgres:mysecretpassword@localhost:5432/postgres',
+		]) {
+			assert.deepStrictEqual(await lintText(content, 'fixture.md', true, false), { ok: true, results: [] }, content);
+		}
+		const result = await lintText('postgres://app:S3cretPassw0rd@db.example.net:5432/app', 'fixture.ts', true, false);
+		assert.deepStrictEqual(result.results.map(finding => getRuleNameFromRuleId(finding.ruleId)), ['database-connection-string']);
+	});
+
 	it('scans in-memory content without collecting unused profiling entries', async () => {
 		await assertNoProfiling(async () => {
 			const [clean, secret, dotenv, disabled] = await Promise.all([
