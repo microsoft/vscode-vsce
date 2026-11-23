@@ -1,3 +1,4 @@
+import { createRequire } from "module";
 import * as os from "os";
 import * as path from "path";
 import { styleText } from "util";
@@ -95,10 +96,16 @@ function importSecretLintModule<T>(packageName: string): Promise<T> {
 	return import(packageName);
 }
 
+// Resolve the profiler from @secretlint/core so the toggle reaches the instance core uses, even if npm installs another copy.
+function importSecretLintProfiler(): Promise<SecretLintProfilerModule> {
+	const requireFromCore = createRequire(require.resolve("@secretlint/core"));
+	return import(pathToFileURL(requireFromCore.resolve("@secretlint/profiler")).href);
+}
+
 async function importSecretLintCore(): Promise<typeof import("@secretlint/core")> {
 	const [core, { secretLintProfiler }] = await Promise.all([
 		import("@secretlint/core"),
-		importSecretLintModule<SecretLintProfilerModule>("@secretlint/profiler")
+		importSecretLintProfiler()
 	]);
 	// VSCE does not consume profiling results, so avoid collecting marks for every rule and file.
 	secretLintProfiler.setEnabled(false);

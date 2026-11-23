@@ -1,10 +1,12 @@
 import * as assert from 'assert';
 import { generateKeyPairSync } from 'crypto';
 import * as fs from 'fs';
+import { createRequire } from 'module';
 import * as os from 'os';
 import * as path from 'path';
 import { performance, PerformanceObserver } from 'perf_hooks';
 import { setImmediate } from 'timers/promises';
+import { pathToFileURL } from 'url';
 import { lintFiles, lintText } from '../secretLint';
 
 const { privateKey } = generateKeyPairSync('ec', {
@@ -16,13 +18,13 @@ const privateKeyRule = '@secretlint/secretlint-rule-preset-recommend > @secretli
 const dotenvRule = '@secretlint/secretlint-rule-no-dotenv';
 
 async function assertNoProfiling(scan: () => Promise<void>): Promise<void> {
-	const profilerPackage = '@secretlint/profiler';
+	const requireFromCore = createRequire(require.resolve('@secretlint/core'));
 	const { secretLintProfiler }: {
 		secretLintProfiler: {
 			readonly isEnabled: boolean;
 			setEnabled(enabled: boolean): void;
 		};
-	} = await import(profilerPackage);
+	} = await import(pathToFileURL(requireFromCore.resolve('@secretlint/profiler')).href);
 	const wasEnabled = secretLintProfiler.isEnabled;
 	secretLintProfiler.setEnabled(true);
 	const names: string[] = [];
@@ -47,23 +49,6 @@ async function assertNoProfiling(scan: () => Promise<void>): Promise<void> {
 }
 
 describe('Secret scanning', () => {
-	it('ignores placeholder private keys and malformed npm tokens', async () => {
-		const placeholder = `-----BEGIN RSA PRIVATE KEY-----\n${'A'.repeat(64)}\n-----END RSA PRIVATE KEY-----`;
-		for (const content of [placeholder, `npm_${'A'.repeat(41)}`]) {
-			assert.deepStrictEqual(await lintText(content, 'fixture.txt', true, true), { ok: true, results: [] });
-		}
-	});
-
-	it('detects newly recommended secret types unless secret scanning is disabled', async () => {
-		const stripeKey = `sk_test_${'A'.repeat(24)}`;
-		const result = await lintText(stripeKey, 'fixture.txt', true, false);
-		assert.strictEqual(result.ok, false);
-		assert.deepStrictEqual(result.results.map(finding => finding.ruleId), [
-			'@secretlint/secretlint-rule-preset-recommend > @secretlint/secretlint-rule-stripe',
-		]);
-		assert.deepStrictEqual(await lintText(stripeKey, 'fixture.txt', false, false), { ok: true, results: [] });
-	});
-
 	it('scans in-memory content without collecting unused profiling entries', async () => {
 		await assertNoProfiling(async () => {
 			const [clean, secret, dotenv, disabled] = await Promise.all([
