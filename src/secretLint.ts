@@ -1,4 +1,3 @@
-import { createRequire } from "module";
 import * as os from "os";
 import * as path from "path";
 import { styleText } from "util";
@@ -6,8 +5,7 @@ import { pathToFileURL } from "url";
 import type {
 	SecretLintCoreConfig,
 	SecretLintCoreResult,
-	SecretLintRuleCreator,
-	SecretLintRulePresetCreator
+	SecretLintRuleCreator
 } from "@secretlint/types";
 import { log } from "./util";
 import { privateKeyRule } from "./secretLintPrivateKeyRule";
@@ -26,12 +24,6 @@ interface SecretLintFinding {
 interface SecretLintResult {
 	ok: boolean;
 	results: SecretLintFinding[];
-}
-
-interface SecretLintProfilerModule {
-	secretLintProfiler: {
-		setEnabled(enabled: boolean): void;
-	};
 }
 
 interface RecommendedRuleConfig {
@@ -87,7 +79,7 @@ const placeholderTokenAllow = "/([A-Za-z0-9])\\1{7,}/";
 // Real private keys often contain long runs of "A" (zero bytes in Base64), so these rules never get the placeholder allowance.
 const rulesWithoutPlaceholderAllow = new Set(["@secretlint/secretlint-rule-privatekey", "@secretlint/secretlint-rule-gcp"]);
 
-function withPlaceholderAllows(configs: RecommendedRuleConfig[], recommendedRules: SecretLintRuleCreator[]): RecommendedRuleConfig[] {
+function withPlaceholderAllows(configs: RecommendedRuleConfig[], recommendedRules: readonly SecretLintRuleCreator<unknown>[]): RecommendedRuleConfig[] {
 	return recommendedRules
 		.filter(rule => rule.meta.type === "scanner")
 		.map(rule => {
@@ -106,8 +98,8 @@ const dotEnvRules = [
 ];
 
 async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<SecretLintCoreConfig> {
-	const [{ creator: recommend, rules: recommendedRules }, { creator: noDotenv }] = await Promise.all([
-		importSecretLintModule<{ creator: SecretLintRulePresetCreator; rules: SecretLintRuleCreator[] }>("@secretlint/secretlint-rule-preset-recommend"),
+	const [{ presetRecommend, recommendedRules }, { creator: noDotenv }] = await Promise.all([
+		import("@secretlint/core/builtin"),
 		importSecretLintModule<{ creator: SecretLintRuleCreator }>("@secretlint/secretlint-rule-no-dotenv")
 	]);
 	const rules: SecretLintCoreConfig["rules"] = [];
@@ -115,7 +107,7 @@ async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<Sec
 		rules.push({
 			...secretsScanningRules[0],
 			rules: withPlaceholderAllows(secretsScanningRules[0].rules, recommendedRules),
-			rule: recommend
+			rule: presetRecommend
 		});
 		rules.push({
 			id: privateKeyRule.meta.id,
@@ -134,22 +126,6 @@ async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<Sec
 
 function importSecretLintModule<T>(packageName: string): Promise<T> {
 	return import(packageName);
-}
-
-// Resolve the profiler from @secretlint/core so the toggle reaches the instance core uses, even if npm installs another copy.
-function importSecretLintProfiler(): Promise<SecretLintProfilerModule> {
-	const requireFromCore = createRequire(require.resolve("@secretlint/core"));
-	return import(pathToFileURL(requireFromCore.resolve("@secretlint/profiler")).href);
-}
-
-async function importSecretLintCore(): Promise<typeof import("@secretlint/core")> {
-	const [core, { secretLintProfiler }] = await Promise.all([
-		import("@secretlint/core"),
-		importSecretLintProfiler()
-	]);
-	// VSCE does not consume profiling results, so avoid collecting marks for every rule and file.
-	secretLintProfiler.setEnabled(false);
-	return core;
 }
 
 async function mapConcurrently<T, U>(values: T[], mapper: (value: T) => Promise<U>): Promise<U[]> {
@@ -176,7 +152,7 @@ export async function lintFiles(
 	let results;
 	try {
 		const [{ lintSource }, { createRawSource }, config] = await Promise.all([
-			importSecretLintCore(),
+			import("@secretlint/core"),
 			import("@secretlint/source-creator"),
 			getConfig(scanSecrets, scanDotEnv)
 		]);
@@ -206,7 +182,7 @@ export async function lintText(
 	let result;
 	try {
 		const [{ lintSource }, config] = await Promise.all([
-			importSecretLintCore(),
+			import("@secretlint/core"),
 			getConfig(scanSecrets, scanDotEnv)
 		]);
 		result = await lintSource({
