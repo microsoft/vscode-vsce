@@ -57,13 +57,21 @@ describe('Secret scanning', () => {
 	});
 
 	it('detects newly recommended secret types unless secret scanning is disabled', async () => {
-		const stripeKey = `sk_test_${'A'.repeat(24)}`;
+		const stripeKey = `sk_test_${'a1B2c3D4'.repeat(3)}`;
 		const result = await lintText(stripeKey, 'fixture.txt', true, false);
 		assert.strictEqual(result.ok, false);
 		assert.deepStrictEqual(result.results.map(finding => finding.ruleId), [
 			'@secretlint/secretlint-rule-preset-recommend > @secretlint/secretlint-rule-stripe',
 		]);
 		assert.deepStrictEqual(await lintText(stripeKey, 'fixture.txt', false, false), { ok: true, results: [] });
+	});
+
+	it('allows placeholder tokens that repeat a character', async () => {
+		for (const content of [`sk_live_${'x'.repeat(24)}`, `glpat-${'x'.repeat(20)}`, `hf_${'x'.repeat(34)}`, `npm_${'0'.repeat(36)}`]) {
+			assert.deepStrictEqual(await lintText(content, 'README.md', true, false), { ok: true, results: [] }, content);
+		}
+		const result = await lintText(`glpat-${'aB3dE5gH7jK9mN1pQ3sT'}`, 'README.md', true, false);
+		assert.deepStrictEqual(result.results.map(finding => getRuleNameFromRuleId(finding.ruleId)), ['gitlab']);
 	});
 
 	it('detects each private key once, including formats the recommended rules skip', async () => {

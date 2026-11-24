@@ -34,7 +34,13 @@ interface SecretLintProfilerModule {
 	};
 }
 
-const secretsScanningRules = [
+interface RecommendedRuleConfig {
+	id: string;
+	allowMessageIds?: string[];
+	options?: { allows?: string[] };
+}
+
+const secretsScanningRules: { id: string; rules: RecommendedRuleConfig[] }[] = [
 	{
 		id: "@secretlint/secretlint-rule-preset-recommend",
 		rules: [
@@ -75,6 +81,24 @@ const secretsScanningRules = [
 	}
 ];
 
+// Documentation and samples use placeholder tokens such as sk_live_xxxxxxxxxxxxxxxxxxxxxxxx. Real tokens are random and
+// practically never repeat a character 8 times in a row.
+const placeholderTokenAllow = "/([A-Za-z0-9])\\1{7,}/";
+// Real private keys often contain long runs of "A" (zero bytes in Base64), so these rules never get the placeholder allowance.
+const rulesWithoutPlaceholderAllow = new Set(["@secretlint/secretlint-rule-privatekey", "@secretlint/secretlint-rule-gcp"]);
+
+function withPlaceholderAllows(configs: RecommendedRuleConfig[], recommendedRules: SecretLintRuleCreator[]): RecommendedRuleConfig[] {
+	return recommendedRules
+		.filter(rule => rule.meta.type === "scanner")
+		.map(rule => {
+			const config = configs.find(config => config.id === rule.meta.id) ?? { id: rule.meta.id };
+			if (rulesWithoutPlaceholderAllow.has(rule.meta.id)) {
+				return config;
+			}
+			return { ...config, options: { ...config.options, allows: [...config.options?.allows ?? [], placeholderTokenAllow] } };
+		});
+}
+
 const dotEnvRules = [
 	{
 		id: "@secretlint/secretlint-rule-no-dotenv"
@@ -82,14 +106,15 @@ const dotEnvRules = [
 ];
 
 async function getConfig(scanSecrets: boolean, scanDotEnv: boolean): Promise<SecretLintCoreConfig> {
-	const [{ creator: recommend }, { creator: noDotenv }] = await Promise.all([
-		importSecretLintModule<{ creator: SecretLintRulePresetCreator }>("@secretlint/secretlint-rule-preset-recommend"),
+	const [{ creator: recommend, rules: recommendedRules }, { creator: noDotenv }] = await Promise.all([
+		importSecretLintModule<{ creator: SecretLintRulePresetCreator; rules: SecretLintRuleCreator[] }>("@secretlint/secretlint-rule-preset-recommend"),
 		importSecretLintModule<{ creator: SecretLintRuleCreator }>("@secretlint/secretlint-rule-no-dotenv")
 	]);
 	const rules: SecretLintCoreConfig["rules"] = [];
 	if (scanSecrets) {
 		rules.push({
 			...secretsScanningRules[0],
+			rules: withPlaceholderAllows(secretsScanningRules[0].rules, recommendedRules),
 			rule: recommend
 		});
 		rules.push({
