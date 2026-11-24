@@ -27,7 +27,9 @@ export const privateKeyRule: SecretLintRuleCreator = {
 		id: "vsce-rule-privatekey",
 		recommended: true,
 		type: "scanner",
-		supportedContentTypes: ["text"]
+		supportedContentTypes: ["text"],
+		// Every match contains this, so Secretlint can skip files without it.
+		keywords: ["PRIVATE KEY"]
 	},
 	create(context) {
 		const t = context.createTranslator(messages);
