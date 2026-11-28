@@ -833,7 +833,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 			contents = contents.replace(markdownPathRegex, urlReplace);
 
 			// Replace <img> links with urls
-			contents = contents.replace(/<(?:img|video)[^>]+src=["']([/.\w\s#-]+)['"][^>]*>/gm, (all, link) => {
+			contents = contents.replace(/<(?:img|video)[^>]+src=["']([^"'>]+)['"][^>]*>/gm, (all, link) => {
 				const isLinkRelative = !/^\w+:\/\//.test(link) && link[0] !== '#' && !link.startsWith('data:');
 
 				if (!this.baseImagesUrl && isLinkRelative) {
@@ -847,7 +847,7 @@ export abstract class MarkdownProcessor extends BaseProcessor {
 					return all;
 				}
 
-				return all.replace(link, urljoin(prefix, path.posix.normalize(link)));
+				return all.replace(link, () => urljoin(prefix, path.posix.normalize(link)));
 			});
 
 			if ((this.gitHubIssueLinking && this.isGitHub) || (this.gitLabIssueLinking && this.isGitLab)) {
